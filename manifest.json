@@ -2,7 +2,8 @@
   "name": "Boxing S&C",
   "short_name": "Boxing S&C",
   "description": "Boxing strength and conditioning plan with session library, logging, and round timer",
-  "start_url": "/index.html",
+  "start_url": "/BoxTrack/index.html",
+  "scope": "/BoxTrack/"
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",

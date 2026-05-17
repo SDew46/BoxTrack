@@ -1,18 +1,9 @@
 {
-  "name": "Boxing S&C",
+  "name": "BoxTrack",
   "short_name": "BoxTrack",
-  "description": "Boxing strength and conditioning plan with session library, logging, and round timer",
-  "start_url": "/BoxTrack/index.html",
+  "start_url": "/BoxTrack/",
   "scope": "/BoxTrack/",
   "display": "standalone",
   "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%230a0a0a'/><text x='96' y='130' font-size='120' text-anchor='middle' fill='%23E63946' font-family='serif' font-weight='bold'>B</text></svg>",
-      "sizes": "192x192",
-      "type": "image/svg+xml"
-    }
-  ]
+  "theme_color": "#0a0a0a"
 }

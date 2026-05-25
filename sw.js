@@ -1,8 +1,8 @@
-const CACHE = 'boxing-sc-v1';
-const ASSETS = ['./index.html', './manifest.json'];
+const CACHE = 'boxtrack-v4';
+const ASSETS = ['./index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(()=>{})));
   self.skipWaiting();
 });
 

@@ -13,6 +13,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
   --red:#E63946;--blue:#457B9D;--gold:#E6A817;--green:#2ecc71;--purple:#8B5CF6;
+  --accent:#E63946;
   --bg:#0a0a0a;--bg2:#0e0e0e;--bg3:#141414;--bg4:#1a1a1a;
   --border:#1f1f1f;--border2:#161616;
   --text:#f0f0f0;--muted:#888;--dim:#555;--dim2:#444;
@@ -22,11 +23,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 
 /* NAV */
 .nav{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);display:flex;}
-.nav-btn{flex:1;font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:1px;padding:12px 2px;background:none;border:none;border-bottom:3px solid transparent;color:var(--dim);cursor:pointer;transition:all 0.2s;line-height:1.2;}
+.nav-btn{flex:1;font-family:'Bebas Neue',sans-serif;font-size:9.5px;letter-spacing:0.5px;padding:11px 1px;background:none;border:none;border-bottom:3px solid transparent;color:var(--dim);cursor:pointer;transition:all 0.2s;line-height:1.3;}
 .nav-btn.on{border-bottom-color:currentColor;}
-.nb-plan.on{color:var(--red);}
+.nb-plan.on{color:var(--accent);}
 .nb-log.on{color:var(--blue);}
 .nb-timer.on{color:var(--red);}
+.nb-combo.on{color:var(--gold);}
 .nb-prog.on{color:var(--gold);}
 .nb-set.on{color:var(--purple);}
 .page{display:none;}.page.active{display:block;}
@@ -81,6 +83,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .cat-tab.on-gu{color:var(--red);border-bottom-color:var(--red);}
 .cat-tab.on-td{color:var(--blue);border-bottom-color:var(--blue);}
 .cat-tab.on-core{color:var(--green);border-bottom-color:var(--green);}
+.cat-tab.on-bw{color:var(--muted);border-bottom-color:var(--muted);}
 .cat-tab.on-custom{color:var(--purple);border-bottom-color:var(--purple);}
 .sess-cards{display:flex;flex-direction:column;gap:10px;}
 .sc{border:1px solid var(--border);border-radius:4px;overflow:hidden;}
@@ -382,6 +385,87 @@ svg.mc{width:100%;height:52px;margin-bottom:8px;display:block;}
 /* TOAST */
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);font-size:13px;font-weight:700;padding:9px 18px;border-radius:30px;letter-spacing:1px;transition:transform 0.3s ease;z-index:999;pointer-events:none;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);}
+
+.set-type-row{padding:5px 12px;border-bottom:1px solid var(--border2);display:flex;gap:5px;flex-wrap:wrap;}
+.set-type-btn{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:20px;border:1px solid var(--border);background:none;color:var(--dim);cursor:pointer;}
+.set-type-btn.active{border-color:var(--blue);color:var(--blue);background:rgba(69,123,157,0.1);}
+.amrap-block{padding:10px 12px;background:var(--bg3);}
+.amrap-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+.amrap-inp{background:var(--bg3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:20px;padding:5px 10px;outline:none;width:65px;text-align:center;-moz-appearance:textfield;}
+.amrap-inp::-webkit-outer-spin-button,.amrap-inp::-webkit-inner-spin-button{-webkit-appearance:none;}
+.pyramid-hint{font-size:11px;color:var(--muted);padding:5px 12px;background:var(--bg3);border-top:1px solid var(--border2);}
+.lc-1rm{font-size:11px;color:var(--gold);font-weight:600;margin-bottom:8px;}
+.color-swatches{display:flex;gap:8px;flex-wrap:wrap;}
+.swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.2s;}
+.swatch.active{border-color:#fff;transform:scale(1.15);}
+.brand-name-inp{background:var(--bg3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;padding:7px 10px;outline:none;flex:1;min-width:0;}
+.corner-quote{margin:0 20px 20px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:4px;padding:12px 14px;}
+.corner-quote-text{font-size:13px;color:var(--gold);font-style:italic;line-height:1.5;}
+.corner-quote-attr{font-size:10px;color:var(--dim);margin-top:4px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.combo-hdr{background:linear-gradient(135deg,var(--bg) 0%,#1a1500 100%);border-bottom:3px solid var(--gold);}
+.combo-cotd{margin:12px 20px 0;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:4px;padding:12px 14px;cursor:pointer;}
+.cotd-label{font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:4px;}
+.cotd-combo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;margin-bottom:3px;}
+.cotd-name{font-size:11px;color:var(--muted);}
+.tier-tabs{display:flex;padding:12px 20px 0;border-bottom:1px solid var(--border);overflow-x:auto;}
+.tier-tab{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:1.5px;padding:8px 11px;background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);cursor:pointer;margin-bottom:-1px;white-space:nowrap;flex-shrink:0;}
+.tier-tab.on{color:var(--gold);border-bottom-color:var(--gold);}
+.tier-tab.legend.on{color:var(--red);border-bottom-color:var(--red);}
+.drill-screen{padding:14px 20px;}
+.drill-display{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:18px 14px;margin-bottom:12px;min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.drill-combo-seq{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px;}
+.punch-chip{font-family:'Bebas Neue',sans-serif;font-size:28px;width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:2px solid var(--border);color:var(--dim);background:var(--bg3);transition:all 0.15s;flex-shrink:0;}
+.punch-chip.punch-active{border-color:var(--red);color:var(--text);background:rgba(230,57,70,0.15);box-shadow:0 0 14px rgba(230,57,70,0.4);transform:scale(1.08);}
+.punch-chip.defence.punch-active{border-color:var(--blue);color:var(--text);background:rgba(69,123,157,0.15);box-shadow:0 0 14px rgba(69,123,157,0.4);}
+.punch-chip.done-chip{border-color:var(--dim2);color:var(--dim2);}
+.drill-combo-name{font-size:12px;color:var(--muted);text-align:center;}
+.tempo-section{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:10px;}
+.tempo-label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
+.tempo-lbl{font-size:12px;font-weight:700;}
+.tempo-val{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px;color:var(--gold);}
+.tempo-slider{width:100%;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--border);outline:none;margin-bottom:5px;}
+.tempo-slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--gold);cursor:pointer;}
+.tempo-marks{display:flex;justify-content:space-between;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);}
+.voice-row{display:flex;align-items:center;justify-content:space-between;margin-top:9px;}
+.voice-lbl{font-size:12px;font-weight:700;}
+.voice-toggle{display:flex;background:var(--bg3);border-radius:3px;overflow:hidden;border:1px solid var(--border);}
+.voice-opt{font-size:11px;font-weight:700;padding:5px 12px;background:none;border:none;color:var(--dim);cursor:pointer;text-transform:uppercase;letter-spacing:1px;}
+.voice-opt.active{background:var(--gold);color:#000;}
+.drill-random-btn{width:100%;padding:10px;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;border:none;border-radius:4px;cursor:pointer;background:var(--bg3);color:var(--muted);border:1px solid var(--border);margin-bottom:8px;}
+.drill-controls{display:flex;gap:10px;margin-bottom:12px;}
+.drill-main-btn{flex:2;padding:13px;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:3px;border:none;border-radius:4px;cursor:pointer;}
+.drill-main-btn.start{background:var(--gold);color:#000;}
+.drill-main-btn.stop{background:var(--red);color:#fff;}
+.drill-next-btn{flex:1;padding:13px;font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:2px;border:none;border-radius:4px;cursor:pointer;background:var(--bg3);color:var(--muted);border:1px solid var(--border);}
+.counter-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px;}
+.drill-ctr-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;flex:1;min-width:100px;}
+.drill-ctr-name{font-size:10px;color:var(--muted);font-weight:600;}
+.drill-ctr-num{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--gold);}
+.combo-list{padding:0 20px 12px;display:flex;flex-direction:column;gap:7px;}
+.combo-card{border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+.combo-card-head{background:#111;padding:10px 13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.combo-card-name{font-size:13px;font-weight:700;color:#e0e0e0;}
+.combo-card-seq{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--gold);}
+.combo-card-body{padding:8px 13px;border-top:1px solid var(--border2);}
+.combo-card-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:7px;}
+.drill-this-btn{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 11px;border-radius:20px;border:none;background:var(--gold);color:#000;cursor:pointer;flex-shrink:0;}
+.legend-card{border:1px solid var(--border);border-radius:4px;margin-bottom:10px;overflow:hidden;}
+.legend-head{background:#111;padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.legend-name{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:2px;color:var(--red);}
+.legend-style{font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;}
+.legend-body{max-height:0;overflow:hidden;transition:max-height 0.35s ease;}
+.legend-body.open{max-height:1200px;}
+.legend-inner{padding:10px 14px 14px;}
+.legend-intro{font-size:13px;color:var(--gold);font-style:italic;margin-bottom:12px;line-height:1.5;padding:8px 10px;background:rgba(230,168,23,0.07);border-radius:3px;border-left:2px solid var(--gold);}
+.combo-builder{padding:0 20px 24px;}
+.punch-palette{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.palette-btn{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;padding:6px 11px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;}
+.palette-btn.punch{border-color:rgba(230,57,70,0.4);color:var(--red);}
+.palette-btn.defence-p{border-color:rgba(69,123,157,0.4);color:var(--blue);}
+.combo-preview{display:flex;flex-wrap:wrap;gap:5px;min-height:42px;padding:7px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;align-items:center;}
+.preview-chip{font-family:'Bebas Neue',sans-serif;font-size:13px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);cursor:pointer;background:var(--bg4);}
+.preview-chip.punch-chip-sm{border-color:rgba(230,57,70,0.4);color:var(--red);}
+.preview-chip.def-chip-sm{border-color:rgba(69,123,157,0.4);color:var(--blue);}
 </style>
 </head>
 <body>
@@ -390,6 +474,7 @@ svg.mc{width:100%;height:52px;margin-bottom:8px;display:block;}
   <button class="nav-btn nb-plan on" onclick="showPage('plan')">PLAN</button>
   <button class="nav-btn nb-log" onclick="showPage('log')">LOG</button>
   <button class="nav-btn nb-timer" onclick="showPage('timer')">TIMER</button>
+  <button class="nav-btn nb-combo" onclick="showPage('combo')">COACH</button>
   <button class="nav-btn nb-prog" onclick="showPage('progress')">PROGRESS</button>
   <button class="nav-btn nb-set" onclick="showPage('settings')">SETTINGS</button>
 </nav>
@@ -496,9 +581,9 @@ svg.mc{width:100%;height:52px;margin-bottom:8px;display:block;}
 
 <!-- ==================== PLAN PAGE ==================== -->
 <div class="page active" id="page-plan">
-  <div class="ph plan-hdr" data-bg="BOX">
-    <div class="ph-label" style="color:var(--red)">Strength &amp; Conditioning</div>
-    <div class="ph-title">BOXTRACK</div>
+  <div class="ph plan-hdr" data-bg="BOX" id="plan-hdr">
+    <div class="ph-label" style="color:var(--accent)" id="plan-hdr-label">Strength &amp; Conditioning</div>
+    <div class="ph-title" id="app-title-plan">BOXTRACK</div>
     <div class="ph-sub">Ground Up · Top Down · Core · Custom</div>
   </div>
   <div id="deload-area"></div>
@@ -525,11 +610,13 @@ svg.mc{width:100%;height:52px;margin-bottom:8px;display:block;}
       <button class="cat-tab on-gu" id="ct-gu" onclick="showCat('gu')">Ground Up</button>
       <button class="cat-tab" id="ct-td" onclick="showCat('td')">Top Down</button>
       <button class="cat-tab" id="ct-core" onclick="showCat('core')">Core</button>
+      <button class="cat-tab" id="ct-bw" onclick="showCat('bw')">Bodyweight</button>
       <button class="cat-tab" id="ct-custom" onclick="showCat('custom')">Custom</button>
     </div>
     <div id="lib-gu" class="sess-cards"></div>
     <div id="lib-td" class="sess-cards" style="display:none"></div>
     <div id="lib-core" class="sess-cards" style="display:none"></div>
+    <div id="lib-bw" class="sess-cards" style="display:none"></div>
     <div id="lib-custom" class="sess-cards" style="display:none">
       <div id="custom-empty" style="display:none"><div class="empty-state">No custom sessions yet.</div></div>
       <div id="custom-cards"></div>
@@ -628,6 +715,7 @@ svg.mc{width:100%;height:52px;margin-bottom:8px;display:block;}
       <button class="t-ctrl t-start" id="t-start-btn" onclick="toggleTimer()">START</button>
     </div>
   </div>
+  <div id="corner-quote-area"></div>
   <div class="t-settings">
     <div class="t-card">
       <div class="t-s-row">
@@ -650,6 +738,49 @@ svg.mc{width:100%;height:52px;margin-bottom:8px;display:block;}
 </div>
 
 <!-- ==================== PROGRESS PAGE ==================== -->
+
+<!-- COMBO COACH PAGE -->
+<div class="page" id="page-combo">
+  <div class="ph combo-hdr" data-bg="BOX">
+    <div class="ph-label" style="color:var(--gold)">Boxing Combo Coach</div>
+    <div class="ph-title">COMBO<br>COACH</div>
+    <div class="ph-sub">Voice-led · Four tiers · Legend combos · Build your own</div>
+  </div>
+  <div id="cotd-area"></div>
+  <div class="tier-tabs">
+    <button class="tier-tab on" id="tt-basics" onclick="showTier('basics')">Basics</button>
+    <button class="tier-tab" id="tt-amateur" onclick="showTier('amateur')">Amateur</button>
+    <button class="tier-tab" id="tt-pro" onclick="showTier('pro')">Pro</button>
+    <button class="tier-tab" id="tt-champ" onclick="showTier('champ')">Champion</button>
+    <button class="tier-tab legend" id="tt-legends" onclick="showTier('legends')">Legends</button>
+    <button class="tier-tab" id="tt-custom-combo" onclick="showTier('custom-combo')">My Combos</button>
+  </div>
+  <div class="drill-screen">
+    <div class="drill-display" id="drill-display">
+      <div class="drill-combo-seq" id="drill-seq"></div>
+      <div class="drill-combo-name" id="drill-name">Select a combo below to begin</div>
+    </div>
+    <div class="tempo-section">
+      <div class="tempo-label-row"><span class="tempo-lbl">Tempo</span><span class="tempo-val" id="tempo-val-lbl">Sparring</span></div>
+      <input type="range" class="tempo-slider" id="tempo-slider" min="1" max="10" value="5" oninput="updateTempo(this.value)">
+      <div class="tempo-marks"><span>Slow</span><span>Sparring</span><span>Pressure</span></div>
+      <div class="voice-row">
+        <span class="voice-lbl">Call punches by</span>
+        <div class="voice-toggle">
+          <button class="voice-opt active" id="vo-num" onclick="setVoiceMode('numbers')">Numbers</button>
+          <button class="voice-opt" id="vo-name" onclick="setVoiceMode('names')">Names</button>
+        </div>
+      </div>
+    </div>
+    <button class="drill-random-btn" onclick="drillRandom()">🎲 SURPRISE ME — Random Combo</button>
+    <div class="drill-controls">
+      <button class="drill-main-btn start" id="drill-main-btn" onclick="toggleDrill()">START DRILL</button>
+      <button class="drill-next-btn" onclick="nextCombo()">NEXT ›</button>
+    </div>
+    <div class="counter-row" id="drill-counters"></div>
+  </div>
+  <div id="combo-tier-content"></div>
+</div>
 <div class="page" id="page-progress">
   <div class="ph prog-hdr" data-bg="PRG">
     <div class="ph-label" style="color:var(--gold)">Progress Tracker</div>
@@ -678,10 +809,30 @@ svg.mc{width:100%;height:52px;margin-bottom:8px;display:block;}
   <div class="ph set-hdr" data-bg="SET">
     <div class="ph-label" style="color:var(--purple)">App Settings</div>
     <div class="ph-title">SETTINGS</div>
-    <div class="ph-sub">Data, units, and preferences</div>
+    <div class="ph-sub">Branding, data, units and preferences</div>
   </div>
   <div class="set-section">
-    <div class="sl" style="margin-bottom:10px">Units</div>
+    <div class="sl" style="margin-bottom:9px">Branding</div>
+    <div class="set-group">
+      <div class="set-row">
+        <div><div class="set-row-lbl">App Name</div><div class="set-row-sub">Shown in the header</div></div>
+        <input class="brand-name-inp" type="text" id="brand-name-inp" placeholder="BoxTrack" oninput="saveBrandName()">
+      </div>
+      <div class="set-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+        <div><div class="set-row-lbl">Accent Colour</div><div class="set-row-sub">Changes highlights throughout the app</div></div>
+        <div class="color-swatches" id="color-swatches"></div>
+      </div>
+      <div class="set-row">
+        <div><div class="set-row-lbl">Logo</div><div class="set-row-sub">Upload an image to use as the header logo</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <img id="logo-preview-img" style="display:none;width:38px;height:38px;border-radius:6px;object-fit:cover;border:1px solid var(--border)">
+          <button class="set-action-btn" onclick="document.getElementById('logo-upload').click()">UPLOAD</button>
+          <button class="set-action-btn" onclick="clearLogo()">CLEAR</button>
+          <input type="file" id="logo-upload" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
+        </div>
+      </div>
+    </div>
+    <div class="sl" style="margin-bottom:9px">Units</div>
     <div class="set-group">
       <div class="set-row">
         <div><div class="set-row-lbl">Weight Units</div><div class="set-row-sub">Applied across all logging and display</div></div>
@@ -718,7 +869,7 @@ svg.mc{width:100%;height:52px;margin-bottom:8px;display:block;}
     </div>
     <div class="sl" style="margin-bottom:10px">About</div>
     <div class="set-group">
-      <div class="set-row"><div><div class="set-row-lbl">Version</div></div><div style="font-size:12px;color:var(--dim)">3.0.0</div></div>
+      <div class="set-row"><div><div class="set-row-lbl">Version</div></div><div style="font-size:12px;color:var(--dim)">4.0.0</div></div>
       <div class="set-row"><div><div class="set-row-lbl">Install as App</div><div class="set-row-sub">Open in Chrome · tap ⋮ · Add to Home Screen</div></div></div>
     </div>
   </div>
@@ -885,6 +1036,7 @@ const CAT_META = {
   GU:{label:'Ground Up',color:'var(--red)',btnCls:'btn-red'},
   TD:{label:'Top Down',color:'var(--blue)',btnCls:'btn-blue'},
   CORE:{label:'Core',color:'var(--green)',btnCls:''},
+  BW:{label:'Bodyweight',color:'var(--muted)',btnCls:''},
   CUSTOM:{label:'Custom',color:'var(--purple)',btnCls:'btn-purple'},
 };
 
@@ -917,14 +1069,15 @@ const fmtWt=v=>v?`${v}${getUnit()}`:'—';
 // NAV
 // ═══════════════════════════════════════
 function showPage(id){
-  ['plan','log','timer','progress','settings'].forEach((p,i)=>{
+  ['plan','log','timer','combo','progress','settings'].forEach((p,i)=>{
     document.getElementById('page-'+p).classList.toggle('active',p===id);
     document.querySelectorAll('.nav-btn')[i].classList.toggle('on',p===id);
   });
-  if(id==='plan') checkDeload();
+  if(id==='plan'){checkDeload();applyBranding();}
   if(id==='log'){renderActiveSessArea();renderHistory();}
+  if(id==='combo'){initComboCoach();}
   if(id==='progress') renderProgress();
-  if(id==='settings') renderSettings();
+  if(id==='settings'){renderSettings();applyBranding();}
 }
 
 // ═══════════════════════════════════════
@@ -989,14 +1142,14 @@ function sessAvail(sess){return (sess.equip||[]).every(e=>activeEquipment.has(e)
 let currentCat='gu';
 function showCat(cat){
   currentCat=cat;
-  ['gu','td','core','custom'].forEach(c=>{
+  ['gu','td','core','bw','custom'].forEach(c=>{
     document.getElementById('lib-'+c).style.display=c===cat?'block':'none';
     document.getElementById('ct-'+c).className='cat-tab'+(c===cat?' on-'+c:'');
   });
   if(cat==='custom') renderCustomLib();
 }
 function renderLibrary(){
-  const catMap={gu:'GU',td:'TD',core:'CORE'};
+  const catMap={gu:'GU',td:'TD',core:'CORE',bw:'BW'};
   Object.entries(catMap).forEach(([key,catId])=>{
     const cont=document.getElementById('lib-'+key);
     const meta=CAT_META[catId];
@@ -1320,13 +1473,7 @@ function buildLogForm(){
         ${ex.swapped?'<span class="lex-swapped">Swapped</span>':''}
       </div>
       ${prevHtml}
-      <div class="col-hdrs"><div class="col-h">Set</div><div class="col-h">Sets</div><div class="col-h">Reps</div><div class="col-h">${getUnit()}</div><div class="col-h"></div></div>
-      <div class="set-rows" id="sr-${ei}">${makeSetRow(ei,0,false,meta.color)}</div>
-      <div class="rest-strip">
-        <button class="rest-btn" id="rb-${ei}" onclick="startRest(${ei},${ex.rest||60})">REST ${fmtSecs(ex.rest||60)}</button>
-        <span class="rest-cd" id="rcd-${ei}" style="display:none"></span>
-      </div>
-      <button class="add-set-btn" onclick="addSetRow(${ei},'${meta.color}')">+ Add set</button>
+      ${injectSetTypes(ei,ex,meta.color)}
     </div>`;
   }).join('');
   document.getElementById('extras-list').innerHTML='';
@@ -1519,6 +1666,8 @@ function saveSession(){
   if(!activeLogSession){toast('Select a session first',true);return;}
   const duration=sessionStartTime?Math.floor((Date.now()-sessionStartTime)/60000):0;
   const exercises=activeLogSession.exercises.map((ex,ei)=>{
+    const st=setTypeState[ei]||'standard';
+    if(st==='amrap'){const mins=document.getElementById('amrap-mins-'+ei)?.value||'';const score=document.getElementById('amrap-score-'+ei)?.value||'';return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:'amrap',amrapMins:mins,amrapScore:score,sets:[]};}
     const cont=document.getElementById('sr-'+ei);const sets=[];
     if(cont) cont.querySelectorAll('.set-row').forEach((row,si)=>{
       const s=document.getElementById('sv-'+ei+'-'+si)?.value;
@@ -1526,7 +1675,7 @@ function saveSession(){
       const k=document.getElementById('kv-'+ei+'-'+si)?.value;
       if(s||r||k) sets.push({sets:s||'',reps:r||'',kg:k||''});
     });
-    return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,sets};
+    return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:st,sets};
   });
   const extras=[];
   document.querySelectorAll('.extra-ex').forEach(el=>{
@@ -1609,7 +1758,7 @@ function renderHistory(){
       const valid=(ex.sets||[]).filter(r=>r.sets||r.reps||r.kg);
       if(!valid.length) return '';
       return `<div class="hi-ex">
-        <div class="hi-ex-name">${ex.name}${ex.swapped?' <span style="font-size:9px;color:var(--gold);font-weight:700">SWAP</span>':''}${ex.extra?' <span style="font-size:9px;color:var(--gold);font-weight:700">EXTRA</span>':''}</div>
+        <div class="hi-ex-name">${ex.name}${ex.swapped?' <span style="font-size:9px;color:var(--gold);font-weight:700">SWAP</span>':''}${ex.setType&&ex.setType!=='standard'?' <span style="font-size:9px;color:var(--blue);font-weight:700">'+ex.setType.toUpperCase()+'</span>':''}${ex.extra?' <span style="font-size:9px;color:var(--gold);font-weight:700">EXTRA</span>':''}</div>
         <div class="hi-set-row"><span></span><span class="hi-col-h">Sets</span><span class="hi-col-h">Reps</span><span class="hi-col-h">Weight</span></div>
         ${valid.map((r,i)=>`<div class="hi-set-row"><span class="hi-set-cell">Set ${i+1}</span><span class="hi-set-val">${r.sets||'—'}</span><span class="hi-set-val">${r.reps||'—'}</span><span class="hi-set-val">${r.kg?fmtWt(parseFloat(r.kg)):'—'}</span></div>`).join('')}
       </div>`;
@@ -1782,6 +1931,7 @@ function renderStreak(){
     </div>
   </div>`;
 }
+function calc1RM(weight,reps){if(reps===1) return weight;return Math.round(weight*(1+reps/30));}
 function renderLifts(){
   const all=ld('sessions',[]);
   const liftMap={};
@@ -1791,7 +1941,8 @@ function renderLifts(){
     if(!tracked) return;
     const kgs=(ex.sets||[]).map(r=>parseFloat(r.kg)).filter(v=>!isNaN(v)&&v>0);
     if(!kgs.length) return;
-    liftMap[tracked.name].push({date:s.date,kg:Math.max(...kgs)});
+    const maxKg2=Math.max(...kgs);const maxSet2=(ex.sets||[]).find(r=>parseFloat(r.kg)===maxKg2);const maxReps2=parseFloat(maxSet2?.reps||1)||1;
+    liftMap[tracked.name].push({date:s.date,kg:maxKg2,e1rm:calc1RM(maxKg2,maxReps2)});
   }));
   const content=document.getElementById('prog-content');
   if(!all.length){content.innerHTML='<div class="empty-state" style="padding:4px 0">No sessions logged yet.</div>';return;}
@@ -1799,6 +1950,7 @@ function renderLifts(){
     const history=liftMap[lift.name];
     if(!history.length) return `<div class="lift-card"><div class="lc-title">${lift.name}<span class="lc-best">No data</span></div><div class="lc-sub">Session ${lift.sess}</div><div class="empty-state">Log this lift to start tracking.</div></div>`;
     const best=Math.max(...history.map(h=>h.kg));
+    const bestE1rm=Math.max(...history.map(h=>h.e1rm||h.kg));
     const chart=history.length>=2?buildChart(history,lift.color):'';
     const rows=history.slice(-5).reverse().map((h,i,arr)=>{
       const prev=i<arr.length-1?arr[i+1].kg:null;
@@ -1806,7 +1958,7 @@ function renderLifts(){
       if(prev!==null){const d=+(h.kg-prev).toFixed(1);if(d>0)delta=`<span class="ld du">+${d}${getUnit()}</span>`;else if(d<0)delta=`<span class="ld dd">${d}${getUnit()}</span>`;else delta=`<span class="ld ds">—</span>`;}
       return `<div class="ll-row"><span class="ll-date">${fmtDate(h.date)}</span>${delta}<span class="ll-wt" style="color:${lift.color}">${fmtWt(h.kg)}</span></div>`;
     }).join('');
-    return `<div class="lift-card"><div class="lc-title">${lift.name}<span class="lc-best">Best: ${fmtWt(best)}</span></div><div class="lc-sub">Session ${lift.sess}</div>${chart}${rows}</div>`;
+    return `<div class="lift-card"><div class="lc-title">${lift.name}<span class="lc-best">Best: ${fmtWt(best)}</span></div><div class="lc-sub">Session ${lift.sess}</div><div class="lc-1rm">Est. 1RM: ${fmtWt(bestE1rm)} <span style="font-weight:400;color:var(--dim)">(Epley)</span></div>${chart}${rows}</div>`;
   }).join('');
 }
 function renderRecentSessions(){
@@ -1902,6 +2054,7 @@ function playBell(){
   g2.gain.setValueAtTime(0.15,t);
   g2.gain.exponentialRampToValueAtTime(0.001,t+3.5);
   o2.start(t);o2.stop(t+3.5);
+  showCornerQuote();
 }
 
 function playClapper(){
@@ -2023,6 +2176,7 @@ function renderSettings(){
   const txt=document.getElementById('storage-txt');
   if(fill) fill.style.width=pct+'%';
   if(txt) txt.textContent=`${kb}KB used of ~5MB`;
+  initBranding();
 }
 function setUnit(u){
   sv('unit',u);
@@ -2031,7 +2185,7 @@ function setUnit(u){
   toast('Units set to '+u);
 }
 function exportData(){
-  const data={sessions:ld('sessions',[]),boxingClasses:ld('boxingClasses',[]),customSessions:ld('customSessions',[]),equipment:ld('equipment',[]),unit:ld('unit','kg'),exportDate:new Date().toISOString()};
+  const data={sessions:ld('sessions',[]),boxingClasses:ld('boxingClasses',[]),customSessions:ld('customSessions',[]),customCombos:ld('customCombos',[]),equipment:ld('equipment',[]),unit:ld('unit','kg'),appName:ld('appName',''),accentColor:ld('accentColor','#E63946'),exportDate:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -2050,6 +2204,9 @@ function importData(e){
       if(data.customSessions) sv('customSessions',data.customSessions);
       if(data.equipment) sv('equipment',data.equipment);
       if(data.unit) sv('unit',data.unit);
+      if(data.customCombos) sv('customCombos',data.customCombos);
+      if(data.appName) sv('appName',data.appName);
+      if(data.accentColor) sv('accentColor',data.accentColor);
       toast('Data imported successfully!');
       renderSettings();renderProgress();renderHistory();
     }catch{toast('Import failed — invalid file',true);}
@@ -2075,11 +2232,357 @@ function toast(msg,err){
   t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2400);
 }
 
+
+// ═══════════════════════════════════════
+// BODYWEIGHT SESSIONS DATA
+// ═══════════════════════════════════════
+const BW_SESSIONS = [
+  {id:'BW1',cat:'BW',name:'BW1 — Full Body Power',sub:'No equipment · Explosive focus',equip:['bodyweight'],
+   warmup:[{name:'Arm Circles',secs:20},{name:'Leg Swings',secs:20},{name:'Shadow Box',secs:90}],
+   exercises:[
+    {name:'Squat Jump',scheme:'4×8',rest:60,note:'Rest 60s. Land soft. Explosive drive upward.',alts:[{name:'Broad Jump',reason:'Horizontal power.'},{name:'Tuck Jump',reason:'More demanding.'}]},
+    {name:'Push-Up',scheme:'4×12',rest:60,note:'Rest 60s. Full range. Pause at bottom.',alts:[{name:'Diamond Push-Up',reason:'Tricep focus.'},{name:'Decline Push-Up',reason:'Upper chest.'}]},
+    {name:'Pull-Up',scheme:'4×max',rest:60,note:'Rest 60s. Dead hang start, full extension.',alts:[{name:'Chin-Up',reason:'More bicep.'},{name:'Inverted Row',reason:'Easier.'}]},
+    {name:'Burpee',scheme:'3×10',rest:60,note:'Rest 60s. Full extension at top.',alts:[{name:'Mountain Climber',reason:'Lower impact.'},{name:'Bear Crawl',reason:'3×10m.'}]},
+    {name:'Single Leg Glute Bridge',scheme:'3×12 each',rest:45,note:'Rest 45s. Full hip extension at top.',alts:[{name:'Glute Bridge',reason:'Both legs.'},{name:'Nordic Hamstring Curl',reason:'Hamstring focus.'}]},
+   ],finisher:'Tabata: 20s work / 10s rest ×8 — push-ups and squat jumps alternating.'},
+  {id:'BW2',cat:'BW',name:'BW2 — Upper Body',sub:'Push and pull · Pull-up bar helpful',equip:['bodyweight','pullupbar'],
+   warmup:[{name:'Arm Circles',secs:20},{name:'Scapular Push-Ups',secs:20},{name:'Shadow Box',secs:90}],
+   exercises:[
+    {name:'Pull-Up',scheme:'5×max',rest:60,note:'Rest 60s. Aim to add reps each week.',alts:[{name:'Chin-Up',reason:'Bicep focused.'},{name:'Inverted Row',reason:'Scalable fallback.'}]},
+    {name:'Wide Push-Up',scheme:'4×12',rest:60,note:'Rest 60s. Wide grip for chest focus.',alts:[{name:'Push-Up',reason:'Standard.'},{name:'Archer Push-Up',reason:'Unilateral.'}]},
+    {name:'Diamond Push-Up',scheme:'3×10',rest:60,note:'Rest 60s. Tricep focus. Pause at bottom.',alts:[{name:'Pike Push-Up',reason:'Shoulder focus.'},{name:'Decline Push-Up',reason:'Upper chest.'}]},
+    {name:'Inverted Row',scheme:'3×12',rest:60,note:'Rest 60s. More horizontal = harder.',alts:[{name:'Pull-Up',reason:'If this becomes easy.'},{name:'Wide Push-Up',reason:'Easier fallback.'}]},
+    {name:'Pike Push-Up',scheme:'3×10',rest:60,note:'Rest 60s. Shoulder press mechanics.',alts:[{name:'Diamond Push-Up',reason:'Tricep focused.'},{name:'Push-Up',reason:'Standard fallback.'}]},
+   ],finisher:'3 rounds: max pull-ups, 20 push-ups, 60s rest.'},
+  {id:'BW3',cat:'BW',name:'BW3 — Boxing Conditioning',sub:'Shadow boxing · Footwork · No equipment',equip:['bodyweight'],
+   warmup:[{name:'Shadow Box',secs:120},{name:'Hip Circles',secs:30},{name:'Arm Circles',secs:20}],
+   exercises:[
+    {name:'Shadow Box',scheme:'4×2min',rest:60,note:'Rest 60s. Technique and movement. Every punch with intent.',alts:[{name:'Mountain Climber',reason:'Conditioning fallback.'},{name:'Burpee',reason:'Full body power.'}]},
+    {name:'Burpee',scheme:'4×10',rest:60,note:'Rest 60s. Full extension at top.',alts:[{name:'Squat Jump',reason:'Lower impact.'},{name:'Mountain Climber',reason:'Core focused.'}]},
+    {name:'Mountain Climber',scheme:'3×20 each',rest:45,note:'Rest 45s. Keep hips level.',alts:[{name:'Plank',reason:'Static version.'},{name:'Bear Crawl',reason:'Full body crawl.'}]},
+    {name:'Single Leg Glute Bridge',scheme:'3×10 each',rest:45,note:'Balance and hip strength.',alts:[{name:'Glute Bridge',reason:'Bilateral fallback.'},{name:'Reverse Lunge',reason:'Balance fallback.'}]},
+    {name:'Jump Rope',scheme:'3×90s',rest:45,note:'Rest 45s.',alts:[{name:'Shadow Box',reason:'If no rope.'},{name:'Squat Jump',reason:'Explosive leg work.'}]},
+   ],finisher:'3 rounds: 30s shadow box, 10 burpees, 60s rest.'},
+];
+
+// ═══════════════════════════════════════
+// COMBO COACH DATA
+// ═══════════════════════════════════════
+const PUNCH_NAMES={1:'Jab',2:'Cross',3:'Left Hook',4:'Right Hook',5:'Left Uppercut',6:'Right Uppercut'};
+const DEFENCE_DISPLAY={'slip-l':'SL','slip-r':'SR','roll':'RL','step':'ST'};
+const DEFENCE_CALL={'slip-l':'Slip left','slip-r':'Slip right','roll':'Roll','step':'Step out'};
+const COMBO_TIERS={
+  basics:{label:'Basics',intro:'Start here. Clean punches, good habits. These are the tools you will use forever.',combos:[
+    {name:'The Jab',seq:[1],desc:'Single jab. Snap it out, bring it back. Your most important weapon.'},
+    {name:'The Cross',seq:[2],desc:'Single right hand. Power from the hip. Step into it.'},
+    {name:'One-Two',seq:[1,2],desc:'The foundation. Jab sets it up, cross finishes. Throw them as one.'},
+    {name:'Double Jab',seq:[1,1],desc:'Two jabs. First measures distance, second lands.'},
+    {name:'Two-One',seq:[2,1],desc:'Cross then jab. Catches them off guard.'},
+    {name:'Triple Jab',seq:[1,1,1],desc:'Three jabs. Control range, keep them guessing.'},
+    {name:'One-Two-One',seq:[1,2,1],desc:'Classic. End with the jab to reset your guard.'},
+    {name:'Double Jab Cross',seq:[1,1,2],desc:'Two jabs to find the range, cross to finish.'},
+  ]},
+  amateur:{label:'Amateur',intro:"You've got the basics. Now we add the hook, the uppercut, and you start moving.",combos:[
+    {name:'One-Two-Three',seq:[1,2,3],desc:'Jab, cross, left hook. The classic three-punch combination.'},
+    {name:'One-Two-Four',seq:[1,2,4],desc:'Jab, cross, right hook.'},
+    {name:'One-Three-Two',seq:[1,3,2],desc:'Jab, hook, cross. Change the rhythm.'},
+    {name:'Slip and Cross',seq:['slip-r',2],desc:'Slip their jab to the right, fire the cross back. Your first counter.'},
+    {name:'Slip and Hook',seq:['slip-l',3],desc:'Slip outside, left hook follows.'},
+    {name:'One-Two-Roll',seq:[1,2,'roll'],desc:'One-two then roll under their counter.'},
+    {name:'Roll and Cross',seq:['roll',2],desc:'Roll under their hook, come up with the cross.'},
+    {name:'One-Two-Three-Two',seq:[1,2,3,2],desc:'Four punches. End with the right hand.'},
+    {name:'Step and Jab',seq:['step',1,1],desc:'Step to the side, two jabs from the angle.'},
+    {name:'One-Two-Five',seq:[1,2,5],desc:'Jab, cross, left uppercut. Level change.'},
+    {name:'Double Hook',seq:[3,4],desc:'Left hook, right hook. Short range damage.'},
+    {name:'Roll and Uppercut',seq:['roll',5,2],desc:'Roll under, come up with uppercut, cross.'},
+  ]},
+  pro:{label:'Pro',intro:'Five and six punch combinations. Level changes. You start looking like a real boxer.',combos:[
+    {name:'Five Punch Combo',seq:[1,2,3,2,3],desc:'Jab, cross, hook, cross, hook. Relentless.'},
+    {name:'Body Head',seq:[1,3,2],desc:'Jab to the body, hook to the head, cross.'},
+    {name:'Six Punch Barrage',seq:[1,1,2,3,2,3],desc:'Double jab to open, four hard shots to follow.'},
+    {name:'Body Body Head',seq:[2,3,2],desc:'Body cross, body hook, head cross.'},
+    {name:'Slip Cross Roll Hook',seq:['slip-r',2,'roll',3],desc:'Slip, power shot, roll, hook. Full defensive counter.'},
+    {name:'Uppercut Combo',seq:[1,2,5,6,3],desc:'Jab-cross, two uppercuts, hook. Inside work.'},
+    {name:'The Pressure Combo',seq:[1,2,3,2,5,2],desc:'Six punches. Do not stop.'},
+    {name:'Step and Punish',seq:['step',1,2,3,2],desc:'Step to angle, then four shots.'},
+    {name:'Philly Shell Counter',seq:['slip-r',2,'roll',3],desc:'Slip, cross, roll under response, left hook.'},
+    {name:'Double Jab Body Head',seq:[1,1,3,2],desc:'Two jabs, hook to body, cross upstairs.'},
+  ]},
+  champ:{label:'Champion',intro:'Champion-level combinations from the greatest. This is what years of work looks like.',combos:[
+    {name:'The Ali Shuffle',seq:[1,1,1,2],desc:'Three rapid jabs with footwork, then the cross. Float and sting.'},
+    {name:'Ali Jab Sequence',seq:[1,1,2,1],desc:'Double jab, cross, reset jab. Always moving.'},
+    {name:'Tyson Peek-a-Boo',seq:['roll',1,2,3],desc:'Roll under, explosive jab-cross-hook. Tyson bread and butter.'},
+    {name:'Tyson Body Assault',seq:[1,3,2,3,2],desc:'Jab to open, alternating hooks and crosses to the body.'},
+    {name:'Pacquiao Angle',seq:[1,2,'step',1,2,3],desc:'One-two, step to angle, one-two-three from the new position.'},
+    {name:'Pacquiao Southpaw Barrage',seq:[2,3,2,3,2],desc:'Volume punching from a southpaw angle.'},
+    {name:'Canelo Counter',seq:['slip-r',2,3,2],desc:'Slip outside the jab, cross-hook-cross. Canelo signature.'},
+    {name:'Canelo Roll and Uppercut',seq:['roll',5,2,3],desc:'Roll under the hook, left uppercut, cross, hook.'},
+    {name:'Floyd Shoulder Roll',seq:['slip-r',2,3,2,3],desc:'Roll off the jab, explode back with four shots.'},
+    {name:'The Championship Round',seq:[1,1,2,3,2,5,3,2],desc:'Eight punches. The full combination. Leave nothing in the tank.'},
+  ]},
+};
+const LEGEND_COMBOS=[
+  {name:'Muhammad Ali',style:'Float like a butterfly, sting like a bee',
+   intro:"Ali's combinations were built on speed and range control. The jab was his paintbrush. You want to move like Ali? You earn it with the jab.",
+   combos:[
+    {name:'The Louisville Lip',seq:[1,1,1,2],desc:'Triple jab, then the cross lands while they are still blocking.'},
+    {name:'Ali Shuffle Counter',seq:['step',1,2],desc:'Side shuffle to create the angle, then jab-cross.'},
+    {name:'Float and Sting',seq:[1,1,2,1],desc:'Two jabs, cross, reset jab. Always moving, never still.'},
+    {name:'Rope-a-Dope Counter',seq:['roll','roll',2,3],desc:'Two rolls to absorb, then explode when they are tired.'},
+    {name:'Speed Combination',seq:[1,2,1,2,1],desc:'Rapid jab-cross-jab-cross-jab. Five punches faster than they can blink.'},
+  ]},
+  {name:'Mike Tyson',style:'Bad intentions. Every single time.',
+   intro:"Tyson came forward, he came low, and he came with bad intentions. Inside is where Tyson lived.",
+   combos:[
+    {name:'Peek-a-Boo Basic',seq:['roll',1,2,3],desc:'Roll under their jab, come up inside with jab-cross-hook.'},
+    {name:'Tyson Body Attack',seq:[1,3,2],desc:'Jab to open the guard, body hook, cross upstairs.'},
+    {name:'The Uppercut Trap',seq:[1,2,5,3],desc:'Jab-cross to cover their head, then uppercut and hook.'},
+    {name:'Controlled Violence',seq:['roll',3,2,3],desc:'Roll in tight, left hook-cross-left hook.'},
+    {name:'The Baddest Man',seq:[1,1,2,3,2,3],desc:'Double jab, then four shots.'},
+  ]},
+  {name:'Manny Pacquiao',style:'Relentless angles and impossible volume',
+   intro:"Pacquiao didn't box in straight lines. Volume and angles. That's the Pac-Man system.",
+   combos:[
+    {name:'The Pacquiao Angle',seq:[1,2,'step',1,2,3],desc:'One-two, step to a new angle, one-two-three.'},
+    {name:'Southpaw Blitz',seq:[2,3,2,3,2],desc:'Cross-hook-cross-hook-cross. Pure volume.'},
+    {name:'Body to Head',seq:[2,3,2],desc:'Body cross, body hook, head cross.'},
+    {name:'The Diagonal Entry',seq:['step',1,2,3,2],desc:'Step to create the diagonal angle, then four shots.'},
+    {name:'Relentless Pressure',seq:[1,2,3,2,3,2],desc:'Six punches in a blitz.'},
+  ]},
+  {name:'Canelo Alvarez',style:'Patient, accurate, then devastating',
+   intro:"Canelo waits. He reads, he slips, he rolls — and then when the opening is there, he punishes.",
+   combos:[
+    {name:'The Canelo Counter',seq:['slip-r',2,3,2],desc:'Slip outside the jab, cross-hook-cross. His signature.'},
+    {name:'Roll and Uppercut',seq:['roll',5,2,3],desc:'Roll under the hook, come up with the left uppercut, cross, hook.'},
+    {name:'Body Shot Counter',seq:['slip-l',3,2],desc:'Slip inside, body hook, cross upstairs.'},
+    {name:'The Mexican Style',seq:[1,2,3,2,3],desc:'Jab-cross-hook-cross-hook. Relentless in the pocket.'},
+    {name:'Patient Counter',seq:['slip-r','roll',2,5,3],desc:'Slip, roll, then cross, uppercut, hook.'},
+  ]},
+];
+const CORNER_QUOTES=[
+  {text:"Every round you survive is a round you've won. Now go take the next one.",attr:"Corner advice"},
+  {text:"You're not tired. Tired is a feeling. Right now you're just working.",attr:"Corner advice"},
+  {text:"Keep your hands up. Every. Single. Second.",attr:"Corner advice"},
+  {text:"Don't think about what he's going to do. Think about what YOU'RE going to do.",attr:"Corner advice"},
+  {text:"Move your head. A moving target is a hard target.",attr:"Corner advice"},
+  {text:"When you want to stop, that's when the other guy is feeling it too.",attr:"Corner advice"},
+  {text:"Breathe. You forget to breathe, everything falls apart.",attr:"Corner advice"},
+  {text:"Champions are made in the rounds they want to quit.",attr:"Cus D'Amato"},
+  {text:"Fear is the greatest obstacle to learning.",attr:"Cus D'Amato"},
+  {text:"The hero and the coward both feel the same thing. What matters is what the hero does with it.",attr:"Cus D'Amato"},
+  {text:"Anyone can be beaten. The question is whether you believe it.",attr:"Corner advice"},
+  {text:"The jab. Use the jab. Everything starts with the jab.",attr:"Corner advice"},
+];
+const ACCENT_COLORS=[
+  {val:'#E63946'},{val:'#457B9D'},{val:'#E6A817'},{val:'#2ecc71'},
+  {val:'#8B5CF6'},{val:'#F4623A'},{val:'#0EA5E9'},{val:'#f0f0f0'},
+];
+
+// ═══════════════════════════════════════
+// COMBO COACH STATE
+// ═══════════════════════════════════════
+let currentTier='basics';
+let currentComboIdx=0;
+let drillRunning=false;
+let drillPunchIdx=0;
+let drillInterval=null;
+let voiceMode='numbers';
+let tempoValue=5;
+let drillCounters={};
+let currentComboList=[];
+let currentDrillCombo=null;
+let comboBuilderSeq=[];
+let synth=null;
+let setTypeState={};
+
+// ═══════════════════════════════════════
+// BRANDING
+// ═══════════════════════════════════════
+function initBranding(){
+  const sw=document.getElementById('color-swatches');
+  if(!sw) return;
+  const current=ld('accentColor','#E63946');
+  sw.innerHTML=ACCENT_COLORS.map(c=>`<div class="swatch ${c.val===current?'active':''}" style="background:${c.val}" onclick="setAccent('${c.val}')"></div>`).join('');
+  const savedName=ld('appName','');
+  if(savedName){const el=document.getElementById('brand-name-inp');if(el) el.value=savedName;}
+  const logo=ld('appLogo','');
+  if(logo){const img=document.getElementById('logo-preview-img');if(img){img.src=logo;img.style.display='block';}}
+}
+function applyBranding(){
+  const name=ld('appName','')||'BOXTRACK';
+  const color=ld('accentColor','#E63946');
+  const logo=ld('appLogo','');
+  document.documentElement.style.setProperty('--accent',color);
+  const titleEl=document.getElementById('app-title-plan');
+  if(titleEl){if(logo) titleEl.innerHTML=`<img src="${logo}" style="height:38px;object-fit:contain;max-width:180px">`;else titleEl.textContent=name;}
+  const lbl=document.getElementById('plan-hdr-label');if(lbl) lbl.style.color=color;
+}
+function saveBrandName(){const val=document.getElementById('brand-name-inp')?.value||'';sv('appName',val);applyBranding();}
+function setAccent(val){sv('accentColor',val);document.querySelectorAll('.swatch').forEach(s=>s.classList.toggle('active',s.style.background===val||s.style.backgroundColor===val));applyBranding();toast('Accent colour updated');}
+function handleLogoUpload(e){const file=e.target.files[0];if(!file) return;const reader=new FileReader();reader.onload=ev=>{sv('appLogo',ev.target.result);const img=document.getElementById('logo-preview-img');if(img){img.src=ev.target.result;img.style.display='block';}applyBranding();toast('Logo updated');};reader.readAsDataURL(file);e.target.value='';}
+function clearLogo(){sv('appLogo','');const img=document.getElementById('logo-preview-img');if(img){img.src='';img.style.display='none';}applyBranding();}
+
+// ═══════════════════════════════════════
+// SET TYPE SELECTORS
+// ═══════════════════════════════════════
+function injectSetTypes(ei, ex, color){
+  const st=setTypeState[ei]||'standard';
+  return `<div class="set-type-row">${['standard','superset','amrap','ladder','pyramid'].map(t=>`<button class="set-type-btn ${st===t?'active':''}" onclick="setSetType(${ei},'${t}')">${t.charAt(0).toUpperCase()+t.slice(1)}</button>`).join('')}</div><div id="set-content-${ei}">${buildSetContent(ei,ex,color,st)}</div>`;
+}
+function setSetType(ei,type){
+  setTypeState[ei]=type;
+  if(!activeLogSession) return;
+  const ex=activeLogSession.exercises[ei];
+  const meta=CAT_META[activeLogSession.cat]||CAT_META.CUSTOM;
+  document.querySelectorAll(`#lex-${ei} .set-type-btn`).forEach(btn=>btn.classList.toggle('active',btn.textContent.toLowerCase()===type));
+  const cont=document.getElementById('set-content-'+ei);if(cont) cont.innerHTML=buildSetContent(ei,ex,meta.color,type);
+}
+function buildSetContent(ei,ex,color,type){
+  if(type==='amrap') return `<div class="amrap-block"><div class="amrap-row"><div style="font-size:12px;color:var(--dim);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-right:8px">Duration</div><input class="amrap-inp" type="number" placeholder="6" id="amrap-mins-${ei}" min="1" max="30"> <span style="font-size:13px;color:var(--dim);margin-left:4px">min</span></div><div class="amrap-row"><div style="font-size:12px;color:var(--dim);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-right:8px">Rounds completed</div><input class="amrap-inp" type="number" placeholder="0" id="amrap-score-${ei}" min="0" step="0.5"></div></div>`;
+  if(type==='pyramid') return `<div class="pyramid-hint">Pyramid: increase weight each set, decrease reps. Log each set below.</div><div class="col-hdrs"><div class="col-h">Set</div><div class="col-h">Sets</div><div class="col-h">Reps</div><div class="col-h">${getUnit()}</div><div class="col-h"></div></div><div class="set-rows" id="sr-${ei}">${makeSetRow(ei,0,false,color)}</div><div class="rest-strip"><button class="rest-btn" id="rb-${ei}" onclick="startRest(${ei},${ex.rest||60})">REST ${fmtSecs(ex.rest||60)}</button><span class="rest-cd" id="rcd-${ei}" style="display:none"></span></div><button class="add-set-btn" onclick="addSetRow(${ei},'${color}')">+ Add set</button>`;
+  if(type==='ladder') return `<div class="pyramid-hint">Ladder: 1 rep, 2 reps, 3 reps... up to target, back down. Log total reps below.</div><div class="col-hdrs"><div class="col-h">Set</div><div class="col-h">Sets</div><div class="col-h">Reps</div><div class="col-h">${getUnit()}</div><div class="col-h"></div></div><div class="set-rows" id="sr-${ei}">${makeSetRow(ei,0,false,color)}</div><div class="rest-strip"><button class="rest-btn" id="rb-${ei}" onclick="startRest(${ei},${ex.rest||60})">REST ${fmtSecs(ex.rest||60)}</button><span class="rest-cd" id="rcd-${ei}" style="display:none"></span></div><button class="add-set-btn" onclick="addSetRow(${ei},'${color}')">+ Add set</button>`;
+  return `<div class="col-hdrs"><div class="col-h">Set</div><div class="col-h">Sets</div><div class="col-h">Reps</div><div class="col-h">${getUnit()}</div><div class="col-h"></div></div><div class="set-rows" id="sr-${ei}">${makeSetRow(ei,0,false,color)}</div><div class="rest-strip"><button class="rest-btn" id="rb-${ei}" onclick="startRest(${ei},${ex.rest||60})">REST ${fmtSecs(ex.rest||60)}</button><span class="rest-cd" id="rcd-${ei}" style="display:none"></span></div><button class="add-set-btn" onclick="addSetRow(${ei},'${color}')">+ Add set</button>`;
+}
+
+// ═══════════════════════════════════════
+// CORNER QUOTE
+// ═══════════════════════════════════════
+function showCornerQuote(){
+  const area=document.getElementById('corner-quote-area');if(!area) return;
+  const q=CORNER_QUOTES[Math.floor(Math.random()*CORNER_QUOTES.length)];
+  area.innerHTML=`<div class="corner-quote"><div class="corner-quote-text">"${q.text}"</div><div class="corner-quote-attr">— ${q.attr}</div></div>`;
+  setTimeout(()=>{if(area) area.innerHTML='';},9000);
+}
+
+// ═══════════════════════════════════════
+// COMBO COACH FUNCTIONS
+// ═══════════════════════════════════════
+function initComboCoach(){
+  if(!synth) synth=window.speechSynthesis;
+  renderCOTD();
+  showTier('basics');
+  renderDrillCounters();
+}
+function fmtSeq(seq){return seq.map(p=>typeof p==='number'?p:(DEFENCE_DISPLAY[p]||p)).join(' — ');}
+function renderCOTD(){
+  const allCombos=[...Object.values(COMBO_TIERS).flatMap(t=>t.combos),...LEGEND_COMBOS.flatMap(l=>l.combos)];
+  const today=new Date().toDateString();
+  const idx=today.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%allCombos.length;
+  const combo=allCombos[idx];
+  const area=document.getElementById('cotd-area');if(!area) return;
+  area.innerHTML=`<div class="combo-cotd" onclick="loadComboForDrill(${JSON.stringify(combo).replace(/"/g,'&quot;')})"><div class="cotd-label">Combo of the Day</div><div class="cotd-combo">${fmtSeq(combo.seq)}</div><div class="cotd-name">${combo.name} · Tap to drill</div></div>`;
+}
+function showTier(tier){
+  currentTier=tier;
+  ['basics','amateur','pro','champ','legends','custom-combo'].forEach(t=>{
+    const el=document.getElementById('tt-'+t);if(el) el.classList.toggle('on',t===tier);
+  });
+  renderTierContent(tier);
+  if(tier!=='legends'&&tier!=='custom-combo'){const td=COMBO_TIERS[tier];if(td?.combos?.length){currentComboIdx=0;currentComboList=td.combos;loadComboForDrill(td.combos[0]);}}
+  else if(tier==='legends'){if(LEGEND_COMBOS[0]?.combos?.length){currentComboList=LEGEND_COMBOS[0].combos;loadComboForDrill(LEGEND_COMBOS[0].combos[0]);}}
+  else{currentComboList=getCustomCombos();if(currentComboList.length) loadComboForDrill(currentComboList[0]);}
+}
+function renderTierContent(tier){
+  const cont=document.getElementById('combo-tier-content');if(!cont) return;
+  if(tier==='legends'){
+    cont.innerHTML=`<div style="padding:0 20px 24px">${LEGEND_COMBOS.map((legend,li)=>`<div class="legend-card"><div class="legend-head" onclick="toggleLegend('leg-${li}')"><div><div class="legend-name">${legend.name}</div><div class="legend-style">${legend.style}</div></div><span id="chev-leg-${li}" style="color:var(--dim);font-size:12px;transition:transform 0.25s">▾</span></div><div class="legend-body" id="leg-${li}"><div class="legend-inner"><div class="legend-intro">"${legend.intro}"</div>${legend.combos.map(c=>`<div class="combo-card"><div class="combo-card-head" onclick="loadComboForDrill(${JSON.stringify(c).replace(/"/g,'&quot;')})"><div><div class="combo-card-name">${c.name}</div><div class="combo-card-seq">${fmtSeq(c.seq)}</div></div><button class="drill-this-btn">DRILL</button></div><div class="combo-card-body"><div class="combo-card-desc">${c.desc}</div></div></div>`).join('')}</div></div></div>`).join('')}</div>`;
+    return;
+  }
+  if(tier==='custom-combo'){
+    const customs=getCustomCombos();
+    cont.innerHTML=`<div class="combo-builder"><div class="sl" style="margin-bottom:7px">Build a Combo</div><div style="font-size:12px;color:var(--dim);margin-bottom:9px">Tap punches and moves to build your combination</div><div class="punch-palette">${[1,2,3,4,5,6].map(n=>`<button class="palette-btn punch" onclick="addToPalette(${n})">${n} — ${PUNCH_NAMES[n]}</button>`).join('')}${['slip-l','slip-r','roll','step'].map(d=>`<button class="palette-btn defence-p" onclick="addToPalette('${d}')">${DEFENCE_CALL[d]}</button>`).join('')}</div><div class="combo-preview" id="combo-preview"><span style="font-size:12px;color:var(--dim)">Tap punches above to build...</span></div><div style="display:flex;gap:8px;margin-bottom:10px"><input class="ex-search" style="flex:1;margin:0" type="text" id="custom-combo-name" placeholder="Combo name..."><button class="btn btn-gold" onclick="saveCustomCombo()">SAVE</button><button class="btn btn-ghost" onclick="clearPalette()">CLEAR</button></div>${customs.length?`<div class="sl" style="margin-bottom:7px">My Combos (${customs.length}/20)</div>${customs.map((c,i)=>`<div class="combo-card" style="margin-bottom:7px"><div class="combo-card-head" onclick="loadComboForDrill(${JSON.stringify(c).replace(/"/g,'&quot;')})"><div><div class="combo-card-name">${c.name}</div><div class="combo-card-seq">${fmtSeq(c.seq)}</div></div><div style="display:flex;gap:6px"><button class="drill-this-btn">DRILL</button><button class="drill-this-btn" style="background:var(--red)" onclick="event.stopPropagation();delCustomCombo(${i})">DEL</button></div></div></div>`).join('')}`:''}`;
+    return;
+  }
+  const td=COMBO_TIERS[tier];if(!td) return;
+  cont.innerHTML=`<div class="combo-list"><div style="font-size:13px;color:var(--muted);font-style:italic;padding:0 0 10px;line-height:1.5">${td.intro}</div>${td.combos.map(c=>`<div class="combo-card"><div class="combo-card-head" onclick="loadComboForDrill(${JSON.stringify(c).replace(/"/g,'&quot;')})"><div><div class="combo-card-name">${c.name}</div><div class="combo-card-seq">${fmtSeq(c.seq)}</div></div><button class="drill-this-btn">DRILL</button></div><div class="combo-card-body"><div class="combo-card-desc">${c.desc}</div></div></div>`).join('')}</div>`;
+}
+function toggleLegend(id){const body=document.getElementById(id);const chev=document.getElementById('chev-'+id);const open=body?.classList.toggle('open');if(chev) chev.style.transform=open?'rotate(180deg)':'';}
+function loadComboForDrill(combo){
+  stopDrill();currentDrillCombo=combo;renderDrillDisplay(combo,-1);
+  const dn=document.getElementById('drill-name');if(dn) dn.textContent=combo.name;
+  const btn=document.getElementById('drill-main-btn');if(btn){btn.textContent='START DRILL';btn.className='drill-main-btn start';}
+}
+function renderDrillDisplay(combo,activeIdx){
+  const seq=combo.seq;
+  const el=document.getElementById('drill-seq');if(!el) return;
+  el.innerHTML=seq.map((p,i)=>{const isD=typeof p==='string';const disp=isD?(DEFENCE_DISPLAY[p]||p):p;return `<div class="punch-chip ${isD?'defence':''} ${i===activeIdx?'punch-active':''} ${i<activeIdx?'done-chip':''}">${disp}</div>`;}).join('');
+}
+function toggleDrill(){if(!currentDrillCombo){toast('Select a combo first',true);return;}if(drillRunning) stopDrill();else startDrill();}
+function startDrill(){
+  if(!currentDrillCombo) return;
+  drillRunning=true;drillPunchIdx=0;
+  const btn=document.getElementById('drill-main-btn');if(btn){btn.textContent='STOP DRILL';btn.className='drill-main-btn stop';}
+  if(synth) synth.cancel();
+  runDrillStep();
+}
+function getTempoMs(){return 2000-(tempoValue-1)*(1600/9);}
+function runDrillStep(){
+  if(!drillRunning) return;
+  const seq=currentDrillCombo.seq;
+  if(drillPunchIdx>=seq.length){
+    renderDrillDisplay(currentDrillCombo,-1);
+    const key=currentDrillCombo.name;drillCounters[key]=(drillCounters[key]||0)+1;sv('drillCounters',drillCounters);renderDrillCounters();
+    if(Math.random()<0.2) speakCornerAdvice();
+    drillPunchIdx=0;drillInterval=setTimeout(runDrillStep,getTempoMs()*2);return;
+  }
+  const punch=seq[drillPunchIdx];renderDrillDisplay(currentDrillCombo,drillPunchIdx);callPunch(punch);drillPunchIdx++;
+  const isD=typeof punch==='string';drillInterval=setTimeout(runDrillStep,isD?getTempoMs()*1.3:getTempoMs());
+}
+function stopDrill(){
+  drillRunning=false;clearTimeout(drillInterval);if(synth) synth.cancel();
+  const btn=document.getElementById('drill-main-btn');if(btn){btn.textContent='START DRILL';btn.className='drill-main-btn start';}
+  if(currentDrillCombo) renderDrillDisplay(currentDrillCombo,-1);
+}
+function nextCombo(){stopDrill();if(!currentComboList.length) return;currentComboIdx=(currentComboIdx+1)%currentComboList.length;loadComboForDrill(currentComboList[currentComboIdx]);}
+function drillRandom(){
+  stopDrill();
+  const tier=COMBO_TIERS[currentTier==='legends'||currentTier==='custom-combo'?'basics':currentTier];
+  const all=[...(tier?.combos||[]),...getCustomCombos()];
+  if(!all.length) return;
+  const combo=all[Math.floor(Math.random()*all.length)];
+  currentComboList=all;currentComboIdx=all.indexOf(combo);loadComboForDrill(combo);
+  toast('Random combo — '+combo.name);
+}
+function callPunch(punch){
+  if(!synth) return;
+  let text='';
+  if(typeof punch==='number'){text=voiceMode==='numbers'?String(punch):PUNCH_NAMES[punch]||String(punch);}
+  else{text=DEFENCE_CALL[punch]||punch;}
+  const utt=new SpeechSynthesisUtterance(text);utt.rate=1.1;utt.pitch=0.85;utt.volume=1.0;
+  const voices=synth.getVoices();
+  const pref=voices.find(v=>v.name.toLowerCase().includes('male')||v.name.toLowerCase().includes('david')||v.name.toLowerCase().includes('mark'));
+  if(pref) utt.voice=pref;synth.speak(utt);
+}
+function speakCornerAdvice(){
+  if(!synth) return;
+  const q=["Again!","Don't think — throw!","Hands up!","Move your feet!","BREATHE!","Head movement!","Stay sharp!","Keep going!","That's it!"];
+  const utt=new SpeechSynthesisUtterance(q[Math.floor(Math.random()*q.length)]);utt.rate=1.0;utt.pitch=0.8;utt.volume=1.0;
+  const voices=synth.getVoices();const pref=voices.find(v=>v.name.toLowerCase().includes('male')||v.name.toLowerCase().includes('david'));if(pref) utt.voice=pref;synth.speak(utt);
+}
+function setVoiceMode(mode){voiceMode=mode;document.getElementById('vo-num').classList.toggle('active',mode==='numbers');document.getElementById('vo-name').classList.toggle('active',mode==='names');}
+function updateTempo(val){tempoValue=parseInt(val);const lbl=tempoValue<=2?'Slow':tempoValue<=4?'Learning':tempoValue<=6?'Sparring':tempoValue<=8?'Fast':'Pressure';document.getElementById('tempo-val-lbl').textContent=lbl;}
+function renderDrillCounters(){drillCounters=ld('drillCounters',{});const top=Object.entries(drillCounters).sort((a,b)=>b[1]-a[1]).slice(0,4);const el=document.getElementById('drill-counters');if(!el) return;if(!top.length){el.innerHTML='';return;}el.innerHTML=top.map(([name,count])=>`<div class="drill-ctr-card"><div><div class="drill-ctr-name">${name}</div></div><div class="drill-ctr-num">${count}</div></div>`).join('');}
+function addToPalette(val){comboBuilderSeq.push(val);renderPalettePreview();}
+function clearPalette(){comboBuilderSeq=[];renderPalettePreview();}
+function renderPalettePreview(){const prev=document.getElementById('combo-preview');if(!prev) return;if(!comboBuilderSeq.length){prev.innerHTML='<span style="font-size:12px;color:var(--dim)">Tap punches above to build...</span>';return;}prev.innerHTML=comboBuilderSeq.map((p,i)=>{const isD=typeof p==='string';const disp=isD?(DEFENCE_DISPLAY[p]||p):p;return `<div class="preview-chip ${isD?'def-chip-sm':'punch-chip-sm'}" onclick="removePaletteItem(${i})">${disp}</div>`;}).join('');}
+function removePaletteItem(i){comboBuilderSeq.splice(i,1);renderPalettePreview();}
+function getCustomCombos(){return ld('customCombos',[]);}
+function saveCustomCombo(){
+  const name=document.getElementById('custom-combo-name')?.value?.trim();
+  if(!name||!comboBuilderSeq.length){toast('Add a name and at least one punch',true);return;}
+  const combos=ld('customCombos',[]);
+  if(combos.length>=20){toast('Maximum 20 custom combos',true);return;}
+  combos.push({name,seq:[...comboBuilderSeq],desc:'Custom combination'});sv('customCombos',combos);
+  comboBuilderSeq=[];toast('Combo saved!');renderTierContent('custom-combo');
+}
+function delCustomCombo(i){if(!confirm('Delete this combo?')) return;const combos=ld('customCombos',[]);combos.splice(i,1);sv('customCombos',combos);renderTierContent('custom-combo');toast('Combo deleted');}
+
 // ═══════════════════════════════════════
 // SERVICE WORKER
 // ═══════════════════════════════════════
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('/BoxTrack/sw.js').catch(()=>{}));
 }
 
 // ═══════════════════════════════════════
@@ -2087,7 +2590,9 @@ if('serviceWorker' in navigator){
 // ═══════════════════════════════════════
 document.getElementById('log-date').value=new Date().toISOString().split('T')[0];
 document.getElementById('boxing-date').value=new Date().toISOString().split('T')[0];
+SESSIONS.push(...BW_SESSIONS);
 initEquipment();
+applyBranding();
 renderLibrary();
 renderHistory();
 updateTimerUI();

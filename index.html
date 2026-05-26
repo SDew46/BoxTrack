@@ -256,12 +256,12 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .cp-ctrl{background:var(--bg2);padding:9px 13px;display:flex;gap:8px;align-items:center;border-top:1px solid var(--border2);}
 .cp-tier{background:var(--bg3);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:5px 8px;outline:none;appearance:none;-webkit-appearance:none;}
 /* Punch chips */
-.pc{font-family:'Bebas Neue',sans-serif;border-radius:9px;display:flex;align-items:center;justify-content:center;border:2px solid var(--border);color:var(--dim2);background:var(--bg);transition:all 0.12s;flex-shrink:0;}
-.pc.lit{border-color:var(--red);color:#fff;background:rgba(230,57,70,0.18);box-shadow:0 0 18px rgba(230,57,70,0.45);transform:scale(1.1);}
+.pc{font-family:'Bebas Neue',sans-serif;border-radius:9px;display:flex;align-items:center;justify-content:center;border:2px solid var(--dim2);color:var(--dim);background:var(--bg2);transition:all 0.12s;flex-shrink:0;}
+.pc.lit{border-color:var(--red);color:#fff;background:rgba(230,57,70,0.28);box-shadow:0 0 24px rgba(230,57,70,0.7),0 0 8px rgba(230,57,70,0.9);transform:scale(1.12);}
 .pc.def{border-color:var(--border);}
-.pc.def.lit{border-color:var(--blue);color:#fff;background:rgba(69,123,157,0.18);box-shadow:0 0 18px rgba(69,123,157,0.45);}
+.pc.def.lit{border-color:var(--blue);color:#fff;background:rgba(69,123,157,0.28);box-shadow:0 0 24px rgba(69,123,157,0.7),0 0 8px rgba(69,123,157,0.9);}
 .pc.done{border-color:var(--dim2);color:var(--dim2);}
-.pc-lg{font-size:42px;width:66px;height:66px;}
+.pc-lg{font-size:46px;width:72px;height:72px;}
 .pc-sm{font-size:16px;width:50px;height:50px;}
 .pc-def-sm{font-size:13px;width:46px;height:46px;}
 /* Combo coach page */
@@ -1199,7 +1199,7 @@ function searchEx(){const q=document.getElementById('ex-search').value.toLowerCa
 function saveCustomSess(){const name=document.getElementById('csb-name').value.trim();if(!name){toast('Please name your session',true);return;}if(!csbExercises.length){toast('Add at least one exercise',true);return;}const sess={name,cat:document.getElementById('csb-cat').value,finisher:document.getElementById('csb-finisher').value.trim(),exercises:csbExercises.map(e=>({...e})),createdAt:Date.now()};const customs=ld('customSessions',[]);if(editingCustomId!==null)customs[editingCustomId]=sess;else customs.push(sess);sv('customSessions',customs);closeOverlay('csb-modal');renderCustomLib();showCat('custom');toast(editingCustomId!==null?'Session updated!':'Session saved!');editingCustomId=null;}
 // BOX PAGE
 function initBoxPage(){updateTimerUI();if(!synth&&window.speechSynthesis){synth=window.speechSynthesis;synth.addEventListener('voiceschanged',loadVoices);loadVoices();}if(boxMode==='coach'){onCoachTierChange();document.getElementById('cotd-area').innerHTML='';}}
-function setBoxMode(mode){boxMode=mode;document.getElementById('bmt-timer').classList.toggle('on',mode==='timer');document.getElementById('bmt-coach').classList.toggle('on',mode==='coach');document.getElementById('coach-panel').style.display=mode==='coach'?'block':'none';document.getElementById('standalone-drill').style.display='none';if(mode==='coach'){onCoachTierChange();}else{renderCOTD();showTier('basics');}}
+function setBoxMode(mode){boxMode=mode;document.getElementById('bmt-timer').classList.toggle('on',mode==='timer');document.getElementById('bmt-coach').classList.toggle('on',mode==='coach');document.getElementById('coach-panel').style.display=mode==='coach'?'block':'none';document.getElementById('standalone-drill').style.display=mode==='timer'?'block':'none';if(mode==='coach'){onCoachTierChange();}else{renderCOTD();showTier('basics');}}
 
 // TIMER
 function initAudio(){if(timerState.audioCtx)return;timerState.audioCtx=new(window.AudioContext||window.webkitAudioContext)();}

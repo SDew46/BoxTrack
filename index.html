@@ -1870,8 +1870,6 @@ function startDrill(){
   if(nav)nav.style.display='none';
   if(boxHdr)boxHdr.style.display='none';
   if(modeTog)modeTog.style.display='none';
-  document.body.style.overflow='hidden';
-  document.documentElement.style.overflow='hidden';
   if(synth)synth.cancel();
   var fs=document.getElementById('drill-fs');
   if(fs)fs.style.display='flex';
@@ -1913,8 +1911,6 @@ function stopDrill(){
   if(nav)nav.style.display='';
   if(boxHdr)boxHdr.style.display='';
   if(modeTog)modeTog.style.display='';
-  document.body.style.overflow='';
-  document.documentElement.style.overflow='';
   if(document.fullscreenElement){try{document.exitFullscreen().catch(function(){});}catch(e){}}
   var fs=document.getElementById('drill-fs');
   if(fs)fs.style.display='none';
@@ -2074,7 +2070,12 @@ function importData(e){
 function clearAll(){if(!confirm('Delete ALL data? Cannot be undone.'))return;localStorage.clear();activeLogSession=null;showLibraryView();renderProgress();renderSettingsPanel();toast('All data cleared');}
 
 // SERVICE WORKER
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/BoxTrack/sw.js').catch(()=>{}));}
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/BoxTrack/sw.js').catch(()=>{});
+    navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
+  });
+}
 
 // PR DETECTION
 function detectPRs(record,allSessions){

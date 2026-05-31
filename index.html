@@ -1992,8 +1992,38 @@ function buildChart(history,color){const vals=history.map(h=>h.kg);const min=Mat
 
 // SETTINGS
 function setUnit(u){sv('unit',u);document.getElementById('unit-kg').classList.toggle('on',u==='kg');document.getElementById('unit-lbs').classList.toggle('on',u==='lbs');toast('Units set to '+u);}
-function exportData(){const data={sessions:ld('sessions',[]),boxingClasses:ld('boxingClasses',[]),customSessions:ld('customSessions',[]),customCombos:ld('customCombos',[]),equipment:ld('equipment',[]),unit:ld('unit','kg'),appName:ld('appName',''),accentColor:ld('accentColor',''),exportDate:new Date().toISOString()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`8rb-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);toast('Data exported!');}
-function importData(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{try{const data=JSON.parse(ev.target.result);if(data.sessions)sv('sessions',data.sessions);if(data.boxingClasses)sv('boxingClasses',data.boxingClasses);if(data.customSessions)sv('customSessions',data.customSessions);if(data.customCombos)sv('customCombos',data.customCombos);if(data.equipment)sv('equipment',data.equipment);if(data.unit)sv('unit',data.unit);if(data.appName)sv('appName',data.appName);if(data.accentColor)sv('accentColor',data.accentColor);toast('Data imported!');renderProgress();renderHistory();}catch{toast('Import failed',true);}};reader.readAsText(file);e.target.value='';}
+function exportData(){const data={sessions:ld('sessions',[]),boxingClasses:ld('boxingClasses',[]),customSessions:ld('customSessions',[]),customCombos:ld('customCombos',[]),equipment:ld('equipment',[]),unit:ld('unit','kg'),appName:ld('appName',''),accentColor:ld('accentColor',''),prs:ld('prs',{}),exportDate:new Date().toISOString()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`8rb-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);toast('Data exported!');}
+function importData(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var data=JSON.parse(ev.target.result);
+      if(data.sessions)sv('sessions',data.sessions);
+      if(data.boxingClasses)sv('boxingClasses',data.boxingClasses);
+      if(data.customSessions)sv('customSessions',data.customSessions);
+      if(data.customCombos)sv('customCombos',data.customCombos);
+      if(data.equipment)sv('equipment',data.equipment);
+      if(data.unit)sv('unit',data.unit);
+      if(data.appName)sv('appName',data.appName);
+      if(data.accentColor)sv('accentColor',data.accentColor);
+      if(data.prs)sv('prs',data.prs);
+      initEquipment();
+      applyBranding();
+      renderLibrary();
+      renderCustomLib();
+      renderProgress();
+      renderSettingsPanel();
+      checkDeload();
+      var count=(data.sessions||[]).length+(data.boxingClasses||[]).length;
+      toast('Imported — '+count+' sessions restored');
+    }catch(err){
+      toast('Import failed — file may be corrupt',true);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
 function clearAll(){if(!confirm('Delete ALL data? Cannot be undone.'))return;localStorage.clear();activeLogSession=null;showLibraryView();renderProgress();renderSettingsPanel();toast('All data cleared');}
 
 // SERVICE WORKER

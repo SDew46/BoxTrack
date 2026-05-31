@@ -446,14 +446,15 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
 .float-ref.show{display:flex;}
 .fr-txt{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:2px;color:var(--blue);}
 /* FULLSCREEN DRILL (section 10) */
-#drill-fs{position:fixed;inset:0;background:#000;z-index:600;display:none;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;padding-top:max(24px,env(safe-area-inset-top));}
+#drill-fs{position:fixed;inset:0;width:100vw;height:100vh;background:#0a0a0a;z-index:9999;display:none;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;}
 #drill-fs.active{display:flex;}
-.dfs-round{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-align:center;padding-top:8px;}
-.dfs-timer{font-family:'Bebas Neue',sans-serif;font-size:15vw;line-height:1;color:#fff;text-align:center;margin-top:16px;}
-.dfs-punch{font-family:'Bebas Neue',sans-serif;font-size:40vw;line-height:0.85;color:#2a2a2a;text-align:center;margin-top:auto;margin-bottom:auto;transition:transform 0.1s ease-out,color 0.08s;}
-.dfs-punch.calling{color:var(--accent);transform:scale(1);}
-.dfs-punch.def-calling{color:var(--blue);}
-.dfs-end{position:absolute;bottom:max(48px,env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:0 32px;min-height:48px;display:flex;align-items:center;background:none;border:1px solid var(--dim2);border-radius:var(--rs);color:var(--dim);cursor:pointer;white-space:nowrap;}
+.dfs-round{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-align:center;width:100%;padding-top:max(24px,env(safe-area-inset-top,24px));padding-bottom:8px;}
+.dfs-timer{font-family:'Bebas Neue',sans-serif;font-size:15vw;line-height:1;color:#fff;text-align:center;}
+.dfs-punch{font-family:'Bebas Neue',sans-serif;font-size:40vw;line-height:1;color:#2a2a2a;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;}
+@keyframes punchIn{from{transform:scale(0.8);}to{transform:scale(1);}}
+.dfs-punch.calling{color:var(--accent);animation:punchIn 0.1s ease-out both;}
+.dfs-punch.def-calling{color:var(--blue);animation:punchIn 0.1s ease-out both;}
+.dfs-end{position:absolute;bottom:max(24px,env(safe-area-inset-bottom,24px));left:50%;transform:translateX(-50%);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:0 32px;min-height:48px;display:flex;align-items:center;background:none;border:1px solid var(--dim2);border-radius:var(--rs);color:var(--dim);cursor:pointer;white-space:nowrap;}
 /* NUMPAD OVERLAY */
 #numpad-ov{position:fixed;inset:0;z-index:700;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,0.7);opacity:0;pointer-events:none;transition:opacity 0.25s;}
 #numpad-ov.open{opacity:1;pointer-events:all;}
@@ -1861,7 +1862,32 @@ function loadComboForDrill(combo){stopDrill();currentDrillCombo=combo;renderDril
 function renderDrillDisplay(combo,activeIdx){const el=document.getElementById('drill-seq');if(!el)return;el.innerHTML=combo.seq.map((p,i)=>{const isD=typeof p==='string';const disp=isD?(DEF_DISP[p]||p):p;const sz=isD?'pc-def-sm':'pc-lg';return `<div class="pc ${sz} ${isD?'def':''} ${i===activeIdx?'lit':''} ${i<activeIdx?'done':''}">${disp}</div>`;}).join('');}
 function toggleDrill(){if(!currentDrillCombo){toast('Select a combo first',true);return;}if(drillRunning)stopDrill();else startDrill();}
 var drillRound=0,drillElapsed=0,drillElapsedInterval=null;
-function startDrill(){if(!currentDrillCombo)return;drillRunning=true;drillPunchIdx=0;drillRound=0;drillElapsed=0;const btn=document.getElementById('drill-main-btn');if(btn){btn.textContent='STOP DRILL';btn.className='db-main db-stop';}if(synth)synth.cancel();var fs=document.getElementById('drill-fs');if(fs){fs.classList.add('active');}updateDrillFsRound();clearInterval(drillElapsedInterval);drillElapsedInterval=setInterval(function(){drillElapsed++;var el=document.getElementById('dfs-timer');if(el)el.textContent=fmtSecs(drillElapsed);},1000);var timer=document.getElementById('dfs-timer');if(timer)timer.textContent='0:00';runDrillStep();}
+function startDrill(){
+  if(!currentDrillCombo)return;
+  drillRunning=true;drillPunchIdx=0;drillRound=0;drillElapsed=0;
+  var nav=document.querySelector('.nav');
+  var boxHdr=document.querySelector('#page-box .sh');
+  if(nav)nav.style.display='none';
+  if(boxHdr)boxHdr.style.display='none';
+  var fsEl=document.documentElement;
+  var fsReq=fsEl.requestFullscreen||fsEl.webkitRequestFullscreen||fsEl.mozRequestFullScreen;
+  if(fsReq){try{fsReq.call(fsEl).catch(function(){});}catch(e){}}
+  var btn=document.getElementById('drill-main-btn');
+  if(btn){btn.textContent='STOP DRILL';btn.className='db-main db-stop';}
+  if(synth)synth.cancel();
+  var fs=document.getElementById('drill-fs');
+  if(fs)fs.classList.add('active');
+  updateDrillFsRound();
+  var timer=document.getElementById('dfs-timer');
+  if(timer)timer.textContent='0:00';
+  clearInterval(drillElapsedInterval);
+  drillElapsedInterval=setInterval(function(){
+    drillElapsed++;
+    var el=document.getElementById('dfs-timer');
+    if(el)el.textContent=fmtSecs(drillElapsed);
+  },1000);
+  runDrillStep();
+}
 function getTempoMs(){return 2000-(tempoValue-1)*(1600/9);}
 function runDrillStep(){if(!drillRunning)return;const seq=currentDrillCombo.seq;if(drillPunchIdx>=seq.length){renderDrillDisplay(currentDrillCombo,-1);updateDrillFS('');if(Math.random()<0.2)speakCoachQuip();drillPunchIdx=0;drillRound++;updateDrillFsRound();drillInterval=setTimeout(runDrillStep,getTempoMs()*2);return;}const punch=seq[drillPunchIdx];renderDrillDisplay(currentDrillCombo,drillPunchIdx);updateDrillFS(punch);callPunch(punch);drillPunchIdx++;const isD=typeof punch==='string';drillInterval=setTimeout(runDrillStep,isD?getTempoMs()*1.3:getTempoMs());}
 function updateDrillFsRound(){var el=document.getElementById('dfs-round');if(el)el.textContent='ROUND '+(drillRound+1);}
@@ -1872,10 +1898,29 @@ function updateDrillFS(punch){
   var isD=typeof punch==='string';
   var disp=isD?(DEF_DISP[punch]||punch):punch;
   fp.textContent=disp;
+  fp.className='dfs-punch';
+  void fp.offsetWidth;
   fp.className='dfs-punch calling'+(isD?' def-calling':'');
   setTimeout(function(){if(fp)fp.className='dfs-punch';},getTempoMs()*0.8);
 }
-function stopDrill(){drillRunning=false;clearTimeout(drillInterval);clearInterval(drillElapsedInterval);if(synth)synth.cancel();const btn=document.getElementById('drill-main-btn');if(btn){btn.textContent='START DRILL';btn.className='db-main db-go';}if(currentDrillCombo)renderDrillDisplay(currentDrillCombo,-1);var fs=document.getElementById('drill-fs');if(fs)fs.classList.remove('active');updateDrillFS('');}
+function stopDrill(){
+  drillRunning=false;clearTimeout(drillInterval);clearInterval(drillElapsedInterval);
+  if(synth)synth.cancel();
+  var nav=document.querySelector('.nav');
+  var boxHdr=document.querySelector('#page-box .sh');
+  if(nav)nav.style.display='';
+  if(boxHdr)boxHdr.style.display='';
+  if(document.fullscreenElement||document.webkitFullscreenElement){
+    var exitFs=document.exitFullscreen||document.webkitExitFullscreen;
+    if(exitFs){try{exitFs.call(document).catch(function(){});}catch(e){}}
+  }
+  var fs=document.getElementById('drill-fs');
+  if(fs)fs.classList.remove('active');
+  var btn=document.getElementById('drill-main-btn');
+  if(btn){btn.textContent='START DRILL';btn.className='db-main db-go';}
+  if(currentDrillCombo)renderDrillDisplay(currentDrillCombo,-1);
+  updateDrillFS('');
+}
 function nextCombo(){stopDrill();if(!currentComboList.length)return;currentComboIdx=(currentComboIdx+1)%currentComboList.length;loadComboForDrill(currentComboList[currentComboIdx]);}
 function drillRandom(){stopDrill();const tier=COMBO_TIERS[currentTier==='legends'||currentTier==='mycombos'?'basics':currentTier];const all=[...(tier?.combos||[]),...getCustomCombos()];if(!all.length)return;const combo=all[Math.floor(Math.random()*all.length)];currentComboList=all;currentComboIdx=all.indexOf(combo);loadComboForDrill(combo);toast('Random — '+combo.name);}
 

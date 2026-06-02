@@ -6,7 +6,7 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 8.0.0. Single file: `index.html`. Stable and deployed. Step 1 of a phased build plan.
+Version 9.0.0. Single file: `index.html`. Stable and deployed. BOX tab fully rebuilt per BOX_TAB_REQUIREMENTS.md — FREESTYLE timer, DRILL combo coach, LEARN reference section, My Combos keypad builder, boxing bell audio embedded.
 
 ---
 

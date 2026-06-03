@@ -1291,8 +1291,8 @@ const EQUIP_OPTIONS=[
   {id:'bags',label:'Punch Bags'},{id:'bodyweight',label:'Bodyweight'},
 ];
 const PUNCH_NAMES={1:'Jab',2:'Cross',3:'Left Hook',4:'Right Hook',5:'Left Uppercut',6:'Right Uppercut'};
-const DEF_DISP={'slip-l':'SL','slip-r':'SR','roll':'RL','step':'ST'};
-const DEF_CALL={'slip-l':'Slip left','slip-r':'Slip right','roll':'Roll','step':'Step out'};
+const DEF_DISP={'slip-l':'SL','slip-r':'SR','roll':'RL','roll-r':'RR','step':'ST'};
+const DEF_CALL={'slip-l':'Slip left','slip-r':'Slip right','roll':'Roll left','roll-r':'Roll right','step':'Step out'};
 const COMBO_TIERS={
   basics:{label:'Basics',intro:'Start here. Clean punches, good habits.',combos:[
     {name:'The Jab',seq:[1],desc:'Single jab. Snap it out, bring it back.'},
@@ -1344,59 +1344,57 @@ const COMBO_TIERS={
   ]},
 };
 const LEGEND_COMBOS=[
-  {name:'Muhammad Ali',style:'Float like a butterfly, sting like a bee',
-   intro:"Ali built combinations on speed and range. The jab was his paintbrush.",
+  {name:'Muhammad Ali · Joe Frazier · Sonny Liston',style:'The heavyweight era that defined the sport',
+   intro:"Ali floated and stung. Frazier came forward and never stopped. Liston stalked. Three different philosophies, three different ways to be dangerous.",
    combos:[
-    {name:'The Louisville Lip',seq:[1,1,1,2],desc:'Triple jab, then the cross.'},
-    {name:'Ali Shuffle Counter',seq:['step',1,2],desc:'Shuffle to create angle, then jab-cross.'},
-    {name:'Float and Sting',seq:[1,1,2,1],desc:'Two jabs, cross, reset jab.'},
-    {name:'Rope-a-Dope Counter',seq:['roll','roll',2,3],desc:'Two rolls, then explode.'},
-    {name:'Speed Combination',seq:[1,2,1,2,1],desc:'Five punches, blink and you miss it.'},
-  ]},
-  {name:'Mike Tyson',style:'Bad intentions. Every single time.',
-   intro:"Tyson came forward, came low, came with bad intentions.",
-   combos:[
-    {name:'Peek-a-Boo Basic',seq:['roll',1,2,3],desc:'Roll under, come up with jab-cross-hook.'},
-    {name:'Tyson Body Attack',seq:[1,3,2],desc:'Jab to open the guard, body hook, cross.'},
-    {name:'The Uppercut Trap',seq:[1,2,5,3],desc:'Jab-cross, then uppercut and hook.'},
-    {name:'Controlled Violence',seq:['roll',3,2,3],desc:'Roll in tight, left hook-cross-left hook.'},
-    {name:'The Baddest Man',seq:[1,1,2,3,2,3],desc:'Double jab, then four shots.'},
-  ]},
-  {name:'Manny Pacquiao',style:'Relentless angles and impossible volume',
-   intro:"Pacquiao did not box in straight lines. Volume and angles.",
-   combos:[
-    {name:'The Pacquiao Angle',seq:[1,2,'step',1,2,3],desc:'One-two, step to angle, one-two-three.'},
-    {name:'Southpaw Blitz',seq:[2,3,2,3,2],desc:'Cross-hook-cross-hook-cross. Pure volume.'},
-    {name:'Body to Head',seq:[2,3,2],desc:'Body cross, body hook, head cross.'},
-    {name:'The Diagonal Entry',seq:['step',1,2,3,2],desc:'Step to diagonal angle, then four shots.'},
-    {name:'Relentless Pressure',seq:[1,2,3,2,3,2],desc:'Six punches in a blitz.'},
-  ]},
-  {name:'Canelo Alvarez',style:'Patient, accurate, then devastating',
-   intro:"Canelo waits. He reads, slips, rolls, and then punishes.",
-   combos:[
-    {name:'The Canelo Counter',seq:['slip-r',2,3,2],desc:'Slip outside the jab, cross-hook-cross.'},
-    {name:'Roll and Uppercut',seq:['roll',5,2,3],desc:'Roll under, left uppercut, cross, hook.'},
-    {name:'Body Shot Counter',seq:['slip-l',3,2],desc:'Slip inside, body hook, cross upstairs.'},
-    {name:'The Mexican Style',seq:[1,2,3,2,3],desc:'Jab-cross-hook-cross-hook.'},
-    {name:'Patient Counter',seq:['slip-r','roll',2,5,3],desc:'Slip, roll, cross, uppercut, hook.'},
-  ]},
-  {name:'Floyd Patterson',style:'Peek-a-boo with explosive upward movement',
-   intro:"Patterson brought the peek-a-boo to boxing. He ducked low, absorbed on his arms, and exploded upward. The body was always the setup.",
-   combos:[
-    {name:'The Gazelle',seq:[1,'b2',1,2],desc:'Jab, body cross, reset jab, cross. Floyd used the body to open the head.'},
-    {name:'Body-Head Floyd',seq:['b3','b2',2,3],desc:'Body hook, body cross, then cross and hook upstairs. Drain the body first.'},
-    {name:'Peek-a-Boo Blitz',seq:['roll',1,2,3,2],desc:'Roll under their cross, explode out with jab-cross-hook-cross. Fast entry.'},
-    {name:'Patterson Counter',seq:['slip-r',2,'b3',2],desc:'Slip their jab, cross to the head, body hook, cross back upstairs.'},
-    {name:'The Tornado',seq:[1,2,'roll',3,2,3],desc:'One-two, roll under the counter, come up with three shots. Keep rolling forward.'},
+    {name:'The Ali Shuffle Entry',seq:[1,1,2,3,2],desc:'Double jab to create confusion, cross-hook-cross to finish. Stay light on your feet.'},
+    {name:'The Frazier Pressure',seq:[1,2,'b2',3],desc:'Standard opener, body cross to drop the guard, lead hook upstairs. Keep moving forward.'},
+    {name:'The Liston Stalk',seq:[1,2,'b3','b4',2,3],desc:'Systematic body work to break down the guard, finish upstairs. Stay patient.'},
    ]},
-  {name:'Sugar Ray Leonard',style:'Speed, footwork and explosive burst combinations',
-   intro:"Leonard moved beautifully, but when he stopped moving, he unloaded. The step-and-angle was his trademark — find the position, then detonate.",
+  {name:'Mike Tyson · George Foreman',style:'Power punchers. They ended fights.',
+   intro:"Tyson used the peek-a-boo to get inside and do damage. Foreman used his jab to measure range and his right hand to close the show.",
    combos:[
-    {name:'The Sugar Ray Flurry',seq:[1,2,3,2,3,2,1],desc:'Seven punches, full commitment. Throw these when the opening is there — all of them.'},
-    {name:'Body-Head Leonard',seq:['b2','b3',3,2,3],desc:'Two body shots to pull the guard down, then three-punch head combination.'},
-    {name:'Step and Punish',seq:['step',1,2,3,2,3],desc:'Step to the angle, then five shots. Finding the position is half the job.'},
-    {name:'Leonard Counter',seq:['slip-r',2,3,2,'step',1,2],desc:'Slip, three shots, step off the line, two more. Never be where they expect you.'},
-    {name:'Sweet Science',seq:[1,'b3',2,'roll',3,2],desc:'Jab, body hook, cross, roll under the counter, left hook, cross. Textbook inside work.'},
+    {name:'The Tyson Peek-a-Boo',seq:[1,'slip-l',2,3],desc:'Jab to draw the counter, slip outside, cross and hook together. Get in close.'},
+    {name:'The Foreman Closer',seq:[1,2,'b3',2],desc:'Establish range with jab-cross, body hook to bend them, finishing cross. Power through.'},
+   ]},
+  {name:'Sugar Ray Leonard · Thomas Hearns',style:'The greatest welterweight rivalry',
+   intro:"Leonard had everything — hand speed, footwork, power and intelligence. Hearns had the reach, the jab and a right hand that could end any fight at any moment.",
+   combos:[
+    {name:'The Sugar Ray',seq:[1,2,'roll',3,2],desc:'Jab-cross, roll under the hook, come back with hook-cross. Rhythm is everything.'},
+    {name:'The Leonard Feint',seq:[1,1,'slip-l',2,5,3],desc:'Double jab feint, slip your own line, cross-lead uppercut-hook. Catch them guessing.'},
+    {name:'The Hearns',seq:[1,2,3,2],desc:'Simple but thrown at maximum power. Every punch a threat. The right hand ends it.'},
+   ]},
+  {name:'Marvin Hagler · Roberto Duran · Bernard Hopkins',style:'Middleweights who mixed levels and never backed down',
+   intro:"Hagler marched forward and alternated head and body constantly. Duran came in low and made you feel every punch. Hopkins was a tactician who smothered and picked his shots.",
+   combos:[
+    {name:'The Hagler March',seq:[1,'b2',3,'b4',2],desc:'Alternate head and body throughout. Never stay on one level. Keep walking them down.'},
+    {name:'The Duran Brawl',seq:['b1','b2',3,2],desc:'Come in low with body jabs and crosses, hook upstairs to straighten them up, finishing cross.'},
+    {name:'The Hopkins Smother',seq:[1,2,'roll-r','b2',3],desc:'Jab-cross, roll away from the counter, body cross and hook. Control the distance.'},
+   ]},
+  {name:'Floyd Mayweather · Andre Ward · Joe Calzaghe',style:'Defence is offence. Volume and intelligence win fights.',
+   intro:"Mayweather made the shoulder roll a weapon. Ward won every close fight because he never wasted a punch. Calzaghe threw more punches than anyone and never let you settle.",
+   combos:[
+    {name:'The Mayweather Counter',seq:['slip-l',2,3,2],desc:'Slip the jab, shoulder roll into cross-hook-cross. Defence into offence.'},
+    {name:'The Ward Control',seq:[1,'slip-l','b2',3,2],desc:'Jab to establish, slip, go to the body, come back upstairs with hook-cross. Surgical.'},
+    {name:'The Calzaghe Volume',seq:[1,2,3,4,1,2],desc:'High output combination. Speed over power. Keep the pressure constant.'},
+   ]},
+  {name:'Manny Pacquiao · Amir Khan · Oscar De La Hoya · Julio César Chávez',style:'World beaters with different approaches, same result',
+   intro:"Pacquiao brought angles and relentless output. Khan brought speed and explosive entries. De La Hoya combined elegance with power. Chávez cut off the ring and wore you down.",
+   combos:[
+    {name:'The Pacquiao Blitz',seq:[1,2,3,2,3,2],desc:'Six punch combination at full pace. Every punch sets up the next. Don\'t stop.'},
+    {name:'The Khan Entry',seq:[1,1,2,'roll',3,2,3],desc:'Double jab to get in range, cross, roll under, three punch finish. Explosive start.'},
+    {name:'The De La Hoya',seq:[1,2,3,'slip-l',2,3],desc:'Classic combination, slip outside, double up on the finish. Stay balanced throughout.'},
+    {name:'The Chavez Cut Off',seq:[1,2,'b2','b3',2],desc:'Use the jab to cut off the ring, attack the body to slow them down, finish with the cross.'},
+   ]},
+  {name:'Canelo Álvarez',style:'Patient, accurate, then devastating.',
+   intro:"Canelo waits longer than you expect, then makes you pay harder than you expected. The body attack is a trap — the head shot comes when your guard drops to protect the ribs.",
+   combos:[
+    {name:'The Canelo Switch',seq:[1,2,'roll','b3',2,3],desc:'Jab-cross, roll under the return, body hook, cross, lead hook. Read their reaction.'},
+   ]},
+  {name:'The Championship Round',style:'Save this for when you\'re ready.',
+   intro:"Eight punches in sequence. Not for beginners. Throw it clean or don't throw it at all — half-hearted combinations are worse than no combination.",
+   combos:[
+    {name:'The Championship Round',seq:[1,1,2,3,2,5,3,2],desc:'Eight punch combination. Save this for when you\'re fit and fast enough to throw it clean.'},
    ]},
 ];
 const TIER_DESCS={basics:'Single punches and fundamental combinations',amateur:'Two and three punch combinations with movement',pro:'Four and five punch combinations',champ:'Complex combinations with defensive moves',legends:'Elite level — championship combinations',mycombos:'Combinations you\'ve built and saved'};

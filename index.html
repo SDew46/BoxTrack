@@ -945,7 +945,6 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
       <div class="sg">
         <div class="sr"><div style="flex:1"><div class="sr-lbl">App Name</div><div class="sr-sub">Shown in the header</div></div><input class="brand-inp" type="text" id="brand-name-inp" placeholder="8RB by 8 Rounds Boxing" oninput="saveBrandName()"></div>
         <div class="sr" style="flex-direction:column;align-items:flex-start;gap:8px"><div class="sr-lbl">Accent Colour</div><div class="swatches" id="color-swatches"></div></div>
-        <div class="sr"><div style="flex:1"><div class="sr-lbl">Logo</div><div class="sr-sub">Replaces wordmark in header</div></div><div style="display:flex;align-items:center;gap:7px"><img id="logo-preview-img" style="display:none;width:34px;height:34px;border-radius:6px;object-fit:cover;border:1px solid var(--border)"><button class="sr-act" onclick="document.getElementById('logo-upload').click()">UPLOAD</button><button class="sr-act" onclick="clearLogo()">CLEAR</button><input type="file" id="logo-upload" accept="image/*" style="display:none" onchange="handleLogoUpload(event)"></div></div>
       </div>
       <div class="sec-lbl">Units</div>
       <div class="sg"><div class="sr"><div class="sr-lbl">Weight Units</div><div class="unit-seg"><button class="us on" id="unit-kg" onclick="setUnit('kg')">kg</button><button class="us" id="unit-lbs" onclick="setUnit('lbs')">lbs</button></div></div></div>
@@ -1495,26 +1494,19 @@ function initBranding(){
   const cur=ld('accentColor','#E63946');
   sw.innerHTML=ACCENT_COLORS.map(c=>`<div class="sw ${c.val===cur?'on':''}" style="background:${c.val}" onclick="setAccent('${c.val}')"></div>`).join('');
   const inp=document.getElementById('brand-name-inp');if(inp){const n=ld('appName','');if(n)inp.value=n;}
-  const logo=ld('appLogo','');if(logo){const img=document.getElementById('logo-preview-img');if(img){img.src=logo;img.style.display='block';}}
 }
 function applyBranding(){
-  const color=ld('accentColor','#E63946'),logo=ld('appLogo',''),name=ld('appName','')||'8RB';
+  const color=ld('accentColor','#E63946'),name=ld('appName','')||'8RB';
   document.documentElement.style.setProperty('--accent',color);
   const el=document.getElementById('train-title');
   if(el){
-    if(logo){
-      el.innerHTML='<img src="'+logo+'" style="height:38px;object-fit:contain;max-width:180px">';
-    } else {
-      var sub=name==='8RB'?'by 8 Rounds Boxing':'';
-      el.innerHTML='<div class="sh-wordmark-main">'+name+'</div>'+(sub?'<div class="sh-wordmark-sub">'+sub+'</div>':'');
-    }
+    var sub=name==='8RB'?'by 8 Rounds Boxing':'';
+    el.innerHTML='<div class="sh-wordmark-main">'+name+'</div>'+(sub?'<div class="sh-wordmark-sub">'+sub+'</div>':'');
   }
   const eye=document.getElementById('train-eye');if(eye)eye.style.color=color;
 }
 function saveBrandName(){sv('appName',document.getElementById('brand-name-inp')?.value||'');applyBranding();}
 function setAccent(val){sv('accentColor',val);document.querySelectorAll('.sw').forEach(s=>s.classList.toggle('on',s.style.background===val||s.style.backgroundColor===val));applyBranding();toast('Accent colour updated');}
-function handleLogoUpload(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{sv('appLogo',ev.target.result);const img=document.getElementById('logo-preview-img');if(img){img.src=ev.target.result;img.style.display='block';}applyBranding();toast('Logo updated');};r.readAsDataURL(f);e.target.value='';}
-function clearLogo(){sv('appLogo','');const img=document.getElementById('logo-preview-img');if(img){img.src='';img.style.display='none';}applyBranding();}
 function openSettings(){initBranding();renderSettingsPanel();document.getElementById('settings-ov').classList.add('open');}
 function closeSettings(e){if(e&&e.target!==document.getElementById('settings-ov'))return;document.getElementById('settings-ov').classList.remove('open');}
 function closeSettingsBtn(){document.getElementById('settings-ov').classList.remove('open');}

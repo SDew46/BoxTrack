@@ -209,6 +209,11 @@ To see the splash screen again, close and reopen the incognito window.
 
 Note: `npx serve` does not work — npm folder missing on this machine.
 
+### Service Worker Update Behaviour
+Confirmed working as of v9.0.0. `skipWaiting()` and `clients.claim()` implemented in `sw.js`. Updates reach the installed PWA within one or two app opens after a push — no manual cache clearing required for users.
+
+For development: Chrome DevTools `F12` → Application → Service Workers → tick **Update on reload** to force SW updates on every refresh during active development. Untick when done.
+
 ---
 
 ## Deployment

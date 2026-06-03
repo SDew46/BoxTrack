@@ -6,7 +6,17 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 9.0.0. Single file: `index.html`. Stable and deployed. BOX tab fully rebuilt per BOX_TAB_REQUIREMENTS.md — FREESTYLE timer, DRILL combo coach, LEARN reference section, My Combos keypad builder, boxing bell audio embedded.
+Version 9.0.0. Modular file structure (completed June 2026 — not yet pushed/deployed). BOX tab fully rebuilt per BOX_TAB_REQUIREMENTS.md — FREESTYLE timer, DRILL combo coach, LEARN reference section, My Combos keypad builder, boxing bell audio embedded.
+
+**Modular split status — all complete, acorn clean, not yet pushed:**
+- `styles.css` — all CSS (54 KB)
+- `data.js` — all data constants (36 KB)
+- `app.js` — shared state, storage, nav, branding, settings, service worker (12 KB)
+- `train.js` — train tab logic (45 KB)
+- `box.js` — box tab logic (60 KB)
+- `progress.js` — progress tab logic (12 KB)
+- `index.html` — HTML skeleton + script tags only, no inline JS or CSS (34 KB)
+- `sw.js` — bumped to v12, all new assets in STATIC_ASSETS pre-cache list
 
 ---
 
@@ -122,7 +132,9 @@ Steve has a cyber security background and this is a hard requirement, not an aft
 ## Technical Stack
 
 ### Current
-- Single file: `index.html` (vanilla JS, no frameworks, no build step)
+- Multi-file structure: `index.html` (HTML only) + `styles.css` + `data.js` + `app.js` + `train.js` + `box.js` + `progress.js`
+- Plain `<script src="...">` tags — no ES modules, no build step, global scope shared across files
+- Load order: data.js → app.js → train.js → box.js → progress.js → inline INIT block
 - CSS custom properties for theming
 - localStorage for all data persistence
 - GitHub Pages deployment
@@ -153,9 +165,13 @@ Steve has a cyber security background and this is a hard requirement, not an aft
 ## JS Rules — Critical
 
 ### 1. Always run acorn syntax check after any JS change
+
+Run from the project directory (`C:\Users\Steve D\botrack app\BoxTrack`):
 ```
-node -e "const acorn=require('acorn');const fs=require('fs');const html=fs.readFileSync('index.html','utf8');const match=html.match(/<script>([\s\S]*?)<\/script>/);try{acorn.parse(match[1],{ecmaVersion:2020});console.log('CLEAN');}catch(e){console.log('ERROR line',e.loc?.line,e.message);}"
+node -e "const acorn=require('acorn'),fs=require('fs'),path=require('path');['data.js','app.js','train.js','box.js','progress.js'].forEach(f=>{const code=fs.readFileSync(f,'utf8');try{acorn.parse(code,{ecmaVersion:2020});console.log(f+' CLEAN');}catch(e){console.log(f+' ERROR line '+(e.loc&&e.loc.line)+': '+e.message);}});"
 ```
+
+Or save a temp file `acorn_check.js` in the project dir and run `node acorn_check.js` (avoids path-with-spaces issues in PowerShell).
 
 ### 2. No nested template literals inside ${} expressions
 Use string concatenation or extract to a variable instead of nesting backtick template literals.
@@ -171,11 +187,21 @@ Update version number in the settings overlay. Current: 7.0.0.
 
 ---
 
-## Current Architecture — Key Sections in index.html
-- TRAIN tab — session selector, equipment picker, progression model, coach's notes
-- BOX tab — round timer (Timer Only / Timer + Coach modes), combo library tiers
-- PROGRESS tab — streak card, strength lift tracking, recent sessions, boxing log
-- Overlays — settings, plate calculator, rest picker, plan ref, swap modal
+## Current Architecture
+
+`index.html` — HTML skeleton only: splash, nav, all tab HTML, overlays, onboarding. No inline JS or CSS.
+
+`styles.css` — all CSS custom properties, component styles, animations.
+
+`data.js` — all static data constants: SESSION_NAMES, EXERCISE_LIBRARY, SESSIONS, CAT_META, TRACKED_LIFTS, EQUIP_OPTIONS, PUNCH_NAMES, DEF_DISP, DEF_CALL, COMBO_TIERS, LEGEND_COMBOS, TIER_DESCS, CORNER_QUOTES, ACCENT_COLORS.
+
+`app.js` — shared state declarations, localStorage utils (ld/sv), formatting helpers (fmtWt/fmtDate/fmtSecs), toast, nav (showPage/openOverlay/closeOverlay), branding (initBranding/applyBranding/setAccent), settings panel render, data export/import/clear, service worker registration.
+
+`train.js` — deload, equipment picker, session library, swap modal, log view, plan ref overlay, warmup timer, log form (sets/reps/weights/rest), history, session complete, custom session builder (CSB).
+
+`box.js` — box tab navigation, freestyle round timer (FREESTYLE), drill combo coach (DRILL), combo learn reference (LEARN), combo builder keypad, voice coach, bell audio.
+
+`progress.js` — streak, lift PRs with chart, recent sessions, boxing log, boxing session delete.
 
 ## Tracked Lifts — all use gold, display full session name not abbreviation
 - Back Squat — Ground Up

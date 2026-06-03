@@ -2645,9 +2645,39 @@ function clearAll(){if(!confirm('Delete ALL data? Cannot be undone.'))return;loc
 
 // SERVICE WORKER
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/BoxTrack/sw.js').catch(()=>{});
-    navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
+  window.addEventListener('load',function(){
+    // Track whether a SW was already controlling this page before registration.
+    // Used to distinguish first install (no reload needed) from updates (reload needed).
+    var hadController=!!navigator.serviceWorker.controller;
+    // Single-fire reload guard — prevents double-reload if both updatefound
+    // and controllerchange fire for the same update.
+    var reloadPending=false;
+    function reloadOnce(){if(!reloadPending){reloadPending=true;window.location.reload();}}
+
+    navigator.serviceWorker.register('/BoxTrack/sw.js').then(function(reg){
+      // Force the browser to check for an updated sw.js on every page load.
+      // Without this, the browser may wait up to 24 h between checks.
+      reg.update();
+      // Detect a new SW being installed during this session.
+      reg.addEventListener('updatefound',function(){
+        var newWorker=reg.installing;
+        if(!newWorker)return;
+        newWorker.addEventListener('statechange',function(){
+          // New SW finished installing. If something was already in control,
+          // reload now — skipWaiting() in sw.js will have activated it.
+          if(newWorker.state==='installed'&&navigator.serviceWorker.controller){
+            reloadOnce();
+          }
+        });
+      });
+    }).catch(function(){});
+
+    // Backup: reload when the controlling SW actually changes.
+    // hadController guard prevents a reload on the very first SW install.
+    navigator.serviceWorker.addEventListener('controllerchange',function(){
+      if(hadController)reloadOnce();
+      hadController=true;
+    });
   });
 }
 

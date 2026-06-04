@@ -1,12 +1,12 @@
-﻿const SESSION_NAMES={
+﻿export const SESSION_NAMES={
   GU1:'Squat Day',GU2:'Goblet Day',GU3:'Unilateral Day',
   TD1:'Deadlift Day',TD2:'Push Day',TD3:'Upper Body Day',
   CORE1:'Core Session',CORE2:'Core Session',CORE3:'Core Session',
   BW1:'Bodyweight Session',BW2:'Bodyweight Session',BW3:'Bodyweight Session',
   CUSTOM:'Custom Session'
 };
-function getSessName(id){return SESSION_NAMES[id]||id;}
-const EXERCISE_LIBRARY=[
+export function getSessName(id){return SESSION_NAMES[id]||id;}
+export const EXERCISE_LIBRARY=[
   {name:'Back Squat',cat:'GU',equip:['barbell'],muscles:'Quads, glutes, hamstrings'},
   {name:'Romanian Deadlift',cat:'GU',equip:['barbell','dumbbells'],muscles:'Hamstrings, glutes'},
   {name:'Conventional Deadlift',cat:'GU',equip:['barbell'],muscles:'Full posterior chain'},
@@ -87,7 +87,7 @@ const EXERCISE_LIBRARY=[
   {name:'Shadow Box',cat:'BW',equip:['bodyweight'],muscles:'Conditioning, boxing technique'},
   {name:'Jump Rope',cat:'BW',equip:['bodyweight'],muscles:'Cardio, footwork, coordination'},
 ];
-const SESSIONS=[
+export const SESSIONS=[
   {id:'GU1',cat:'GU',name:'GU1 — Barbell',sub:'Back squat led · Barbell focus',equip:['barbell','dumbbells','landmine','bags'],
    warmup:[{name:'Hip 90/90 Rotations',secs:40},{name:'Goblet Squat Hold',secs:30},{name:'Shadow Box',secs:90}],
    exercises:[
@@ -199,30 +199,30 @@ const SESSIONS=[
     {name:'Jump Rope',scheme:'3×90s',rest:45,note:'Double-unders when comfortable.',alts:[{name:'Shadow Box',reason:'If no rope.'}]},
    ],finisher:'3 rounds: 30s shadow box, 10 burpees, 60s rest.'},
 ];
-const CAT_META={
+export const CAT_META={
   GU:{label:'Ground Up',color:'var(--red)',abtn:'ab-r'},
   TD:{label:'Top Down',color:'var(--blue)',abtn:'ab-b'},
   CORE:{label:'Core',color:'var(--green)',abtn:'ab-gr'},
   BW:{label:'Bodyweight',color:'var(--muted)',abtn:'ab-gh'},
   CUSTOM:{label:'Custom',color:'var(--purple)',abtn:'ab-p'},
 };
-const TRACKED_LIFTS=[
+export const TRACKED_LIFTS=[
   {name:'Back Squat',color:'#E6A817',sess:'GU',sessLabel:'Ground Up'},
   {name:'Barbell Deadlift',color:'#E6A817',sess:'TD',sessLabel:'Top Down'},
   {name:'Barbell Bench Press',color:'#E6A817',sess:'TD',sessLabel:'Top Down'},
   {name:'Romanian Deadlift',color:'#E6A817',sess:'GU',sessLabel:'Ground Up'},
   {name:'Weighted Pull-Ups',color:'#E6A817',sess:'TD',sessLabel:'Top Down'},
 ];
-const EQUIP_OPTIONS=[
+export const EQUIP_OPTIONS=[
   {id:'barbell',label:'Barbell & Rack'},{id:'dumbbells',label:'Dumbbells'},
   {id:'kettlebells',label:'Kettlebells'},{id:'ezbar',label:'EZ Bar'},
   {id:'pullupbar',label:'Pull-Up Bar'},{id:'landmine',label:'Landmine'},
   {id:'bags',label:'Punch Bags'},{id:'bodyweight',label:'Bodyweight'},
 ];
-const PUNCH_NAMES={1:'Jab',2:'Cross',3:'Left Hook',4:'Right Hook',5:'Left Uppercut',6:'Right Uppercut'};
-const DEF_DISP={'slip-l':'SL','slip-r':'SR','roll':'RL','roll-r':'RR','step':'ST'};
-const DEF_CALL={'slip-l':'Slip left','slip-r':'Slip right','roll':'Roll left','roll-r':'Roll right','step':'Step out'};
-const COMBO_TIERS={
+export const PUNCH_NAMES={1:'Jab',2:'Cross',3:'Left Hook',4:'Right Hook',5:'Left Uppercut',6:'Right Uppercut'};
+export const DEF_DISP={'slip-l':'SL','slip-r':'SR','roll':'RL','roll-r':'RR','step':'ST'};
+export const DEF_CALL={'slip-l':'Slip left','slip-r':'Slip right','roll':'Roll left','roll-r':'Roll right','step':'Step out'};
+export const COMBO_TIERS={
   basics:{label:'Basics',intro:'Start here. Clean punches, good habits.',combos:[
     {name:'The Jab',seq:[1],desc:'Single jab. Snap it out, bring it back.'},
     {name:'The Cross',seq:[2],desc:'Single right hand. Power from the hip.'},
@@ -272,7 +272,7 @@ const COMBO_TIERS={
     {name:'The Championship Round',seq:[1,1,2,3,2,5,3,2],desc:'Eight punches. Leave nothing in the tank.'},
   ]},
 };
-const LEGEND_COMBOS=[
+export const LEGEND_COMBOS=[
   {name:'Muhammad Ali',style:'Float like a butterfly, sting like a bee',
    intro:"Ali built everything on speed, feints and angles. The jab was his paintbrush — it measured range, set up the cross, and kept opponents honest. Stay light on your feet.",
    combos:[
@@ -370,8 +370,8 @@ const LEGEND_COMBOS=[
     {name:'The Championship Round',seq:[1,1,2,3,2,5,3,2],desc:'Eight punch combination. Save this for when you\'re fit and fast enough to throw it clean.'},
    ]},
 ];
-const TIER_DESCS={basics:'Single punches and fundamental combinations',amateur:'Two and three punch combinations with movement',pro:'Four and five punch combinations',champ:'Complex combinations with defensive moves',legends:'Elite level — championship combinations',mycombos:'Combinations you\'ve built and saved'};
-const CORNER_QUOTES=[
+export const TIER_DESCS={basics:'Single punches and fundamental combinations',amateur:'Two and three punch combinations with movement',pro:'Four and five punch combinations',champ:'Complex combinations with defensive moves',legends:'Elite level — championship combinations',mycombos:'Combinations you\'ve built and saved'};
+export const CORNER_QUOTES=[
   {text:"Every round you survive is a round you've won.",attr:"Corner"},
   {text:"You're not tired. Tired is a feeling. Right now you're just working.",attr:"Corner"},
   {text:"Keep your hands up. Every. Single. Second.",attr:"Corner"},
@@ -385,4 +385,4 @@ const CORNER_QUOTES=[
   {text:"The jab. Use the jab. Everything starts with the jab.",attr:"Corner"},
   {text:"Anyone can be beaten. The question is whether you believe it.",attr:"Corner"},
 ];
-const ACCENT_COLORS=[{val:'#E63946'},{val:'#457B9D'},{val:'#E6A817'},{val:'#2ecc71'},{val:'#8B5CF6'},{val:'#F4623A'},{val:'#0EA5E9'},{val:'#f0f0f0'}];
+export const ACCENT_COLORS=[{val:'#E63946'},{val:'#457B9D'},{val:'#E6A817'},{val:'#2ecc71'},{val:'#8B5CF6'},{val:'#F4623A'},{val:'#0EA5E9'},{val:'#f0f0f0'}];

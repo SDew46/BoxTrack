@@ -6,17 +6,62 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 9.0.0. Modular file structure (completed June 2026 — not yet pushed/deployed). BOX tab fully rebuilt per BOX_TAB_REQUIREMENTS.md — FREESTYLE timer, DRILL combo coach, LEARN reference section, My Combos keypad builder, boxing bell audio embedded.
+Version 10.0.0. Step 2 (Firebase backend) complete — not yet pushed/deployed.
 
-**Modular split status — all complete, acorn clean, not yet pushed:**
-- `styles.css` — all CSS (54 KB)
-- `data.js` — all data constants (36 KB)
-- `app.js` — shared state, storage, nav, branding, settings, service worker (12 KB)
-- `train.js` — train tab logic (45 KB)
-- `box.js` — box tab logic (60 KB)
-- `progress.js` — progress tab logic (12 KB)
-- `index.html` — HTML skeleton + script tags only, no inline JS or CSS (34 KB)
-- `sw.js` — bumped to v12, all new assets in STATIC_ASSETS pre-cache list
+**File structure — all ES modules, all acorn clean:**
+- `styles.css` — all CSS, includes Step 2 auth + offline indicator styles
+- `firebase.js` — Firebase app init, exports `auth` and `db`
+- `data.js` — all data constants, all exported
+- `app.js` — auth state, Firestore user data cache, shared utilities, nav, branding, settings
+- `train.js` — train tab logic, Firestore session writes
+- `box.js` — box tab logic, Firestore boxing session + combo writes
+- `progress.js` — progress tab logic, reads from Firestore via userDataCache
+- `index.html` — HTML skeleton with importmap, all scripts `type="module"`, auth screens
+- `admin.html` — coach admin interface (Coach's Notes), separate file at `/BoxTrack/admin.html`
+- `firestore.rules` — Firestore security rules (deploy via Firebase console or CLI)
+- `sw.js` — v13, firebase.js + admin.html added to STATIC_ASSETS pre-cache
+
+**Firebase project:**
+- Project ID: `rb-boxing`
+- Auth domain: `rb-boxing.firebaseapp.com`
+- Firestore region: europe-west2 (London)
+- Auth methods: Google sign-in + email/password (email verification required)
+- Authorised domain: sdew46.github.io
+
+**Coach role assignment — MANUAL ONLY, never through the app:**
+1. Coach creates account normally → gets `role: "member"` automatically
+2. Steve opens Firebase console → Firestore → users → coach's userId → profile → data
+3. Manually change `role` from "member" to "coach"
+4. Security rules enforce this — impossible to elevate through the app
+
+**Admin URL:** `https://sdew46.github.io/BoxTrack/admin.html`
+
+**Conflict resolution assumption:** Firebase last-write-wins for session data. Acceptable — a member is unlikely to log the same session simultaneously on two devices.
+
+**Step 2 testing results (June 2026):**
+- ✓ Google sign-in — works end to end
+- ✓ Email/password sign-in — works (see known issue below)
+- ✓ Session data saves to Firestore and appears in console
+- ✓ Coach role set manually, admin route accessible
+- ✓ Coach's Notes update in TRAIN tab in real-time
+- ✓ Security rules — cross-user data reads correctly blocked
+- ✓ Account deletion — removes all Firestore data and Auth record
+
+**Known issue — email verification emails not delivered:**
+Firebase sends verification emails from `noreply@rb-boxing.firebaseapp.com`. This domain is aggressively spam-filtered. Password reset emails from the same address DO arrive (different spam scoring for reset vs verification subject lines).
+
+**Workaround for testing:** Register → Forgot Password → reset via email that arrives → Firebase marks email as verified on password reset link click → sign in normally.
+
+**Fix required before real members use the app:**
+Firebase console → Authentication → Templates → Email address verification → configure a custom sender domain (e.g. `noreply@8roundsboxing.com`) or custom SMTP server. A custom domain dramatically improves deliverability. This is a Firebase console configuration step, no code change required.
+
+**Step 3 security backlog (do not implement in Step 2):**
+- Fix email verification deliverability (custom sender domain in Firebase Auth Templates) — do this before member launch
+- MFA for coach account (TOTP primary, SMS backup — SMS is a paid Firebase feature)
+- Optional MFA for members
+- Optional biometric prompt on app open for members
+- Admin activity logging (who changed what and when)
+- Login anomaly detection
 
 ---
 
@@ -168,7 +213,7 @@ Steve has a cyber security background and this is a hard requirement, not an aft
 
 Run from the project directory (`C:\Users\Steve D\botrack app\BoxTrack`):
 ```
-node -e "const acorn=require('acorn'),fs=require('fs'),path=require('path');['data.js','app.js','train.js','box.js','progress.js'].forEach(f=>{const code=fs.readFileSync(f,'utf8');try{acorn.parse(code,{ecmaVersion:2020});console.log(f+' CLEAN');}catch(e){console.log(f+' ERROR line '+(e.loc&&e.loc.line)+': '+e.message);}});"
+node -e "const acorn=require('acorn'),fs=require('fs');['firebase.js','data.js','app.js','train.js','box.js','progress.js'].forEach(f=>{const code=fs.readFileSync(f,'utf8');try{acorn.parse(code,{ecmaVersion:2020,sourceType:'module'});console.log(f+' CLEAN');}catch(e){console.log(f+' ERROR line '+(e.loc&&e.loc.line)+': '+e.message);}});"
 ```
 
 Or save a temp file `acorn_check.js` in the project dir and run `node acorn_check.js` (avoids path-with-spaces issues in PowerShell).
@@ -183,25 +228,39 @@ Use explicit checks: obj && obj.prop not obj?.prop in these contexts.
 Steve is on Windows/PowerShell. Run commands separately, not chained with &&.
 
 ### 5. Version bump on every meaningful change
-Update version number in the settings overlay. Current: 7.0.0.
+Update version number in the settings overlay and in `renderSettingsPanel()` in app.js. Current: 10.0.0.
 
 ---
 
 ## Current Architecture
 
-`index.html` — HTML skeleton only: splash, nav, all tab HTML, overlays, onboarding. No inline JS or CSS.
+All JS files are ES modules (`type="module"`). Import maps in index.html and admin.html point to Firebase 10.7.0 CDN. Functions called from HTML `onclick` handlers are exposed via `window.functionName = functionName` at the bottom of each module.
 
-`styles.css` — all CSS custom properties, component styles, animations.
+`index.html` — HTML skeleton: importmap, splash, auth screen (sign-in/sign-up/verify), #app-content wrapper (nav, pages, overlays, onboarding), all scripts type="module".
 
-`data.js` — all static data constants: SESSION_NAMES, EXERCISE_LIBRARY, SESSIONS, CAT_META, TRACKED_LIFTS, EQUIP_OPTIONS, PUNCH_NAMES, DEF_DISP, DEF_CALL, COMBO_TIERS, LEGEND_COMBOS, TIER_DESCS, CORNER_QUOTES, ACCENT_COLORS.
+`styles.css` — all CSS custom properties, component styles, animations, auth screen styles, offline dot.
 
-`app.js` — shared state declarations, localStorage utils (ld/sv), formatting helpers (fmtWt/fmtDate/fmtSecs), toast, nav (showPage/openOverlay/closeOverlay), branding (initBranding/applyBranding/setAccent), settings panel render, data export/import/clear, service worker registration.
+`firebase.js` — Firebase app init with provided config. Exports `auth` (Firebase Auth) and `db` (Firestore with persistentLocalCache for offline support).
 
-`train.js` — deload, equipment picker, session library, swap modal, log view, plan ref overlay, warmup timer, log form (sets/reps/weights/rest), history, session complete, custom session builder (CSB).
+`data.js` — all static data constants (all exported): SESSION_NAMES, EXERCISE_LIBRARY, SESSIONS, CAT_META, TRACKED_LIFTS, EQUIP_OPTIONS, PUNCH_NAMES, DEF_DISP, DEF_CALL, COMBO_TIERS, LEGEND_COMBOS, TIER_DESCS, CORNER_QUOTES, ACCENT_COLORS, getSessName.
 
-`box.js` — box tab navigation, freestyle round timer (FREESTYLE), drill combo coach (DRILL), combo learn reference (LEARN), combo builder keypad, voice coach, bell audio.
+`app.js` — auth state (onAuthStateChanged, sign-in/up/Google/signOut/delete), user data cache (userDataCache — loaded from Firestore on auth, used by ld() to route session data reads), storage utils (ld/sv), formatting helpers, toast, nav, branding, settings panel, service worker registration, PR detection, numpad, onboarding. Exports all utility functions; exposes all HTML-called functions on window.
 
-`progress.js` — streak, lift PRs with chart, recent sessions, boxing log, boxing session delete.
+`train.js` — deload, equipment picker, session library, swap modal, log view, plan ref overlay, warmup timer, log form, history, session complete, CSB. Writes sessions/boxing classes/custom sessions to Firestore. Defines playRestDone() (Web Audio beep, was previously undefined).
+
+`box.js` — freestyle timer, drill combo coach, learn reference, combo builder keypad, voice coach, bell audio. Writes freestyle sessions and custom combos to Firestore.
+
+`progress.js` — streak, lift PRs with chart, recent sessions, boxing log with delete. Reads all data from userDataCache (populated from Firestore by app.js loadUserData).
+
+`admin.html` — standalone coach admin page. Auth-checks on load (must be signed in + role=coach). Coach's Notes textarea with save to gym/8RB/config/main Firestore document. Redirect to index.html on access denied.
+
+`firestore.rules` — security rules file. Deploy via Firebase console (Firestore → Rules → paste and publish) or Firebase CLI (`firebase deploy --only firestore:rules`).
+
+**User data flow:**
+- On auth: app.js calls `loadUserData(uid)` → fetches all user subcollections into `userDataCache`
+- `ld('sessions')` → returns `userDataCache.sessions` when user is signed in
+- Saves go to Firestore AND update userDataCache immediately (fire-and-forget for Firestore write)
+- Settings/preferences (unit, accent colour, etc.) remain in localStorage via ld/sv
 
 ## Tracked Lifts — all use gold, display full session name not abbreviation
 - Back Squat — Ground Up

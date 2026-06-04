@@ -1,4 +1,31 @@
-﻿// DELOAD
+﻿import { ld, sv, toast, showPage, openOverlay, closeOverlay, fmtWt, fmtDate, fmtSecs, getUnit, detectPRs, getPR, getPrevWtFromSessions, userDataCache } from './app.js';
+import { SESSIONS, EQUIP_OPTIONS, CAT_META, EXERCISE_LIBRARY, getSessName } from './data.js';
+import { db } from './firebase.js';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+
+// ─── TRAIN-ONLY STATE ─────────────────────────────────────────────────────────
+let extraCount=0,restTimers={},selectedFeel='',csbExercises=[],editingCustomId=null;
+let swapState={sessId:null,exIdx:null,selected:null},histFilter='all',sessionStartTime=null,durInterval=null,setTypeState={};
+let wuState={running:false,stepIdx:0,secsLeft:0,interval:null};
+var restFsEi=-1,restFsSecs=0,restFsRem=0,restFsInterval=null;
+var csbSessionType=null,csbExTypes=[],csbEmomInterval=60;
+var CSB_EX_TYPES={straight_sets:['standard','superset','amrap','ladder','pyramid','drop_set'],circuit:['standard','amrap','ladder','pyramid','drop_set'],amrap:['standard'],emom:['standard']};
+var CSB_EX_LABELS={standard:'Standard',superset:'Superset',amrap:'AMRAP',ladder:'Ladder',pyramid:'Pyramid',drop_set:'Drop Set'};
+
+// ─── AUDIO: REST DONE BEEP ────────────────────────────────────────────────────
+function playRestDone(){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    var o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);
+    o.frequency.value=587;
+    g.gain.setValueAtTime(0.4,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
+    o.start(ctx.currentTime);o.stop(ctx.currentTime+0.4);
+  }catch(e){}
+}
+
+// DELOAD
 function checkDeload(){
   const area=document.getElementById('deload-area');if(!area)return;
   if(ld('deloadDismissed',false)){area.innerHTML='';return;}
@@ -51,12 +78,12 @@ function selAlt(i,name){document.querySelectorAll('.alt-opt').forEach((el,j)=>el
 function confirmSwap(){const{sessId,exIdx,selected}=swapState;const sess=SESSIONS.find(s=>s.id===sessId);if(!sess||!selected)return;const orig=sess.exercises[exIdx].name;const isOrig=selected===orig;if(!sess._swaps)sess._swaps={};isOrig?delete sess._swaps[exIdx]:sess._swaps[exIdx]=selected;const n=document.getElementById(`pn-${sessId}-${exIdx}`);if(n)n.textContent=selected;const sb=document.getElementById(`sb-${sessId}-${exIdx}`);if(sb){sb.classList.toggle('on',!isOrig);sb.textContent=isOrig?'SWAP':'SWAPPED';}closeOverlay('swap-modal');toast('Exercise updated');}
 
 // USE SESSION
-function useSession(sessId){const sess=SESSIONS.find(s=>s.id===sessId);if(!sess)return;activeLogSession={id:sess.id,cat:sess.cat,name:getSessName(sess.id),custom:false,warmup:sess.warmup||[],exercises:sess.exercises.map((ex,i)=>({...ex,displayName:(sess._swaps&&sess._swaps[i])?sess._swaps[i]:ex.name,swapped:!!(sess._swaps&&sess._swaps[i])}))};sv('activeLogSession',activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();}
-function useCustomSession(idx){const customs=ld('customSessions',[]),sess=customs[idx];if(!sess)return;activeLogSession={id:'custom-'+idx,cat:sess.cat,name:sess.name,custom:true,warmup:[],exercises:(sess.exercises||[]).map(ex=>({...ex,displayName:ex.name,swapped:false}))};sv('activeLogSession',activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();toast('Session loaded');}
+function useSession(sessId){const sess=SESSIONS.find(s=>s.id===sessId);if(!sess)return;window.activeLogSession={id:sess.id,cat:sess.cat,name:getSessName(sess.id),custom:false,warmup:sess.warmup||[],exercises:sess.exercises.map((ex,i)=>({...ex,displayName:(sess._swaps&&sess._swaps[i])?sess._swaps[i]:ex.name,swapped:!!(sess._swaps&&sess._swaps[i])}))};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();}
+function useCustomSession(idx){const customs=ld('customSessions',[]),sess=customs[idx];if(!sess)return;window.activeLogSession={id:'custom-'+idx,cat:sess.cat,name:sess.name,custom:true,warmup:[],exercises:(sess.exercises||[]).map(ex=>({...ex,displayName:ex.name,swapped:false}))};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();toast('Session loaded');}
 function showLogView(){document.getElementById('train-lib').style.display='none';document.getElementById('train-log').style.display='block';const meta=CAT_META[activeLogSession.cat]||CAT_META.CUSTOM;document.getElementById('log-eye').textContent=meta.label;document.getElementById('log-eye').style.color=meta.color;document.getElementById('log-title').textContent=activeLogSession.name;document.getElementById('float-ref').classList.add('show');buildLogForm();renderWarmup();restoreAutosave();renderHistory();}
 function showLibraryView(){document.getElementById('train-lib').style.display='block';document.getElementById('train-log').style.display='none';document.getElementById('float-ref').classList.remove('show');}
 function confirmClearSess(){if(!confirm('Change session? Unsaved data will be lost.'))return;clearActiveSession();}
-function clearActiveSession(){activeLogSession=null;sv('activeLogSession',null);extraCount=0;restTimers={};setTypeState={};clearInterval(durInterval);sessionStartTime=null;sv('logAutosave',null);showLibraryView();}
+function clearActiveSession(){window.activeLogSession=null;sv('activeLogSession',null);extraCount=0;restTimers={};setTypeState={};clearInterval(durInterval);sessionStartTime=null;sv('logAutosave',null);showLibraryView();}
 
 // PLAN REF
 function openPlanRef(){if(!activeLogSession){toast('No session loaded',true);return;}const meta=CAT_META[activeLogSession.cat]||CAT_META.CUSTOM;document.getElementById('prs-ttl').textContent=activeLogSession.name;document.getElementById('prs-ttl').style.color=meta.color;document.getElementById('prs-content').innerHTML=activeLogSession.exercises.map(ex=>`<div class="prs-ex"><div class="prs-nm"><span>${ex.displayName}${ex.swapped?' <span style="font-size:9px;color:var(--gold);font-weight:700">SWAP</span>':''}</span><span class="prs-sc">${ex.scheme}</span></div><div class="prs-nt">${ex.note}</div><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-top:3px">Rest: ${fmtSecs(ex.rest||60)}</div></div>`).join('');document.getElementById('prov').classList.add('open');}
@@ -287,16 +314,30 @@ function makeExRow(id,si,del){var vis=del?'':'visibility:hidden';return '<div cl
 function addExRow(id){const cont=document.getElementById('xsr-'+id);const n=cont.querySelectorAll('.set-row').length;const d=document.createElement('div');d.innerHTML=makeExRow(id,n,true);cont.appendChild(d.firstElementChild);}
 
 // SAVE SESSION
-function saveSession(){
-  const date=document.getElementById('log-date').value;if(!date){toast('Please select a date',true);return;}if(!activeLogSession){toast('Select a session first',true);return;}
+async function saveSession(){
+  const date=document.getElementById('log-date').value;if(!date){toast('Please select a date',true);return;}if(!window.activeLogSession){toast('Select a session first',true);return;}
   const duration=sessionStartTime?Math.floor((Date.now()-sessionStartTime)/60000):0;
-  const exercises=activeLogSession.exercises.map((ex,ei)=>{const st=setTypeState[ei]||'standard';if(st==='amrap'){const mins=document.getElementById('amrap-mins-'+ei)?.value||'';const score=document.getElementById('amrap-score-'+ei)?.value||'';return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:'amrap',amrapMins:mins,amrapScore:score,sets:[]};}const cont=document.getElementById('sr-'+ei);const sets=[];if(cont)cont.querySelectorAll('.set-row').forEach((row,si)=>{const k=document.getElementById('kv-'+ei+'-'+si)?.value;const r=document.getElementById('rv-'+ei+'-'+si)?.value;if(k||r)sets.push({sets:'',reps:r||'',kg:k||''});});return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:st,sets};});
+  const exercises=window.activeLogSession.exercises.map((ex,ei)=>{const st=setTypeState[ei]||'standard';if(st==='amrap'){const mins=document.getElementById('amrap-mins-'+ei)?.value||'';const score=document.getElementById('amrap-score-'+ei)?.value||'';return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:'amrap',amrapMins:mins,amrapScore:score,sets:[]};}const cont=document.getElementById('sr-'+ei);const sets=[];if(cont)cont.querySelectorAll('.set-row').forEach((row,si)=>{const k=document.getElementById('kv-'+ei+'-'+si)?.value;const r=document.getElementById('rv-'+ei+'-'+si)?.value;if(k||r)sets.push({sets:'',reps:r||'',kg:k||''});});return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:st,sets};});
   const extras=[];document.querySelectorAll('.extra-card').forEach(el=>{const id=el.id.replace('extra-','');const name=(document.getElementById('en-'+id)?.value||'').trim();if(!name)return;const cont=document.getElementById('xsr-'+id);const sets=[];if(cont)cont.querySelectorAll('.set-row').forEach((row,si)=>{const s=document.getElementById('xsv-'+id+'-'+si)?.value;const r=document.getElementById('xrv-'+id+'-'+si)?.value;const k=document.getElementById('xkv-'+id+'-'+si)?.value;if(s||r||k)sets.push({sets:s||'',reps:r||'',kg:k||''});});extras.push({name,sets,extra:true});});
   const notes=document.getElementById('session-notes').value.trim();
-  const record={id:Date.now(),date,cat:activeLogSession.cat,sessId:activeLogSession.id,sessName:activeLogSession.name,exercises,extras,notes,duration};
-  const all=ld('sessions',[]);all.push(record);all.sort((a,b)=>a.date.localeCompare(b.date));sv('sessions',all);sv('logAutosave',null);clearInterval(durInterval);sessionStartTime=null;
-  detectPRs(record,all);
+  const record={id:Date.now(),date,cat:window.activeLogSession.cat,sessId:window.activeLogSession.id,sessName:window.activeLogSession.name,exercises,extras,notes,duration};
+  sv('logAutosave',null);clearInterval(durInterval);sessionStartTime=null;
+  // Update in-memory cache first so UI reflects change immediately
+  if(userDataCache.sessions!==null){
+    userDataCache.sessions=[...userDataCache.sessions,record].sort((a,b)=>a.date.localeCompare(b.date));
+    detectPRs(record,userDataCache.sessions);
+  } else {
+    detectPRs(record,[record]);
+  }
   showDone(record);buildLogForm();renderHistory();checkDeload();
+  // Write to Firestore in background
+  if(window.currentUser){
+    try{
+      const docRef=await addDoc(collection(db,'users',window.currentUser.uid,'sessions'),Object.assign({},record,{createdAt:serverTimestamp()}));
+      const entry=userDataCache.sessions&&userDataCache.sessions.find(function(s){return s.id===record.id;});
+      if(entry)entry._firestoreId=docRef.id;
+    }catch(err){console.error('Firestore session save failed:',err);}
+  }
 }
 function showDone(record){
   const allS=ld('sessions',[]);
@@ -358,18 +399,43 @@ function countUp(id,from,to,dur,suffix){
   })();
 }
 function closeDone(){document.getElementById('done-ov').classList.remove('open');}
-function getPrevWtFromSessions(name,sessions){for(let i=sessions.length-1;i>=0;i--){const ex=[...(sessions[i].exercises||[]),...(sessions[i].extras||[])].find(e=>e.name===name||e.originalName===name);if(ex){const valid=(ex.sets||[]).filter(r=>r.kg&&parseFloat(r.kg)>0);if(valid.length)return{kg:Math.max(...valid.map(r=>parseFloat(r.kg)))};}}return null;}
+// getPrevWtFromSessions is imported from app.js — no local duplicate needed
 
 // HISTORY
 function filterHist(cat,btn){histFilter=cat;document.querySelectorAll('#hfilt .pill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderHistory();}
 function renderHistory(){const all=ld('sessions',[]);const filtered=histFilter==='all'?all:all.filter(s=>s.cat===histFilter);const el=document.getElementById('sess-history');if(!el)return;if(!filtered.length){el.innerHTML='<div class="empty-state" style="padding:32px 24px"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="empty-state-head">'+(histFilter==='all'?'NO SESSIONS YET':'NO '+histFilter+' SESSIONS')+'</div><div class="empty-state-sub">'+(histFilter==='all'?'Your completed sessions will appear here.':'No sessions logged for this category yet.')+'</div></div>';return;}el.innerHTML=filtered.slice().reverse().map((s,ri)=>{const realIdx=all.indexOf(s);const meta=CAT_META[s.cat]||CAT_META.CUSTOM;const allEx=[...s.exercises,...(s.extras||[])];const exHtml=allEx.map(ex=>{if(ex.setType==='amrap')return `<div class="hi-ex"><div class="hi-ex-nm">${ex.name} <span style="font-size:9px;color:var(--blue);font-weight:700">AMRAP</span></div><div style="font-size:13px;padding:4px 0">${ex.amrapMins?ex.amrapMins+' min — ':''}<strong>${ex.amrapScore||'—'} rounds</strong></div></div>`;const valid=(ex.sets||[]).filter(r=>r.sets||r.reps||r.kg);if(!valid.length)return '';return `<div class="hi-ex"><div class="hi-ex-nm">${ex.name}${ex.swapped?' <span style="font-size:9px;color:var(--gold);font-weight:700">SWAP</span>':''}${ex.extra?' <span style="font-size:9px;color:var(--gold);font-weight:700">EXTRA</span>':''}${ex.setType&&ex.setType!=='standard'?' <span style="font-size:9px;color:var(--blue);font-weight:700">'+ex.setType.toUpperCase()+'</span>':''}</div><div class="hi-grid"><span></span><span class="hg-h">Sets</span><span class="hg-h">Reps</span><span class="hg-h">Wt</span>${valid.map((r,i)=>`<span class="hg-l">Set ${i+1}</span><span class="hg-v">${r.sets||'—'}</span><span class="hg-v">${r.reps||'—'}</span><span class="hg-v">${r.kg?fmtWt(parseFloat(r.kg)):'—'}</span>`).join('')}</div></div>`;}).join('');return `<div class="hi"><div class="hi-hd" onclick="toggleHist('hb-${realIdx}')"><div><span class="hi-date">${fmtDate(s.date)}</span>${s.sessName?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${s.sessName}</div>`:''}</div><div style="display:flex;gap:5px;align-items:center"><span class="tag" style="color:${meta.color};background:${meta.color}18">${s.cat}</span><button class="del-x" onclick="event.stopPropagation();delSession(${realIdx})">×</button></div></div><div class="hi-bd" id="hb-${realIdx}"><div class="hi-in">${exHtml||'<div class="empty">No data entered.</div>'}${s.notes?`<div class="hi-notes">${s.notes}</div>`:''}<div style="font-size:11px;color:var(--dim);margin-top:5px">${s.duration?`⏱ ${s.duration} min`:''}</div></div></div></div>`;}).join('');}
 function toggleHist(id){document.getElementById(id)?.classList.toggle('open');}
-function delSession(idx){if(!confirm('Delete this session?'))return;const all=ld('sessions',[]);all.splice(idx,1);sv('sessions',all);renderHistory();toast('Session deleted');}
+function delSession(idx){
+  if(!confirm('Delete this session?'))return;
+  if(userDataCache.sessions!==null){
+    var entry=userDataCache.sessions[idx];
+    if(entry&&entry._firestoreId&&window.currentUser){
+      deleteDoc(doc(db,'users',window.currentUser.uid,'sessions',entry._firestoreId)).catch(function(e){console.error('Firestore delete failed:',e);});
+    }
+    userDataCache.sessions.splice(idx,1);
+  }
+  renderHistory();toast('Session deleted');
+}
 
 // BOXING CLASS
 function openBoxingModal(){selectedFeel='';document.getElementById('boxing-date').value=new Date().toISOString().split('T')[0];document.getElementById('boxing-notes').value='';document.querySelectorAll('.feel-opt').forEach(el=>el.classList.remove('sel'));openOverlay('boxing-modal');}
 function selFeel(el,feel){selectedFeel=feel;document.querySelectorAll('.feel-opt').forEach(e=>e.classList.remove('sel'));el.classList.add('sel');}
-function saveBoxingClass(){const date=document.getElementById('boxing-date').value;if(!date){toast('Please select a date',true);return;}const notes=document.getElementById('boxing-notes').value.trim();const record={date,feel:selectedFeel||'good',notes,id:Date.now()};const classes=ld('boxingClasses',[]);classes.push(record);classes.sort((a,b)=>a.date.localeCompare(b.date));sv('boxingClasses',classes);closeOverlay('boxing-modal');toast('Boxing class logged!');renderProgress();}
+async function saveBoxingClass(){
+  const date=document.getElementById('boxing-date').value;if(!date){toast('Please select a date',true);return;}
+  const notes=document.getElementById('boxing-notes').value.trim();
+  const record={date,feel:selectedFeel||'good',notes,id:Date.now(),type:'class'};
+  if(userDataCache.boxingSessions!==null){
+    userDataCache.boxingSessions=[...userDataCache.boxingSessions,record].sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  closeOverlay('boxing-modal');toast('Boxing class logged!');renderProgress();
+  if(window.currentUser){
+    try{
+      const docRef=await addDoc(collection(db,'users',window.currentUser.uid,'boxingSessions'),Object.assign({},record,{createdAt:serverTimestamp()}));
+      const entry=userDataCache.boxingSessions&&userDataCache.boxingSessions.find(function(s){return s.id===record.id;});
+      if(entry)entry._firestoreId=docRef.id;
+    }catch(err){console.error('Firestore boxing class save failed:',err);}
+  }
+}
 
 // CSB
 var csbSessionType=null,csbExTypes=[],csbEmomInterval=60;
@@ -428,7 +494,17 @@ function openCSB(editIdx){
   openOverlay('csb-modal');
 }
 function editCustom(idx){openCSB(idx);}
-function delCustom(idx){if(!confirm('Delete this custom session?'))return;const customs=ld('customSessions',[]);customs.splice(idx,1);sv('customSessions',customs);renderCustomLib();toast('Session deleted');}
+function delCustom(idx){
+  if(!confirm('Delete this custom session?'))return;
+  if(userDataCache.customSessions!==null){
+    var entry=userDataCache.customSessions[idx];
+    if(entry&&entry._firestoreId&&window.currentUser){
+      deleteDoc(doc(db,'users',window.currentUser.uid,'customSessions',entry._firestoreId)).catch(function(){});
+    }
+    userDataCache.customSessions.splice(idx,1);
+  }
+  renderCustomLib();toast('Session deleted');
+}
 function addBlankEx(){
   csbExercises.push({name:'',sets:'3',reps:'10',rest:60});
   csbExTypes.push('standard');
@@ -470,7 +546,7 @@ function renderCSBList(){
 }
 function removeCsbEx(i){csbExercises.splice(i,1);csbExTypes.splice(i,1);renderCSBList();}
 function searchEx(){const q=document.getElementById('ex-search').value.toLowerCase().trim();const res=document.getElementById('ex-results');if(!q){res.style.display='none';return;}const matches=EXERCISE_LIBRARY.filter(e=>e.name.toLowerCase().includes(q)||e.muscles.toLowerCase().includes(q)).slice(0,10);if(!matches.length){res.style.display='none';return;}res.style.display='block';res.innerHTML=matches.map(e=>'<div class="ex-ri" onclick="addCSBExFromLib(\''+e.name.replace(/'/g,"\\'")+'\')">'+ e.name+'<small>'+e.muscles+'</small></div>').join('');}
-function saveCustomSess(){
+async function saveCustomSess(){
   if(!csbSessionType){toast('Choose a session type first',true);return;}
   var name=document.getElementById('csb-name').value.trim();
   if(!name){toast('Please name your session',true);return;}
@@ -479,8 +555,87 @@ function saveCustomSess(){
   if(csbSessionType==='amrap'){extra.amrapCap=parseInt(document.getElementById('csb-amrap-cap').value)||20;extra.amrapTargetRounds=document.getElementById('csb-amrap-rounds').value||null;}
   if(csbSessionType==='emom'){extra.emomDur=parseInt(document.getElementById('csb-emom-dur').value)||20;extra.emomInterval=csbEmomInterval;}
   var sess={name:name,cat:'CUSTOM',sessionType:csbSessionType,finisher:document.getElementById('csb-finisher').value.trim(),exercises:csbExercises.map(function(e){return Object.assign({},e);}),exTypes:csbExTypes.slice(),extra:extra,createdAt:Date.now()};
-  var customs=ld('customSessions',[]);
-  if(editingCustomId!==null)customs[editingCustomId]=sess;else customs.push(sess);
-  sv('customSessions',customs);closeOverlay('csb-modal');renderCustomLib();showCat('custom');
-  toast(editingCustomId!==null?'Session updated!':'Session saved!');editingCustomId=null;
+  var isEdit=editingCustomId!==null;
+  if(userDataCache.customSessions!==null){
+    if(isEdit){
+      var oldEntry=userDataCache.customSessions[editingCustomId];
+      if(oldEntry){
+        Object.assign(oldEntry,sess);
+        if(oldEntry._firestoreId&&window.currentUser){
+          // For edits, we'd need setDoc — for simplicity in Step 2, delete and re-add
+          deleteDoc(doc(db,'users',window.currentUser.uid,'customSessions',oldEntry._firestoreId)).catch(function(){});
+          addDoc(collection(db,'users',window.currentUser.uid,'customSessions'),Object.assign({},sess,{createdAt:serverTimestamp()})).then(function(ref){oldEntry._firestoreId=ref.id;}).catch(function(){});
+        }
+      }
+    } else {
+      userDataCache.customSessions.push(sess);
+      if(window.currentUser){
+        addDoc(collection(db,'users',window.currentUser.uid,'customSessions'),Object.assign({},sess,{createdAt:serverTimestamp()})).then(function(ref){sess._firestoreId=ref.id;}).catch(function(){});
+      }
+    }
+  }
+  closeOverlay('csb-modal');renderCustomLib();showCat('custom');
+  toast(isEdit?'Session updated!':'Session saved!');editingCustomId=null;
 }
+
+// ─── EXPOSE TO HTML ONCLICK HANDLERS ─────────────────────────────────────────
+export { checkDeload, initEquipment, renderLibrary, renderCustomLib, showLibraryView, showLogView };
+window.checkDeload = checkDeload;
+window.initEquipment = initEquipment;
+window.renderLibrary = renderLibrary;
+window.renderCustomLib = renderCustomLib;
+window.showLibraryView = showLibraryView;
+window.showLogView = showLogView;
+window.showCat = showCat;
+window.toggleSC = toggleSC;
+window.openSwap = openSwap;
+window.selAlt = selAlt;
+window.confirmSwap = confirmSwap;
+window.useSession = useSession;
+window.useCustomSession = useCustomSession;
+window.confirmClearSess = confirmClearSess;
+window.openPlanRef = openPlanRef;
+window.closePlanRef = closePlanRef;
+window.toggleWarmup = toggleWarmup;
+window.toggleWarmupTimer = toggleWarmupTimer;
+window.skipWuStep = skipWuStep;
+window.editGlobalRest = editGlobalRest;
+window.setGlobalRest = setGlobalRest;
+window.toggleTypePicker = toggleTypePicker;
+window.toggleExercise = toggleExercise;
+window.setSetType = setSetType;
+window.changeSets = changeSets;
+window.completeSet = completeSet;
+window.fillSuggestedKg = fillSuggestedKg;
+window.editExRest = editExRest;
+window.setExRest = setExRest;
+window.onSetInput = onSetInput;
+window.addSetRow = addSetRow;
+window.removeRow = removeRow;
+window.skipRest = skipRest;
+window.addExtra = addExtra;
+window.addExRow = addExRow;
+window.saveSession = saveSession;
+window.closeDone = closeDone;
+window.filterHist = filterHist;
+window.renderHistory = renderHistory;
+window.toggleHist = toggleHist;
+window.delSession = delSession;
+window.openBoxingModal = openBoxingModal;
+window.selFeel = selFeel;
+window.saveBoxingClass = saveBoxingClass;
+window.selectCSBType = selectCSBType;
+window.selectEmomInterval = selectEmomInterval;
+window.openCSB = openCSB;
+window.editCustom = editCustom;
+window.delCustom = delCustom;
+window.addBlankEx = addBlankEx;
+window.addCSBExFromLib = addCSBExFromLib;
+window.setCsbExType = setCsbExType;
+window.renderCSBList = renderCSBList;
+window.removeCsbEx = removeCsbEx;
+window.searchEx = searchEx;
+window.saveCustomSess = saveCustomSess;
+window.getPrevWt = getPrevWt;
+window.autosaveLog = autosaveLog;
+window.buildLogForm = buildLogForm;

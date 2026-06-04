@@ -1,247 +1,699 @@
-﻿// STATE
-let activeEquipment=new Set(EQUIP_OPTIONS.map(e=>e.id));
-let activeLogSession=null,extraCount=0,restTimers={},selectedFeel='',csbExercises=[],editingCustomId=null;
-let swapState={sessId:null,exIdx:null,selected:null},histFilter='all',sessionStartTime=null,durInterval=null,setTypeState={};
-let wuState={running:false,stepIdx:0,secsLeft:0,interval:null};
-const FS_REST_OPTIONS=[30,45,60,90,120];
-let fsState={running:false,phase:'idle',totalRounds:6,currentRound:0,roundDurationMins:3,restDurationIdx:2,doubleRound:false,secondsLeft:0,interval:null,sessionStart:null};
-let currentBoxTab='freestyle',currentTier='basics',currentComboIdx=0,currentComboList=[],currentDrillCombo=null;
-let drillRunning=false,drillPunchIdx=0,drillInterval=null,voiceMode='numbers',tempoValue=5;
-let comboBuilderSeq=[],synth=null,voicesLoaded=false,preferredVoice=null;
-var audioUnlocked=false;var bellAudioObj=null;
+import { auth, db } from './firebase.js';
+import {
+  onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signInWithPopup, GoogleAuthProvider, signOut as fbSignOut,
+  sendEmailVerification, sendPasswordResetEmail, deleteUser, updateProfile
+} from 'firebase/auth';
+import {
+  doc, getDoc, setDoc, getDocs, collection, addDoc, deleteDoc, serverTimestamp, writeBatch, onSnapshot
+} from 'firebase/firestore';
+import { EQUIP_OPTIONS, ACCENT_COLORS } from './data.js';
 
-// STORAGE
-const ld=(k,fb)=>{try{return JSON.parse(localStorage.getItem(k))??fb;}catch{return fb;}};
-const sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-const getUnit=()=>ld('unit','kg');
-const fmtWt=v=>v?`${v}${getUnit()}`:'—';
-function fmtDate(str){const d=new Date(str+'T00:00:00');return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});}
-function fmtSecs(s){const m=Math.floor(s/60);return `${m}:${(s%60).toString().padStart(2,'0')}`;}
-let toastTimer;
-function toast(msg,err){const t=document.getElementById('toast');t.textContent=msg;t.style.background=err?'var(--red)':'var(--green)';t.style.color=err?'#fff':'#000';t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2400);}
+// ─── SHARED MUTABLE STATE ──────────────────────────────────────────────────────
+// Assigned to window so train.js / box.js can read as bare names and write as window.x
+window.activeEquipment = new Set(EQUIP_OPTIONS.map(e => e.id));
+window.activeLogSession = null;
+window.currentUser = null;
 
-// NAV
-function showPage(id){
-  ['train','box','progress'].forEach((p,i)=>{document.getElementById('page-'+p).classList.toggle('active',p===id);document.querySelectorAll('.nav-btn')[i].classList.toggle('on',p===id);});
-  if(id==='train'){checkDeload();applyBranding();}
-  if(id==='box'){initBoxPage();}
-  if(id==='progress'){renderProgress();renderSettingsPanel();}
-}
-function openOverlay(id){document.getElementById(id).classList.add('open');}
-function closeOverlay(id,e){if(e&&e.target!==document.getElementById(id))return;document.getElementById(id).classList.remove('open');}
+// ─── USER DATA CACHE ───────────────────────────────────────────────────────────
+// null = not yet loaded from Firestore (fall back to localStorage).
+// Once loaded, ld() returns from cache instead of localStorage for these keys.
+export const userDataCache = {
+  sessions: null,
+  boxingSessions: null,   // covers freestyle timer sessions + boxing class logs
+  customCombos: null,
+  customSessions: null
+};
 
-// BRANDING
-function initBranding(){
-  const sw=document.getElementById('color-swatches');if(!sw)return;
-  const cur=ld('accentColor','#E63946');
-  sw.innerHTML=ACCENT_COLORS.map(c=>`<div class="sw ${c.val===cur?'on':''}" style="background:${c.val}" onclick="setAccent('${c.val}')"></div>`).join('');
-  const inp=document.getElementById('brand-name-inp');if(inp){const n=ld('appName','');if(n)inp.value=n;}
-}
-function applyBranding(){
-  const color=ld('accentColor','#E63946'),name=ld('appName','')||'8RB';
-  document.documentElement.style.setProperty('--accent',color);
-  const el=document.getElementById('train-title');
-  if(el){
-    var sub=name==='8RB'?'by 8 Rounds Boxing':'';
-    el.innerHTML='<div class="sh-wordmark-main">'+name+'</div>'+(sub?'<div class="sh-wordmark-sub">'+sub+'</div>':'');
+// ─── STORAGE ───────────────────────────────────────────────────────────────────
+export const ld = (k, fb) => {
+  if (window.currentUser) {
+    if (k === 'sessions' && userDataCache.sessions !== null) return userDataCache.sessions;
+    if (k === 'freestyleSessions' && userDataCache.boxingSessions !== null)
+      return userDataCache.boxingSessions.filter(function(s){return s.type === 'freestyle';});
+    if (k === 'boxingClasses' && userDataCache.boxingSessions !== null)
+      return userDataCache.boxingSessions.filter(function(s){return s.type === 'class';});
+    if (k === 'customCombos' && userDataCache.customCombos !== null) return userDataCache.customCombos;
+    if (k === 'customSessions' && userDataCache.customSessions !== null) return userDataCache.customSessions;
   }
-  const eye=document.getElementById('train-eye');if(eye)eye.style.color=color;
+  try { return JSON.parse(localStorage.getItem(k)) ?? fb; } catch(e) { return fb; }
+};
+export const sv = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+export const getUnit = () => ld('unit', 'kg');
+export const fmtWt = v => v ? v + getUnit() : '—';
+export function fmtDate(str) {
+  var d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'2-digit'});
 }
-function saveBrandName(){sv('appName',document.getElementById('brand-name-inp')?.value||'');applyBranding();}
-function setAccent(val){sv('accentColor',val);document.querySelectorAll('.sw').forEach(s=>s.classList.toggle('on',s.style.background===val||s.style.backgroundColor===val));applyBranding();toast('Accent colour updated');}
-function openSettings(){initBranding();renderSettingsPanel();document.getElementById('settings-ov').classList.add('open');}
-function closeSettings(e){if(e&&e.target!==document.getElementById('settings-ov'))return;document.getElementById('settings-ov').classList.remove('open');}
-function closeSettingsBtn(){document.getElementById('settings-ov').classList.remove('open');}
-function renderSettingsPanel(){
-  const u=getUnit();document.getElementById('unit-kg').classList.toggle('on',u==='kg');document.getElementById('unit-lbs').classList.toggle('on',u==='lbs');
-  let total=0;for(let k in localStorage)if(localStorage.hasOwnProperty(k))total+=((localStorage[k].length+k.length)*2);
-  const kb=Math.round(total/1024),pct=Math.min(100,Math.round(total/(5*1024*1024)*100));
-  const fill=document.getElementById('storage-fill'),txt=document.getElementById('storage-txt');
-  if(fill)fill.style.width=pct+'%';if(txt)txt.textContent=`${kb}KB used of ~5MB`;
+export function fmtSecs(s) {
+  var m = Math.floor(s / 60);
+  return m + ':' + (s % 60).toString().padStart(2, '0');
+}
+var toastTimer;
+export function toast(msg, err) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = err ? 'var(--red)' : 'var(--green)';
+  t.style.color = err ? '#fff' : '#000';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){t.classList.remove('show');}, 2400);
 }
 
-// SETTINGS
-function setUnit(u){sv('unit',u);document.getElementById('unit-kg').classList.toggle('on',u==='kg');document.getElementById('unit-lbs').classList.toggle('on',u==='lbs');toast('Units set to '+u);}
-function exportData(){const data={sessions:ld('sessions',[]),boxingClasses:ld('boxingClasses',[]),customSessions:ld('customSessions',[]),customCombos:ld('customCombos',[]),equipment:ld('equipment',[]),unit:ld('unit','kg'),appName:ld('appName',''),accentColor:ld('accentColor',''),prs:ld('prs',{}),exportDate:new Date().toISOString()};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`8rb-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);toast('Data exported!');}
-function importData(e){
-  var file=e.target.files[0];if(!file)return;
-  var reader=new FileReader();
-  reader.onload=function(ev){
-    try{
-      var data=JSON.parse(ev.target.result);
-      if(data.sessions)sv('sessions',data.sessions);
-      if(data.boxingClasses)sv('boxingClasses',data.boxingClasses);
-      if(data.customSessions)sv('customSessions',data.customSessions);
-      if(data.customCombos)sv('customCombos',data.customCombos);
-      if(data.equipment)sv('equipment',data.equipment);
-      if(data.unit)sv('unit',data.unit);
-      if(data.appName)sv('appName',data.appName);
-      if(data.accentColor)sv('accentColor',data.accentColor);
-      if(data.prs)sv('prs',data.prs);
-      initEquipment();
-      applyBranding();
-      renderLibrary();
-      renderCustomLib();
-      renderProgress();
-      renderSettingsPanel();
-      checkDeload();
-      var count=(data.sessions||[]).length+(data.boxingClasses||[]).length;
-      toast('Imported — '+count+' sessions restored');
-    }catch(err){
-      toast('Import failed — file may be corrupt',true);
-    }
+// ─── NAV ───────────────────────────────────────────────────────────────────────
+export function showPage(id) {
+  ['train','box','progress'].forEach(function(p, i) {
+    document.getElementById('page-'+p).classList.toggle('active', p === id);
+    document.querySelectorAll('.nav-btn')[i].classList.toggle('on', p === id);
+  });
+  if (id === 'train') { checkDeload(); applyBranding(); }
+  if (id === 'box') { initBoxPage(); }
+  if (id === 'progress') { renderProgress(); renderSettingsPanel(); }
+}
+export function openOverlay(id) { document.getElementById(id).classList.add('open'); }
+export function closeOverlay(id, e) {
+  if (e && e.target !== document.getElementById(id)) return;
+  document.getElementById(id).classList.remove('open');
+}
+
+// ─── BRANDING ─────────────────────────────────────────────────────────────────
+export function initBranding() {
+  var sw = document.getElementById('color-swatches'); if (!sw) return;
+  var cur = ld('accentColor', '#E63946');
+  sw.innerHTML = ACCENT_COLORS.map(function(c) {
+    return '<div class="sw ' + (c.val === cur ? 'on' : '') + '" style="background:' + c.val + '" onclick="setAccent(\'' + c.val + '\')"></div>';
+  }).join('');
+  var inp = document.getElementById('brand-name-inp');
+  if (inp) { var n = ld('appName', ''); if (n) inp.value = n; }
+}
+export function applyBranding() {
+  var color = ld('accentColor', '#E63946'), name = ld('appName', '') || '8RB';
+  document.documentElement.style.setProperty('--accent', color);
+  var el = document.getElementById('train-title');
+  if (el) {
+    var sub = name === '8RB' ? 'by 8 Rounds Boxing' : '';
+    el.innerHTML = '<div class="sh-wordmark-main">' + name + '</div>' + (sub ? '<div class="sh-wordmark-sub">' + sub + '</div>' : '');
+  }
+  var eye = document.getElementById('train-eye'); if (eye) eye.style.color = color;
+}
+function saveBrandName() { sv('appName', document.getElementById('brand-name-inp').value || ''); applyBranding(); }
+function setAccent(val) {
+  sv('accentColor', val);
+  document.querySelectorAll('.sw').forEach(function(s) { s.classList.toggle('on', s.style.background === val || s.style.backgroundColor === val); });
+  applyBranding(); toast('Accent colour updated');
+}
+export function openSettings() { initBranding(); renderSettingsPanel(); document.getElementById('settings-ov').classList.add('open'); }
+function closeSettings(e) { if (e && e.target !== document.getElementById('settings-ov')) return; document.getElementById('settings-ov').classList.remove('open'); }
+function closeSettingsBtn() { document.getElementById('settings-ov').classList.remove('open'); }
+export function renderSettingsPanel() {
+  var u = getUnit();
+  document.getElementById('unit-kg').classList.toggle('on', u === 'kg');
+  document.getElementById('unit-lbs').classList.toggle('on', u === 'lbs');
+  // Storage bar
+  var total = 0;
+  for (var k in localStorage) { if (localStorage.hasOwnProperty(k)) total += ((localStorage[k].length + k.length) * 2); }
+  var kb = Math.round(total / 1024), pct = Math.min(100, Math.round(total / (5 * 1024 * 1024) * 100));
+  var fill = document.getElementById('storage-fill'), txt = document.getElementById('storage-txt');
+  if (fill) fill.style.width = pct + '%';
+  if (txt) txt.textContent = kb + 'KB used of ~5MB';
+  // User info row
+  var userRow = document.getElementById('settings-user-row');
+  if (userRow && window.currentUser) {
+    var displayName = window.currentUser.displayName || '';
+    var email = window.currentUser.email || '';
+    userRow.innerHTML = '<div class="sr"><div style="flex:1"><div class="sr-lbl">' + (displayName || 'Account') + '</div><div class="sr-sub">' + email + '</div></div><button class="sr-act" onclick="handleSignOut()">SIGN OUT</button></div>';
+  }
+  // Version
+  var verEl = document.getElementById('settings-version');
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v10.0.0';
+}
+
+// ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
+function setUnit(u) { sv('unit', u); document.getElementById('unit-kg').classList.toggle('on', u === 'kg'); document.getElementById('unit-lbs').classList.toggle('on', u === 'lbs'); toast('Units set to ' + u); }
+function exportData() {
+  var data = {sessions:ld('sessions',[]),boxingClasses:ld('boxingClasses',[]),customSessions:ld('customSessions',[]),customCombos:ld('customCombos',[]),equipment:ld('equipment',[]),unit:ld('unit','kg'),appName:ld('appName',''),accentColor:ld('accentColor',''),prs:ld('prs',{}),exportDate:new Date().toISOString()};
+  var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url; a.download = '8rb-backup-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  URL.revokeObjectURL(url); toast('Data exported!');
+}
+function importData(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      if (data.sessions) sv('sessions', data.sessions);
+      if (data.boxingClasses) sv('boxingClasses', data.boxingClasses);
+      if (data.customSessions) sv('customSessions', data.customSessions);
+      if (data.customCombos) sv('customCombos', data.customCombos);
+      if (data.equipment) sv('equipment', data.equipment);
+      if (data.unit) sv('unit', data.unit);
+      if (data.appName) sv('appName', data.appName);
+      if (data.accentColor) sv('accentColor', data.accentColor);
+      if (data.prs) sv('prs', data.prs);
+      initEquipment(); applyBranding(); renderLibrary(); renderCustomLib(); renderProgress(); renderSettingsPanel(); checkDeload();
+      var count = (data.sessions||[]).length + (data.boxingClasses||[]).length;
+      toast('Imported — ' + count + ' sessions restored');
+    } catch(err) { toast('Import failed — file may be corrupt', true); }
   };
   reader.readAsText(file);
-  e.target.value='';
+  e.target.value = '';
 }
-function clearAll(){if(!confirm('Delete ALL data? Cannot be undone.'))return;localStorage.clear();activeLogSession=null;showLibraryView();renderProgress();renderSettingsPanel();toast('All data cleared');}
+function clearAll() {
+  if (!confirm('Delete ALL local data? Cannot be undone.')) return;
+  localStorage.clear();
+  window.activeLogSession = null;
+  showLibraryView(); renderProgress(); renderSettingsPanel(); toast('All data cleared');
+}
 
-// SERVICE WORKER
-if('serviceWorker' in navigator){
-  window.addEventListener('load',function(){
-    // Track whether a SW was already controlling this page before registration.
-    // Used to distinguish first install (no reload needed) from updates (reload needed).
-    var hadController=!!navigator.serviceWorker.controller;
-    // Single-fire reload guard — prevents double-reload if both updatefound
-    // and controllerchange fire for the same update.
-    var reloadPending=false;
-    function reloadOnce(){if(!reloadPending){reloadPending=true;window.location.reload();}}
-
-    navigator.serviceWorker.register('/BoxTrack/sw.js').then(function(reg){
-      // Force the browser to check for an updated sw.js on every page load.
-      // Without this, the browser may wait up to 24 h between checks.
+// ─── SERVICE WORKER ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    var hadController = !!navigator.serviceWorker.controller;
+    var reloadPending = false;
+    function reloadOnce() { if (!reloadPending) { reloadPending = true; window.location.reload(); } }
+    navigator.serviceWorker.register('/BoxTrack/sw.js').then(function(reg) {
       reg.update();
-      // Detect a new SW being installed during this session.
-      reg.addEventListener('updatefound',function(){
-        var newWorker=reg.installing;
-        if(!newWorker)return;
-        newWorker.addEventListener('statechange',function(){
-          // New SW finished installing. If something was already in control,
-          // reload now — skipWaiting() in sw.js will have activated it.
-          if(newWorker.state==='installed'&&navigator.serviceWorker.controller){
-            reloadOnce();
-          }
+      reg.addEventListener('updatefound', function() {
+        var newWorker = reg.installing; if (!newWorker) return;
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) reloadOnce();
         });
       });
     }).catch(function(){});
-
-    // Backup: reload when the controlling SW actually changes.
-    // hadController guard prevents a reload on the very first SW install.
-    navigator.serviceWorker.addEventListener('controllerchange',function(){
-      if(hadController)reloadOnce();
-      hadController=true;
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      if (hadController) reloadOnce(); hadController = true;
     });
   });
 }
 
-// PR DETECTION
-function detectPRs(record,allSessions){
-  var prs=ld('prs',{});
-  var prev=allSessions.slice(0,-1);
-  record.exercises.forEach(function(ex){
-    var sets=(ex.sets||[]).filter(function(r){return parseFloat(r.kg)>0;});
-    if(!sets.length)return;
-    var maxKg=Math.max.apply(null,sets.map(function(r){return parseFloat(r.kg);}));
-    var prevBest=getPrevWtFromSessions(ex.name,prev);
-    if(!prevBest||maxKg>prevBest.kg){
-      prs[ex.name]={kg:maxKg,date:record.date};
-    }
+// ─── PR DETECTION ─────────────────────────────────────────────────────────────
+export function detectPRs(record, allSessions) {
+  var prs = ld('prs', {}); var prev = allSessions.slice(0, -1);
+  record.exercises.forEach(function(ex) {
+    var sets = (ex.sets||[]).filter(function(r){return parseFloat(r.kg) > 0;});
+    if (!sets.length) return;
+    var maxKg = Math.max.apply(null, sets.map(function(r){return parseFloat(r.kg);}));
+    var prevBest = getPrevWtFromSessions(ex.name, prev);
+    if (!prevBest || maxKg > prevBest.kg) prs[ex.name] = {kg:maxKg, date:record.date};
   });
-  sv('prs',prs);
+  sv('prs', prs);
 }
-function getPR(name){var prs=ld('prs',{});return prs[name]||null;}
+export function getPR(name) { var prs = ld('prs', {}); return prs[name] || null; }
 
-// NUMPAD
-var npTarget=null,npField='kg',npEi=0,npSi=0,npVal='';
-function openNumpad(inp,field,ei,si){
-  npTarget=inp;npField=field;npEi=ei;npSi=si;
-  npVal=inp.value||'';
-  var ex=activeLogSession&&activeLogSession.exercises[ei];
-  var exName=ex?ex.displayName:'Exercise';
-  var setNum=si+1;
-  document.getElementById('np-ex').textContent=exName;
-  document.getElementById('np-set').textContent='Set '+setNum+' — '+(field==='kg'?getUnit():'Reps');
-  var prev=ex?(getPrevWt(ex.displayName)||getPrevWt(ex.name)):null;
-  var prevEl=document.getElementById('np-prev');
-  if(prevEl)prevEl.textContent=prev?'Last: '+fmtWt(prev.kg)+(prev.reps?' × '+prev.reps:'')+'  —  '+fmtDate(prev.date):'No previous data';
-  var incrEl=document.getElementById('np-incr');
-  if(incrEl){
-    if(field==='kg'){
-      incrEl.innerHTML='<button class="dec" onclick="npIncr(-2.5)">−2.5</button><button class="dec" onclick="npIncr(-1.25)">−1.25</button><button class="inc" onclick="npIncr(1.25)">+1.25</button><button class="inc" onclick="npIncr(2.5)">+2.5</button>';
+// ─── NUMPAD ────────────────────────────────────────────────────────────────────
+var npTarget = null, npField = 'kg', npEi = 0, npSi = 0, npVal = '';
+function openNumpad(inp, field, ei, si) {
+  npTarget = inp; npField = field; npEi = ei; npSi = si; npVal = inp.value || '';
+  var ex = window.activeLogSession && window.activeLogSession.exercises[ei];
+  var exName = ex ? ex.displayName : 'Exercise';
+  document.getElementById('np-ex').textContent = exName;
+  document.getElementById('np-set').textContent = 'Set ' + (si+1) + ' — ' + (field === 'kg' ? getUnit() : 'Reps');
+  var prev = ex ? (getPrevWt(ex.displayName) || getPrevWt(ex.name)) : null;
+  var prevEl = document.getElementById('np-prev');
+  if (prevEl) prevEl.textContent = prev ? 'Last: ' + fmtWt(prev.kg) + (prev.reps ? ' × ' + prev.reps : '') + '  —  ' + fmtDate(prev.date) : 'No previous data';
+  var incrEl = document.getElementById('np-incr');
+  if (incrEl) {
+    if (field === 'kg') {
+      incrEl.innerHTML = '<button class="dec" onclick="npIncr(-2.5)">−2.5</button><button class="dec" onclick="npIncr(-1.25)">−1.25</button><button class="inc" onclick="npIncr(1.25)">+1.25</button><button class="inc" onclick="npIncr(2.5)">+2.5</button>';
     } else {
-      incrEl.innerHTML='<button class="dec" onclick="npIncr(-1)">−1</button><button class="inc" onclick="npIncr(1)">+1</button>';
+      incrEl.innerHTML = '<button class="dec" onclick="npIncr(-1)">−1</button><button class="inc" onclick="npIncr(1)">+1</button>';
     }
   }
   updateNpDisplay();
   document.getElementById('numpad-ov').classList.add('open');
 }
-function npKey(k){
-  if(k==='.'&&npVal.includes('.'))return;
-  if(npVal==='0'&&k!=='.')npVal=k;
-  else npVal+=k;
-  updateNpDisplay();
+function npKey(k) { if (k === '.' && npVal.includes('.')) return; if (npVal === '0' && k !== '.') npVal = k; else npVal += k; updateNpDisplay(); }
+function npDel() { npVal = npVal.slice(0, -1); updateNpDisplay(); }
+function npIncr(d) { var cur = parseFloat(npVal)||0; var next = Math.max(0, +(cur+d).toFixed(2)); npVal = String(next); updateNpDisplay(); }
+function updateNpDisplay() {
+  var disp = document.getElementById('np-display'), plate = document.getElementById('np-plate');
+  if (disp) { if (npVal === '') { disp.textContent = '—'; disp.className = 'np-display placeholder'; } else { disp.textContent = npVal + (npField === 'kg' ? getUnit() : ''); disp.className = 'np-display'; } }
+  if (plate && npField === 'kg') { var kg = parseFloat(npVal)||0; plate.textContent = kg > 20 ? '20kg bar + ' + calcPlatesStr(kg) : ''; } else if (plate) { plate.textContent = ''; }
 }
-function npDel(){npVal=npVal.slice(0,-1);updateNpDisplay();}
-function npIncr(d){
-  var cur=parseFloat(npVal)||0;
-  var next=Math.max(0,+(cur+d).toFixed(2));
-  npVal=String(next);
-  updateNpDisplay();
-}
-function updateNpDisplay(){
-  var disp=document.getElementById('np-display');
-  var plate=document.getElementById('np-plate');
-  if(disp){
-    if(npVal===''){disp.textContent='—';disp.className='np-display placeholder';}
-    else{disp.textContent=npVal+(npField==='kg'?getUnit():'');disp.className='np-display';}
-  }
-  if(plate&&npField==='kg'){
-    var kg=parseFloat(npVal)||0;
-    plate.textContent=kg>20?'20kg bar + '+calcPlatesStr(kg):'';
-  } else if(plate){plate.textContent='';}
-}
-function calcPlatesStr(kg){
-  var side=(kg-20)/2;if(side<=0)return '';
-  var plates=[25,20,15,10,5,2.5,1.25],res=[];
-  plates.forEach(function(p){var c=Math.floor(side/p);if(c>0){res.push(c+'×'+p);side=+(side-c*p).toFixed(2);}});
-  return res.join(' / ')+' per side';
-}
-function npDone(){
-  if(npTarget&&npVal!=='')npTarget.value=npVal;
-  document.getElementById('numpad-ov').classList.remove('open');
-  autosaveLog();
-}
-function npBgTap(e){if(e.target===document.getElementById('numpad-ov'))document.getElementById('numpad-ov').classList.remove('open');}
+function calcPlatesStr(kg) { var side=(kg-20)/2; if(side<=0)return ''; var plates=[25,20,15,10,5,2.5,1.25],res=[]; plates.forEach(function(p){var c=Math.floor(side/p);if(c>0){res.push(c+'x'+p);side=+(side-c*p).toFixed(2);}}); return res.join(' / ')+' per side'; }
+function npDone() { if (npTarget && npVal !== '') npTarget.value = npVal; document.getElementById('numpad-ov').classList.remove('open'); autosaveLog(); }
+function npBgTap(e) { if (e.target === document.getElementById('numpad-ov')) document.getElementById('numpad-ov').classList.remove('open'); }
 
-// ONBOARDING
-var obIdx=0;
-function initOnboarding(){
-  if(ld('onboarded',false))return;
-  var ov=document.getElementById('onboarding');
-  if(!ov)return;
-  ov.classList.add('show');
-  obIdx=0;
-  updateObSlide();
-  var wrap=ov.querySelector('.ob-slides-wrap');
-  var startX=0;
-  if(wrap){
-    wrap.addEventListener('touchstart',function(e){startX=e.touches[0].clientX;},{passive:true});
-    wrap.addEventListener('touchend',function(e){
-      var dx=e.changedTouches[0].clientX-startX;
-      if(Math.abs(dx)>50){if(dx<0&&obIdx<2)obIdx++;else if(dx>0&&obIdx>0)obIdx--;updateObSlide();}
-    },{passive:true});
+// ─── ONBOARDING ────────────────────────────────────────────────────────────────
+var obIdx = 0;
+export function initOnboarding() {
+  if (ld('onboarded', false)) return;
+  var ov = document.getElementById('onboarding'); if (!ov) return;
+  ov.classList.add('show'); obIdx = 0; updateObSlide();
+  var wrap = ov.querySelector('.ob-slides-wrap');
+  var startX = 0;
+  if (wrap) {
+    wrap.addEventListener('touchstart', function(e){startX=e.touches[0].clientX;},{passive:true});
+    wrap.addEventListener('touchend', function(e){var dx=e.changedTouches[0].clientX-startX;if(Math.abs(dx)>50){if(dx<0&&obIdx<2)obIdx++;else if(dx>0&&obIdx>0)obIdx--;updateObSlide();}},{passive:true});
   }
 }
-function goToSlide(n){obIdx=n;updateObSlide();}
-function updateObSlide(){
-  var slides=document.getElementById('ob-slides');
-  var dots=document.querySelectorAll('.ob-dot');
-  if(slides)slides.style.transform='translateX(-'+obIdx+'00%)';
-  dots.forEach(function(d,i){d.classList.toggle('on',i===obIdx);});
+function goToSlide(n) { obIdx = n; updateObSlide(); }
+function updateObSlide() {
+  var slides = document.getElementById('ob-slides'), dots = document.querySelectorAll('.ob-dot');
+  if (slides) slides.style.transform = 'translateX(-' + obIdx + '00%)';
+  dots.forEach(function(d,i){d.classList.toggle('on', i===obIdx);});
 }
-function finishOnboarding(){
-  sv('onboarded',true);
-  var ov=document.getElementById('onboarding');
-  if(ov)ov.classList.remove('show');
+function finishOnboarding() { sv('onboarded', true); var ov=document.getElementById('onboarding'); if(ov)ov.classList.remove('show'); }
+
+// ─── OFFLINE INDICATOR ─────────────────────────────────────────────────────────
+function updateOfflineIndicator() {
+  var dot = document.getElementById('offline-dot');
+  if (!dot) return;
+  if (!navigator.onLine) {
+    dot.classList.add('show');
+    dot.title = "You're offline. Changes will sync when connected.";
+  } else {
+    dot.classList.remove('show');
+  }
+}
+window.addEventListener('online', updateOfflineIndicator);
+window.addEventListener('offline', updateOfflineIndicator);
+
+// ─── AUTH SCREEN HELPERS ───────────────────────────────────────────────────────
+function showAuthForm(which) {
+  ['auth-signin','auth-signup','auth-verify'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = id === which ? 'flex' : 'none';
+  });
+}
+export function showSignInScreen() {
+  var appEl = document.getElementById('app-content');
+  var authEl = document.getElementById('auth-screen');
+  if (appEl) appEl.style.display = 'none';
+  if (authEl) authEl.style.display = 'flex';
+  showAuthForm('auth-signin');
+  clearAuthErrors();
+}
+export function showEmailVerificationScreen(email) {
+  var appEl = document.getElementById('app-content');
+  var authEl = document.getElementById('auth-screen');
+  if (appEl) appEl.style.display = 'none';
+  if (authEl) authEl.style.display = 'flex';
+  showAuthForm('auth-verify');
+  var emailEl = document.getElementById('verify-email-txt');
+  if (emailEl) emailEl.textContent = email || '';
+}
+export function showApp() {
+  var appEl = document.getElementById('app-content');
+  var authEl = document.getElementById('auth-screen');
+  if (authEl) authEl.style.display = 'none';
+  if (appEl) appEl.style.display = '';
+  updateOfflineIndicator();
+  // Restore in-progress session
+  var savedSess = ld('activeLogSession', null);
+  if (savedSess) { window.activeLogSession = savedSess; showLogView(); }
+  initEquipment();
+  applyBranding();
+  renderLibrary();
+  checkDeload();
+  updateFsPreUI();
+  initOnboarding();
+  loadCoachesNotes();
+  // Prompt migration if localStorage has existing session data
+  checkMigration();
+}
+function clearAuthErrors() {
+  ['auth-error','auth-error-signup'].forEach(function(id){
+    var el=document.getElementById(id);if(el){el.textContent='';el.style.display='none';}
+  });
+}
+function showAuthError(msg) {
+  // Target the error div inside the currently visible form
+  var inSignup=document.getElementById('auth-signup')&&document.getElementById('auth-signup').style.display!=='none';
+  var id=inSignup?'auth-error-signup':'auth-error';
+  var errEl=document.getElementById(id);
+  if(errEl){errEl.textContent=msg;errEl.style.display='block';}
 }
 
+// ─── LOAD USER DATA FROM FIRESTORE ────────────────────────────────────────────
+export async function loadUserData(uid) {
+  try {
+    var [sessSnap, boxSnap, combosSnap, customSnap] = await Promise.all([
+      getDocs(collection(db, 'users', uid, 'sessions')),
+      getDocs(collection(db, 'users', uid, 'boxingSessions')),
+      getDocs(collection(db, 'users', uid, 'customCombos')),
+      getDocs(collection(db, 'users', uid, 'customSessions'))
+    ]);
+    userDataCache.sessions = sessSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());}).sort(function(a,b){return a.date.localeCompare(b.date);});
+    userDataCache.boxingSessions = boxSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());}).sort(function(a,b){return a.date.localeCompare(b.date);});
+    userDataCache.customCombos = combosSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());});
+    userDataCache.customSessions = customSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());});
+  } catch(err) {
+    console.warn('Failed to load from Firestore, using localStorage:', err);
+    // userDataCache remains null — ld() will fall back to localStorage
+  }
+}
+
+// ─── CREATE USER PROFILE ──────────────────────────────────────────────────────
+async function createUserProfile(user, displayName) {
+  try {
+    var profileRef = doc(db, 'users', user.uid, 'profile', 'data');
+    var existing = await getDoc(profileRef);
+    if (!existing.exists()) {
+      await setDoc(profileRef, {
+        displayName: displayName || user.displayName || '',
+        email: user.email || '',
+        gym: '8RB',
+        role: 'member',
+        joinDate: serverTimestamp(),
+        unit: 'kg',
+        accentColour: '#E63946',
+        onboarded: false
+      });
+    }
+  } catch(err) { console.warn('Profile creation failed:', err); }
+}
+
+// ─── AUTH STATE LISTENER ──────────────────────────────────────────────────────
+var authReady = false;
+var authUser = null;
+var splashDone = false;
+
+function resolveAuth() {
+  if (!splashDone || !authReady) return;
+  if (authUser && authUser.emailVerified) {
+    window.currentUser = authUser;
+    loadUserData(authUser.uid).then(function() { showApp(); });
+  } else if (authUser && !authUser.emailVerified) {
+    showEmailVerificationScreen(authUser.email);
+  } else {
+    showSignInScreen();
+  }
+}
+
+export function onSplashDone() {
+  splashDone = true;
+  resolveAuth();
+}
+
+// Attempt Firebase connection; fall back to localStorage-only mode on network failure
+var firebaseAvailable = true;
+try {
+  onAuthStateChanged(auth, function(user) {
+    authReady = true;
+    authUser = user;
+    resolveAuth();
+  }, function(err) {
+    // Auth listener error — go offline mode
+    console.warn('Auth listener error:', err);
+    authReady = true;
+    authUser = null;
+    resolveAuth();
+  });
+} catch(e) {
+  firebaseAvailable = false;
+  authReady = true;
+  // Show app in offline mode after splash
+  setTimeout(function() {
+    splashDone = true;
+    toast('Running in offline mode. Sign in when connected to sync your data.');
+    showApp();
+  }, 0);
+}
+
+// ─── SIGN IN ──────────────────────────────────────────────────────────────────
+async function handleSignIn() {
+  var emailEl = document.getElementById('signin-email');
+  var passEl = document.getElementById('signin-password');
+  var email = emailEl ? emailEl.value.trim() : '';
+  var pass = passEl ? passEl.value : '';
+  if (!email || !pass) { showAuthError('Please enter your email and password.'); return; }
+  clearAuthErrors();
+  var btn = document.getElementById('signin-btn');
+  if (btn) { btn.textContent = 'SIGNING IN...'; btn.disabled = true; }
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    // onAuthStateChanged handles the rest
+  } catch(err) {
+    var msg = err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found'
+      ? 'Incorrect email or password.' : 'Sign in failed. Please try again.';
+    showAuthError(msg);
+  } finally {
+    if (btn) { btn.textContent = 'SIGN IN'; btn.disabled = false; }
+  }
+}
+
+// ─── GOOGLE SIGN IN ───────────────────────────────────────────────────────────
+async function handleGoogleSignIn() {
+  clearAuthErrors();
+  try {
+    var provider = new GoogleAuthProvider();
+    var result = await signInWithPopup(auth, provider);
+    await createUserProfile(result.user, result.user.displayName);
+    // onAuthStateChanged fires after
+  } catch(err) {
+    if (err.code !== 'auth/popup-closed-by-user') showAuthError('Google sign-in failed. Please try again.');
+  }
+}
+
+// ─── SIGN UP ──────────────────────────────────────────────────────────────────
+async function handleSignUp() {
+  var nameEl = document.getElementById('signup-name');
+  var emailEl = document.getElementById('signup-email');
+  var passEl = document.getElementById('signup-password');
+  var confEl = document.getElementById('signup-confirm');
+  var name = nameEl ? nameEl.value.trim() : '';
+  var email = emailEl ? emailEl.value.trim() : '';
+  var pass = passEl ? passEl.value : '';
+  var conf = confEl ? confEl.value : '';
+  if (!name) { showAuthError('Please enter your name.'); return; }
+  if (!email) { showAuthError('Please enter your email.'); return; }
+  if (pass.length < 8) { showAuthError('Password must be at least 8 characters.'); return; }
+  if (pass !== conf) { showAuthError('Passwords do not match.'); return; }
+  clearAuthErrors();
+  var btn = document.getElementById('signup-btn');
+  if (btn) { btn.textContent = 'CREATING...'; btn.disabled = true; }
+  try {
+    var result = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(result.user, { displayName: name }).catch(function(){});
+    await sendEmailVerification(result.user);
+    await createUserProfile(result.user, name);
+    showEmailVerificationScreen(email);
+  } catch(err) {
+    var msg = err.code === 'auth/email-already-in-use'
+      ? 'An account with this email already exists.'
+      : 'Sign up failed. Please try again.';
+    showAuthError(msg);
+  } finally {
+    if (btn) { btn.textContent = 'CREATE ACCOUNT'; btn.disabled = false; }
+  }
+}
+
+// ─── FORGOT PASSWORD ──────────────────────────────────────────────────────────
+async function handleForgotPassword() {
+  var emailEl = document.getElementById('signin-email');
+  var email = emailEl ? emailEl.value.trim() : '';
+  if (!email) { showAuthError('Enter your email address above first.'); return; }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showAuthError('Reset link sent to ' + email + '.');
+  } catch(err) { showAuthError('Could not send reset email. Check the address and try again.'); }
+}
+
+// ─── RESEND VERIFICATION ──────────────────────────────────────────────────────
+async function handleResendVerification() {
+  if (!authUser) return;
+  try {
+    await sendEmailVerification(authUser);
+    toast('Verification email resent.');
+  } catch(err) { toast('Could not resend. Please try again.', true); }
+}
+
+// ─── SIGN OUT ─────────────────────────────────────────────────────────────────
+async function handleSignOut() {
+  try {
+    await fbSignOut(auth);
+    window.currentUser = null;
+    userDataCache.sessions = null; userDataCache.boxingSessions = null;
+    userDataCache.customCombos = null; userDataCache.customSessions = null;
+    closeSettingsBtn();
+    showSignInScreen();
+  } catch(err) { toast('Sign out failed. Try again.', true); }
+}
+
+// ─── DELETE ACCOUNT ───────────────────────────────────────────────────────────
+function confirmDeleteAccount() {
+  var modal = document.getElementById('delete-account-modal');
+  if (modal) modal.classList.add('open');
+}
+function cancelDeleteAccount() {
+  var modal = document.getElementById('delete-account-modal');
+  if (modal) modal.classList.remove('open');
+}
+async function executeDeleteAccount() {
+  if (!window.currentUser) return;
+  var btn = document.getElementById('delete-confirm-btn');
+  if (btn) { btn.textContent = 'DELETING...'; btn.disabled = true; }
+  try {
+    var uid = window.currentUser.uid;
+    // Delete all Firestore subcollections
+    var colls = ['sessions','boxingSessions','customCombos','customSessions'];
+    for (var ci = 0; ci < colls.length; ci++) {
+      var snap = await getDocs(collection(db, 'users', uid, colls[ci]));
+      var batch = writeBatch(db);
+      snap.docs.forEach(function(d) { batch.delete(d.ref); });
+      if (snap.docs.length > 0) await batch.commit();
+    }
+    // Delete profile
+    await deleteDoc(doc(db, 'users', uid, 'profile', 'data')).catch(function(){});
+    // Delete auth record
+    await deleteUser(window.currentUser);
+    localStorage.clear();
+    window.currentUser = null;
+    cancelDeleteAccount();
+    closeSettingsBtn();
+    var authEl = document.getElementById('auth-screen');
+    var appEl = document.getElementById('app-content');
+    if (appEl) appEl.style.display = 'none';
+    if (authEl) authEl.style.display = 'flex';
+    showAuthForm('auth-signin');
+    var errEl = document.getElementById('auth-error');
+    if (errEl) { errEl.textContent = 'Your account has been deleted.'; errEl.style.display = 'block'; errEl.style.color = 'var(--muted)'; }
+  } catch(err) {
+    if (err.code === 'auth/requires-recent-login') {
+      toast('Please sign out and sign back in before deleting your account.', true);
+    } else {
+      toast('Delete failed. Please try again.', true);
+    }
+    if (btn) { btn.textContent = 'DELETE EVERYTHING'; btn.disabled = false; }
+  }
+}
+
+// ─── COACH'S NOTES ────────────────────────────────────────────────────────────
+function renderCoachNotes(html) {
+  var el = document.getElementById('coaches-notes-content');
+  if (el) el.innerHTML = html;
+}
+function loadCoachesNotes() {
+  // Show cached version immediately so notes survive every refresh
+  var cached = localStorage.getItem('coachNotesHtml');
+  if (cached) renderCoachNotes(cached);
+
+  // Then fetch live from Firestore and update cache
+  try {
+    onSnapshot(doc(db, 'gym', '8RB', 'config', 'main'), function(snap) {
+      if (!snap.exists() || !snap.data().coachNotes) return;
+      var notes = snap.data().coachNotes;
+      var html = notes.split('\n').filter(function(l){return l.trim();}).map(function(l){return '— ' + l.trim();}).join('<br>');
+      localStorage.setItem('coachNotesHtml', html);
+      renderCoachNotes(html);
+    }, function(err) {
+      console.warn('Coach notes Firestore read failed (using cache/fallback):', err);
+    });
+  } catch(e) {}
+}
+
+// ─── DATA MIGRATION (localStorage → Firestore) ────────────────────────────────
+function checkMigration() {
+  if (!window.currentUser) return;
+  if (ld('migrationComplete', false)) return;
+  var existingSessions = JSON.parse(localStorage.getItem('sessions') || 'null');
+  if (!existingSessions || !existingSessions.length) {
+    sv('migrationComplete', true); return;
+  }
+  // Show migration prompt
+  var msg = 'We found ' + existingSessions.length + ' session(s) on this device. Import to your account?';
+  if (confirm(msg)) {
+    runMigration();
+  } else {
+    sv('migrationComplete', true);
+  }
+}
+async function runMigration() {
+  if (!window.currentUser) return;
+  var uid = window.currentUser.uid;
+  var count = 0;
+  try {
+    var sessions = JSON.parse(localStorage.getItem('sessions') || '[]');
+    var boxing = JSON.parse(localStorage.getItem('freestyleSessions') || '[]');
+    var classes = JSON.parse(localStorage.getItem('boxingClasses') || '[]');
+    var combos = JSON.parse(localStorage.getItem('customCombos') || '[]');
+    var custom = JSON.parse(localStorage.getItem('customSessions') || '[]');
+    for (var i = 0; i < sessions.length; i++) {
+      await addDoc(collection(db, 'users', uid, 'sessions'), Object.assign({}, sessions[i], {createdAt: serverTimestamp()}));
+      count++;
+    }
+    for (var j = 0; j < boxing.length; j++) {
+      await addDoc(collection(db, 'users', uid, 'boxingSessions'), Object.assign({}, boxing[j], {type:'freestyle', createdAt: serverTimestamp()}));
+      count++;
+    }
+    for (var k = 0; k < classes.length; k++) {
+      await addDoc(collection(db, 'users', uid, 'boxingSessions'), Object.assign({}, classes[k], {type:'class', createdAt: serverTimestamp()}));
+      count++;
+    }
+    for (var l = 0; l < combos.length; l++) {
+      await addDoc(collection(db, 'users', uid, 'customCombos'), Object.assign({}, combos[l], {createdAt: serverTimestamp()}));
+    }
+    for (var m = 0; m < custom.length; m++) {
+      await addDoc(collection(db, 'users', uid, 'customSessions'), Object.assign({}, custom[m], {createdAt: serverTimestamp()}));
+    }
+    sv('migrationComplete', true);
+    await loadUserData(uid);
+    renderProgress();
+    toast(count + ' sessions imported successfully.');
+  } catch(err) {
+    console.error('Migration error:', err);
+    toast('Import failed — your data is still on this device.', true);
+  }
+}
+
+// ─── HELPER: getPrevWtFromSessions ────────────────────────────────────────────
+export function getPrevWtFromSessions(name, sessions) {
+  for (var i = sessions.length - 1; i >= 0; i--) {
+    var ex = [...(sessions[i].exercises||[]),...(sessions[i].extras||[])].find(function(e){return e.name===name||e.originalName===name;});
+    if (ex) { var valid=(ex.sets||[]).filter(function(r){return r.kg&&parseFloat(r.kg)>0;}); if(valid.length) return {kg:Math.max.apply(null,valid.map(function(r){return parseFloat(r.kg);}))}; }
+  }
+  return null;
+}
+
+// ─── SWITCH FORMS ─────────────────────────────────────────────────────────────
+function switchToSignUp() { clearAuthErrors(); showAuthForm('auth-signup'); }
+function switchToSignIn() { clearAuthErrors(); showAuthForm('auth-signin'); }
+
+// ─── PASSWORD VISIBILITY TOGGLE ───────────────────────────────────────────────
+function togglePwVisibility(inputId, btn) {
+  var inp = document.getElementById(inputId);
+  if (!inp) return;
+  var isText = inp.type === 'text';
+  inp.type = isText ? 'password' : 'text';
+  btn.textContent = isText ? 'SHOW' : 'HIDE';
+}
+
+// ─── EXPOSE ALL HTML-CALLED FUNCTIONS ON WINDOW ───────────────────────────────
+window.showPage = showPage;
+window.openOverlay = openOverlay;
+window.closeOverlay = closeOverlay;
+window.openSettings = openSettings;
+window.closeSettings = closeSettings;
+window.closeSettingsBtn = closeSettingsBtn;
+window.initBranding = initBranding;
+window.applyBranding = applyBranding;
+window.saveBrandName = saveBrandName;
+window.setAccent = setAccent;
+window.renderSettingsPanel = renderSettingsPanel;
+window.setUnit = setUnit;
+window.exportData = exportData;
+window.importData = importData;
+window.clearAll = clearAll;
+window.openNumpad = openNumpad;
+window.npKey = npKey;
+window.npDel = npDel;
+window.npIncr = npIncr;
+window.npDone = npDone;
+window.npBgTap = npBgTap;
+window.goToSlide = goToSlide;
+window.finishOnboarding = finishOnboarding;
+window.handleSignIn = handleSignIn;
+window.handleGoogleSignIn = handleGoogleSignIn;
+window.handleSignUp = handleSignUp;
+window.handleForgotPassword = handleForgotPassword;
+window.handleResendVerification = handleResendVerification;
+window.handleSignOut = handleSignOut;
+window.confirmDeleteAccount = confirmDeleteAccount;
+window.cancelDeleteAccount = cancelDeleteAccount;
+window.executeDeleteAccount = executeDeleteAccount;
+window.switchToSignUp = switchToSignUp;
+window.switchToSignIn = switchToSignIn;
+window.togglePwVisibility = togglePwVisibility;

@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isCoach() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data)
+          .data.role == 'coach';
+    }
+
+    function isVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    // User profile — field-level protection
+    match /users/{userId}/profile/data {
+      allow read: if isAuthenticated() && isOwner(userId);
+
+      // On creation: role must be member, gym must be 8RB
+      allow create: if isAuthenticated()
+        && isOwner(userId)
+        && isVerified()
+        && request.resource.data.role == 'member'
+        && request.resource.data.gym == '8RB';
+
+      // On update: role, gym, joinDate are immutable
+      allow update: if isAuthenticated()
+        && isOwner(userId)
+        && isVerified()
+        && !request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasAny(['role', 'gym', 'joinDate']);
+    }
+
+    // User subcollections — owner only, verified only
+    match /users/{userId}/sessions/{sessionId} {
+      allow read, write: if isAuthenticated()
+        && isOwner(userId)
+        && isVerified();
+    }
+
+    match /users/{userId}/boxingSessions/{sessionId} {
+      allow read, write: if isAuthenticated()
+        && isOwner(userId)
+        && isVerified();
+    }
+
+    match /users/{userId}/customCombos/{comboId} {
+      allow read, write: if isAuthenticated()
+        && isOwner(userId)
+        && isVerified();
+    }
+
+    match /users/{userId}/customSessions/{sessionId} {
+      allow read, write: if isAuthenticated()
+        && isOwner(userId)
+        && isVerified();
+    }
+
+    // Gym config — all verified members read, coach only write
+    match /gym/{gymId}/config/{docId} {
+      allow read: if isAuthenticated() && isVerified();
+      allow write: if isCoach() && isVerified();
+    }
+
+    // Announcements — all verified members read, coach only write
+    match /gym/{gymId}/announcements/{announcementId} {
+      allow read: if isAuthenticated() && isVerified();
+      allow write: if isCoach() && isVerified();
+    }
+
+    // Deny everything else explicitly
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,4 +1,9 @@
-﻿// PROGRESS
+﻿import { ld, sv, toast, fmtWt, fmtDate, fmtSecs, getUnit, getPR, openOverlay, closeOverlay, userDataCache } from './app.js';
+import { TRACKED_LIFTS, CAT_META } from './data.js';
+import { db } from './firebase.js';
+import { collection, deleteDoc, doc } from 'firebase/firestore';
+
+// PROGRESS
 function renderProgress(){renderStreak();renderLifts();renderRecentSessions();renderFreestyleSessions();renderBoxingLog();}
 function renderFreestyleSessions(){
   var sessions=ld('freestyleSessions',[]);
@@ -97,6 +102,23 @@ function renderLifts(){
 }
 function renderRecentSessions(){const all=ld('sessions',[]);const el=document.getElementById('recent-list');if(!all.length){el.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="empty-state-head">NO SESSIONS YET</div><div class="empty-state-sub">Pick a session from the Train tab and log your first workout.</div></div>';return;}el.innerHTML=all.slice(-5).reverse().map(s=>{const meta=CAT_META[s.cat]||CAT_META.CUSTOM;const pills=[...s.exercises,...(s.extras||[])].filter(ex=>(ex.sets||[]).some(r=>r.kg)).map(ex=>{const maxKg=Math.max(...ex.sets.map(r=>parseFloat(r.kg)).filter(v=>!isNaN(v)));return `<span class="rs-pill" style="${ex.extra?'color:var(--gold)':''}">${ex.name} · ${fmtWt(maxKg)}</span>`;}).join('');return `<div class="rec-sess"><div class="rs-hd"><div><span class="rs-date">${fmtDate(s.date)}</span>${s.sessName?`<div style="font-size:10px;color:var(--muted);margin-top:1px">${s.sessName}</div>`:''}</div><div style="display:flex;align-items:center;gap:6px">${s.duration?`<span style="font-size:10px;color:var(--dim)">⏱${s.duration}m</span>`:''}<span class="tag" style="color:${meta.color};background:${meta.color}18">${s.cat}</span></div></div>${pills?`<div class="rs-pills">${pills}</div>`:'<div style="font-size:12px;color:var(--dim)">No weights recorded</div>'}${s.notes?`<div class="rs-note">"${s.notes}"</div>`:''}</div>`;}).join('');}
 function renderBoxingLog(){const classes=ld('boxingClasses',[]),wrap=document.getElementById('boxing-log-wrap'),empty=document.getElementById('boxing-log-empty'),list=document.getElementById('boxing-log-list');if(!classes.length){wrap.style.display='none';empty.style.display='block';empty.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg><div class="empty-state-head">NO ROUNDS LOGGED YET</div><div class="empty-state-sub">Head to the Box tab and start your first round.</div></div>';return;}wrap.style.display='block';empty.style.display='none';const fm={great:'f-gr',good:'f-gd',ok:'f-ok',hard:'f-hd'},fl={great:'Great',good:'Good',ok:'OK',hard:'Tough'};list.innerHTML=classes.slice(-8).reverse().map((c,ri)=>{const realIdx=classes.length-1-ri;return `<div class="bi"><div><span class="bi-date">${fmtDate(c.date)}</span>${c.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${c.notes}</div>`:''}</div><div style="display:flex;align-items:center;gap:7px"><span class="fp ${fm[c.feel]||'f-gd'}">${fl[c.feel]||'Good'}</span><button class="del-x" onclick="delBoxing(${realIdx})">×</button></div></div>`;}).join('');}
-function delBoxing(idx){if(!confirm('Delete this boxing class?'))return;const classes=ld('boxingClasses',[]);classes.splice(idx,1);sv('boxingClasses',classes);renderProgress();}
-function buildChart(history,color){const vals=history.map(h=>h.kg);const min=Math.min(...vals)*0.92,max=Math.max(...vals)*1.08;const w=300,h=46,pad=8;const pts=vals.map((v,i)=>{const x=pad+(i/(vals.length-1))*(w-pad*2);const y=h-pad-((v-min)/(max-min||1))*(h-pad*2);return `${x.toFixed(1)},${y.toFixed(1)}`;}).join(' ');const last=pts.split(' ').pop().split(',');const fill=pts+` ${(w-pad).toFixed(1)},${h} ${pad},${h}`;const cid='g'+color.replace('#','');return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="${cid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.22"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><polygon points="${fill}" fill="url(#${cid})"/><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${last[0]}" cy="${last[1]}" r="3" fill="${color}"/></svg>`;}
+function delBoxing(idx){
+  if(!confirm('Delete this boxing class?'))return;
+  if(userDataCache.boxingSessions!==null){
+    var classes=userDataCache.boxingSessions.filter(function(s){return s.type==='class';});
+    var entry=classes[idx];
+    if(entry&&entry._firestoreId&&window.currentUser){
+      deleteDoc(doc(db,'users',window.currentUser.uid,'boxingSessions',entry._firestoreId)).catch(function(){});
+    }
+    var globalIdx=userDataCache.boxingSessions.indexOf(entry);
+    if(globalIdx>-1)userDataCache.boxingSessions.splice(globalIdx,1);
+  }
+  renderProgress();
+}
+function buildChart(history,color){const vals=history.map(h=>h.kg);const min=Math.min(...vals)*0.92,max=Math.max(...vals)*1.08;const w=300,h=46,pad=8;const pts=vals.map((v,i)=>{const x=pad+(i/(vals.length-1))*(w-pad*2);const y=h-pad-((v-min)/(max-min||1))*(h-pad*2);return x.toFixed(1)+','+y.toFixed(1);}).join(' ');const last=pts.split(' ').pop().split(',');const fill=pts+' '+(w-pad).toFixed(1)+','+h+' '+pad+','+h;const cid='g'+color.replace('#','');return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><defs><linearGradient id="'+cid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+color+'" stop-opacity="0.22"/><stop offset="100%" stop-color="'+color+'" stop-opacity="0"/></linearGradient></defs><polygon points="'+fill+'" fill="url(#'+cid+')"/><polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="'+last[0]+'" cy="'+last[1]+'" r="3" fill="'+color+'"/></svg>';}
+
+// ─── EXPOSE TO HTML ONCLICK HANDLERS ─────────────────────────────────────────
+export { renderProgress };
+window.renderProgress = renderProgress;
+window.delBoxing = delBoxing;
 

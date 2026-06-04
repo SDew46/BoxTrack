@@ -582,3 +582,29 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
 @keyframes splashIn{from{opacity:0;transform:scale(0.82);}to{opacity:1;transform:scale(1);}}
 @keyframes splashOut{from{opacity:1;}to{opacity:0;}}
 #splash.hiding{animation:splashOut 0.45s ease forwards;}
+
+/* ── AUTH SCREEN ─────────────────────────────────────────────────────────── */
+.auth-screen{position:fixed;inset:0;background:#0a0a0a;z-index:900;display:flex;align-items:center;justify-content:center;padding:32px 0;overflow-y:auto;}
+.auth-screen>div{flex-direction:column;align-items:center;width:100%;max-width:420px;padding:24px 24px 40px;min-height:100%;}
+.auth-google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;height:56px;background:#fff;border:none;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#111;cursor:pointer;margin-bottom:0;}
+.auth-google-btn:hover{background:#f5f5f5;}
+.auth-or{display:flex;align-items:center;width:100%;gap:12px;margin:16px 0;color:var(--dim);font-family:'DM Sans',sans-serif;font-size:13px;}
+.auth-or::before,.auth-or::after{content:'';flex:1;height:1px;background:var(--border);}
+.auth-inp{display:block;width:100%;height:56px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:0 14px;outline:none;margin-bottom:12px;box-sizing:border-box;-webkit-appearance:none;}
+.auth-inp:focus{border-color:var(--accent);}
+.auth-btn{display:block;width:100%;height:56px;border:none;border-radius:var(--rs);font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;cursor:pointer;margin-top:8px;}
+.auth-btn-red{background:var(--accent);color:#fff;}
+.auth-btn-red:disabled{opacity:0.6;cursor:default;}
+.auth-btn-outline{background:transparent;color:var(--text);border:1px solid var(--border);}
+.auth-link{background:none;border:none;color:var(--dim);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;padding:10px 0;width:100%;text-align:center;}
+.auth-link strong{color:var(--text);}
+.auth-error{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--red);background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);border-radius:6px;padding:10px 12px;margin-top:4px;margin-bottom:4px;width:100%;box-sizing:border-box;text-align:center;}
+.auth-pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:1px;}
+
+/* ── OFFLINE DOT ─────────────────────────────────────────────────────────── */
+.offline-dot{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:var(--dim);opacity:0;transition:opacity 0.3s;pointer-events:none;}
+.offline-dot.show{opacity:1;}
+.nav{position:relative;}
+
+/* ── SETTINGS ACCOUNT ROW ────────────────────────────────────────────────── */
+#settings-user-row .sr{flex-wrap:wrap;gap:4px;}

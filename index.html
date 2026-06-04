@@ -10,10 +10,89 @@
 <link rel="preload" as="image" href="8RB.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"
+  }
+}
+</script>
 </head>
 <body>
 <!-- SPLASH -->
 <div id="splash"><img src="8RB.png" alt="8 Rounds Boxing"><div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-top:16px;animation:splashIn 0.7s cubic-bezier(0.22,1,0.36,1) both;">BOXING FOR EVERYONE</div></div>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="auth-screen" style="display:none">
+  <!-- Sign-in form -->
+  <div id="auth-signin" style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:420px;padding:0 24px">
+    <img src="8RB.png" alt="8RB" style="width:80px;height:80px;object-fit:contain;margin-bottom:24px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:#fff;letter-spacing:2px;text-align:center;line-height:1">WELCOME BACK</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);margin-top:6px;margin-bottom:32px;text-align:center">8RB by 8 Rounds Boxing</div>
+    <button class="auth-google-btn" onclick="handleGoogleSignIn()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style="width:20px;height:20px">Continue with Google</button>
+    <div class="auth-or"><span>or</span></div>
+    <input class="auth-inp" type="email" id="signin-email" placeholder="Email address" autocomplete="email">
+    <div style="position:relative;width:100%">
+      <input class="auth-inp" type="password" id="signin-password" placeholder="Password" autocomplete="current-password" style="padding-right:70px">
+      <button class="auth-pw-toggle" onclick="togglePwVisibility('signin-password',this)">SHOW</button>
+    </div>
+    <div id="auth-error" class="auth-error" style="display:none"></div>
+    <button class="auth-btn auth-btn-red" id="signin-btn" onclick="handleSignIn()">SIGN IN</button>
+    <button class="auth-link" onclick="handleForgotPassword()">Forgot password?</button>
+    <button class="auth-link" onclick="switchToSignUp()">New to 8RB? <strong>Create account</strong></button>
+    <div style="font-family:'DM Sans',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-top:auto;padding-top:32px">BOXING FOR EVERYONE</div>
+  </div>
+  <!-- Sign-up form -->
+  <div id="auth-signup" style="display:none;flex-direction:column;align-items:center;width:100%;max-width:420px;padding:0 24px">
+    <img src="8RB.png" alt="8RB" style="width:80px;height:80px;object-fit:contain;margin-bottom:24px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:#fff;letter-spacing:2px;text-align:center;line-height:1">JOIN 8RB</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);margin-top:6px;margin-bottom:32px;text-align:center">8RB by 8 Rounds Boxing</div>
+    <button class="auth-google-btn" onclick="handleGoogleSignIn()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style="width:20px;height:20px">Continue with Google</button>
+    <div class="auth-or"><span>or</span></div>
+    <input class="auth-inp" type="text" id="signup-name" placeholder="Your name" autocomplete="name">
+    <input class="auth-inp" type="email" id="signup-email" placeholder="Email address" autocomplete="email">
+    <div style="position:relative;width:100%">
+      <input class="auth-inp" type="password" id="signup-password" placeholder="Password (min 8 characters)" autocomplete="new-password" style="padding-right:70px">
+      <button class="auth-pw-toggle" onclick="togglePwVisibility('signup-password',this)">SHOW</button>
+    </div>
+    <div style="position:relative;width:100%">
+      <input class="auth-inp" type="password" id="signup-confirm" placeholder="Confirm password" autocomplete="new-password" style="padding-right:70px">
+      <button class="auth-pw-toggle" onclick="togglePwVisibility('signup-confirm',this)">SHOW</button>
+    </div>
+    <div id="auth-error-signup" class="auth-error" style="display:none"></div>
+    <button class="auth-btn auth-btn-red" id="signup-btn" onclick="handleSignUp()">CREATE ACCOUNT</button>
+    <button class="auth-link" onclick="switchToSignIn()">Already have an account? <strong>Sign in</strong></button>
+    <div style="font-family:'DM Sans',sans-serif;font-size:11px;color:var(--dim);margin-top:auto;padding-top:32px;text-align:center">By creating an account you agree to our terms of service.</div>
+  </div>
+  <!-- Email verification waiting -->
+  <div id="auth-verify" style="display:none;flex-direction:column;align-items:center;width:100%;max-width:420px;padding:0 24px;text-align:center">
+    <img src="8RB.png" alt="8RB" style="width:80px;height:80px;object-fit:contain;margin-bottom:32px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:#fff;letter-spacing:2px">CHECK YOUR EMAIL</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:var(--muted);margin-top:12px;line-height:1.6">We've sent a verification link to<br><strong id="verify-email-txt" style="color:var(--text)"></strong></div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--dim);margin-top:20px;line-height:1.6">Click the link in the email to activate your account. Check your spam folder if you don't see it.</div>
+    <button class="auth-btn auth-btn-outline" onclick="handleResendVerification()" style="margin-top:32px">RESEND EMAIL</button>
+    <button class="auth-link" onclick="switchToSignIn()" style="margin-top:12px">Back to sign in</button>
+  </div>
+</div>
+
+<!-- DELETE ACCOUNT CONFIRMATION MODAL -->
+<div class="ov" id="delete-account-modal" onclick="if(event.target===this)cancelDeleteAccount()">
+  <div class="sheet">
+    <div class="sh-hdl"></div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:var(--red);margin-bottom:12px">DELETE YOUR ACCOUNT</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px">This will permanently delete your account, all session logs, progress data, and custom content. This cannot be undone.</div>
+    <div class="sh-acts">
+      <button class="sh-cancel" onclick="cancelDeleteAccount()">CANCEL</button>
+      <button id="delete-confirm-btn" class="abtn ab-r" onclick="executeDeleteAccount()" style="flex:2;padding:11px;font-size:14px">DELETE EVERYTHING</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP CONTENT (hidden until auth confirmed) -->
+<div id="app-content" style="display:none">
+
 <!-- NAV -->
 <nav class="nav">
   <button class="nav-btn nb-train on" onclick="showPage('train')">
@@ -28,6 +107,7 @@
     <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     <span>Progress</span>
   </button>
+  <div id="offline-dot" class="offline-dot" title="Offline — changes sync when connected"></div>
 </nav>
 <div class="toast" id="toast"></div>
 
@@ -148,7 +228,7 @@
       </div>
       <div class="card">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;margin-bottom:9px;border-bottom:1px solid var(--border);padding-bottom:7px">COACH'S NOTES</div>
-        <div style="font-size:13px;color:#999;line-height:1.9">— Your boxing classes ARE your cardio base.<br>— 1.6–2g protein per kg bodyweight daily.<br>— Sleep is your third training session. 7–8 hours.<br>— Trap bar replaces deadlift on Top Down when it arrives.</div>
+        <div id="coaches-notes-content" style="font-size:13px;color:#999;line-height:1.9">— Your boxing classes ARE your cardio base.<br>— 1.6–2g protein per kg bodyweight daily.<br>— Sleep is your third training session. 7–8 hours.<br>— Trap bar replaces deadlift on Top Down when it arrives.</div>
       </div>
     </div>
   </div>
@@ -370,10 +450,16 @@
         <div class="sr"><div style="flex:1"><div class="sr-lbl">Import Data</div><div class="sr-sub">Restore from backup</div></div><button class="sr-act" onclick="document.getElementById('import-file').click()">IMPORT</button><input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)"></div>
         <div class="sr"><div style="flex:1"><div class="sr-lbl">Clear All Data</div><div class="sr-sub">Cannot be undone</div></div><button class="sr-act dng" onclick="clearAll()">CLEAR</button></div>
       </div>
+      <div class="sec-lbl">Account</div>
+      <div class="sg" id="settings-user-row"></div>
       <div class="sec-lbl">About</div>
       <div class="sg">
-        <div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v9.0.0</div></div>
+        <div class="sr"><div class="sr-lbl">Version</div><div id="settings-version" style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v10.0.0</div></div>
         <div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>
+      </div>
+      <div class="sec-lbl" style="color:var(--red)">Danger Zone</div>
+      <div class="sg">
+        <div class="sr"><div style="flex:1"><div class="sr-lbl" style="color:var(--red)">Delete Account</div><div class="sr-sub">Permanently deletes your account and all data. Cannot be undone.</div></div><button class="sr-act dng" onclick="confirmDeleteAccount()">DELETE</button></div>
       </div>
     </div>
   </div>
@@ -482,25 +568,32 @@
     <button class="ob-dot" onclick="goToSlide(2)"></button>
   </div>
 </div>
-<script src="data.js"></script>
-<script src="app.js"></script>
-<script src="train.js"></script>
-<script src="box.js"></script>
-<script src="progress.js"></script>
-<script>
-// INIT
+
+</div><!-- end #app-content -->
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="data.js"></script>
+<script type="module" src="app.js"></script>
+<script type="module" src="train.js"></script>
+<script type="module" src="box.js"></script>
+<script type="module" src="progress.js"></script>
+<script type="module">
+import { onSplashDone } from './app.js';
+// INIT — runs after all modules have loaded
 document.getElementById('log-date').value=new Date().toISOString().split('T')[0];
 document.getElementById('boxing-date').value=new Date().toISOString().split('T')[0];
-if(window.speechSynthesis){synth=window.speechSynthesis;synth.addEventListener('voiceschanged',loadVoices);loadVoices();}
-initEquipment();
-applyBranding();
-renderLibrary();
-checkDeload();
-const savedSess=ld('activeLogSession',null);
-if(savedSess){activeLogSession=savedSess;showLogView();}
-updateFsPreUI();
-// Splash dismiss then onboarding
-(function(){var sp=document.getElementById('splash');if(!sp)return;setTimeout(function(){sp.classList.add('hiding');sp.addEventListener('animationend',function(){sp.remove();initOnboarding();});},1800);})();
+// Splash dismiss: after animation, signal auth resolver in app.js
+(function(){
+  var sp=document.getElementById('splash');
+  if(!sp)return;
+  setTimeout(function(){
+    sp.classList.add('hiding');
+    sp.addEventListener('animationend',function(){
+      sp.remove();
+      onSplashDone();
+    });
+  },1800);
+})();
 </script>
 </body>
 </html>

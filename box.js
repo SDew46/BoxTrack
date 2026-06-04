@@ -1,4 +1,19 @@
-﻿// BOX PAGE
+﻿import { ld, sv, toast, fmtSecs, getUnit, userDataCache } from './app.js';
+import { COMBO_TIERS, LEGEND_COMBOS, TIER_DESCS, CORNER_QUOTES, PUNCH_NAMES, DEF_DISP, DEF_CALL } from './data.js';
+import { db } from './firebase.js';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+
+// ─── BOX-ONLY STATE ───────────────────────────────────────────────────────────
+const FS_REST_OPTIONS=[30,45,60,90,120];
+let fsState={running:false,phase:'idle',totalRounds:6,currentRound:0,roundDurationMins:3,restDurationIdx:2,doubleRound:false,secondsLeft:0,interval:null,sessionStart:null};
+let currentBoxTab='freestyle',currentTier='basics',currentComboIdx=0,currentComboList=[],currentDrillCombo=null;
+let drillRunning=false,drillPunchIdx=0,drillInterval=null,voiceMode='numbers',tempoValue=5;
+let comboBuilderSeq=[],synth=null,voicesLoaded=false,preferredVoice=null;
+var audioUnlocked=false;var bellAudioObj=null;
+var drillRound=0,drillElapsed=0,drillElapsedInterval=null;
+var kpBodyMod=false;
+
+// BOX PAGE
 function showBoxTab(tab){
   currentBoxTab=tab;
   ['freestyle','drill','learn'].forEach(function(t){
@@ -185,15 +200,28 @@ function showFsDoneOv(){
   var sub=document.getElementById('fsd-sub');
   if(sub)sub.textContent=fsState.currentRound+' rounds · '+elapsed+' min';
 }
-function completeFsSession(){
+async function endFreestyleSession(){
+  clearInterval(fsState.interval);
+  fsState.running=false;
+  document.getElementById('fs-round-ov').classList.remove('show');
+  showFsDoneOv();
+}
+async function completeFsSession(){
   var elapsed=fsState.sessionStart?Math.round((Date.now()-fsState.sessionStart)/60000):0;
-  var record={date:new Date().toISOString().split('T')[0],rounds:fsState.currentRound,roundDurationMins:fsState.roundDurationMins,restDurationSecs:FS_REST_OPTIONS[fsState.restDurationIdx],totalMins:elapsed,id:Date.now()};
-  var sessions=ld('freestyleSessions',[]);
-  sessions.push(record);
-  sv('freestyleSessions',sessions);
+  var record={date:new Date().toISOString().split('T')[0],rounds:fsState.currentRound,roundDurationMins:fsState.roundDurationMins,restDurationSecs:FS_REST_OPTIONS[fsState.restDurationIdx],totalMins:elapsed,id:Date.now(),type:'freestyle'};
+  if(userDataCache.boxingSessions!==null){
+    userDataCache.boxingSessions=[...userDataCache.boxingSessions,record].sort(function(a,b){return a.date.localeCompare(b.date);});
+  }
   document.getElementById('fs-done-ov').classList.remove('show');
   resetFreestyle();
   toast('Session saved!');
+  if(window.currentUser){
+    try{
+      var docRef=await addDoc(collection(db,'users',window.currentUser.uid,'boxingSessions'),Object.assign({},record,{createdAt:serverTimestamp()}));
+      var entry=userDataCache.boxingSessions&&userDataCache.boxingSessions.find(function(s){return s.id===record.id;});
+      if(entry)entry._firestoreId=docRef.id;
+    }catch(err){console.error('Firestore freestyle session save failed:',err);}
+  }
 }
 function updateBtiIndicator(){
   var ind=document.getElementById('box-timer-ind');
@@ -296,9 +324,7 @@ function renderDrillDisplay(combo,activeIdx){
   }).join('');
 }
 function toggleDrill(){if(!currentDrillCombo){toast('Select a combo first',true);return;}if(drillRunning)stopDrill();else startDrill();}
-var drillRound=0,drillElapsed=0,drillElapsedInterval=null;
 // KEYPAD BUILDER
-var kpBodyMod=false;
 function openComboBuilder(){
   comboBuilderSeq=[];kpBodyMod=false;
   var bb=document.getElementById('kp-body-btn');if(bb)bb.classList.remove('active');
@@ -357,18 +383,27 @@ function showKpNameInput(){
   if(inp)setTimeout(function(){inp.focus();},300);
 }
 function closeKpNameOv(e){if(e&&e.target!==document.getElementById('kp-name-ov'))return;document.getElementById('kp-name-ov').classList.remove('open');}
-function confirmSaveCombo(){
+async function confirmSaveCombo(){
   var inp=document.getElementById('kp-name-ov-inp');
   var name=inp?inp.value.trim():'';
   if(!name){toast('Please name your combo',true);return;}
   if(comboBuilderSeq.length<2){toast('Add at least 2 moves',true);return;}
-  var combos=ld('customCombos',[]);
-  if(combos.length>=50){toast("You've reached the limit. Delete a combo to save a new one.",true);return;}
-  combos.push({name:name,seq:[...comboBuilderSeq],desc:'Custom combination'});
-  sv('customCombos',combos);
+  var existing=ld('customCombos',[]);
+  if(existing.length>=50){toast("You've reached the limit. Delete a combo to save a new one.",true);return;}
+  var newCombo={name:name,seq:[...comboBuilderSeq],desc:'Custom combination',id:Date.now()};
+  if(userDataCache.customCombos!==null){
+    userDataCache.customCombos.push(newCombo);
+  }
   document.getElementById('kp-name-ov').classList.remove('open');
   toast('Combo saved!');
   closeComboBuilder();
+  if(window.currentUser){
+    try{
+      var docRef=await addDoc(collection(db,'users',window.currentUser.uid,'customCombos'),Object.assign({},newCombo,{createdAt:serverTimestamp()}));
+      var entry=userDataCache.customCombos&&userDataCache.customCombos.find(function(c){return c.id===newCombo.id;});
+      if(entry)entry._firestoreId=docRef.id;
+    }catch(err){console.error('Firestore combo save failed:',err);}
+  }
 }
 function enterDrillFs(){
   var nav=document.querySelector('.nav');
@@ -531,7 +566,58 @@ function callPunch(punch){
 function speakCoachQuip(){if(!synth)return;const quips=["Again!","Don't think — throw!","Hands up!","Move your feet!","BREATHE!","Head movement!","Keep going!","That's it!","Combinations!","Stay sharp!"];const utt=new SpeechSynthesisUtterance(quips[Math.floor(Math.random()*quips.length)]);utt.rate=0.95;utt.pitch=0.65;utt.volume=1.0;if(preferredVoice)utt.voice=preferredVoice;synth.speak(utt);}
 function setVoiceMode(mode){voiceMode=mode;document.getElementById('vo-num').classList.toggle('on',mode==='numbers');document.getElementById('vo-name').classList.toggle('on',mode==='names');}
 function updateTempo(val){tempoValue=parseInt(val);const lbl=val<=2?'Slow':val<=4?'Learning':val<=6?'Sparring':val<=8?'Fast':'Pressure';document.getElementById('tempo-val-lbl').textContent=lbl;}
-function getCustomCombos(){return ld('customCombos',[]);}
+function getCustomCombos(){return userDataCache.customCombos!==null?userDataCache.customCombos:ld('customCombos',[]);}
 function saveCustomCombo(){const combos=ld('customCombos',[]);if(combos.length>=50){toast("You've reached the limit. Delete a combo to save a new one.",true);return;}}
-function delCustomCombo(i){if(!confirm('Delete this combo?'))return;const combos=ld('customCombos',[]);combos.splice(i,1);sv('customCombos',combos);renderTierContent('mycombos');toast('Combo deleted');}
+function delCustomCombo(i){
+  if(!confirm('Delete this combo?'))return;
+  if(userDataCache.customCombos!==null){
+    var entry=userDataCache.customCombos[i];
+    if(entry&&entry._firestoreId&&window.currentUser){
+      deleteDoc(doc(db,'users',window.currentUser.uid,'customCombos',entry._firestoreId)).catch(function(){});
+    }
+    userDataCache.customCombos.splice(i,1);
+  }
+  renderTierContent('mycombos');toast('Combo deleted');
+}
 
+// ─── EXPOSE TO HTML ONCLICK HANDLERS ─────────────────────────────────────────
+export { initBoxPage, updateFsPreUI, stopDrill, loadVoices };
+window.initBoxPage = initBoxPage;
+window.updateFsPreUI = updateFsPreUI;
+window.stopDrill = stopDrill;
+window.loadVoices = loadVoices;
+window.showBoxTab = showBoxTab;
+window.toggleFreestyle = toggleFreestyle;
+window.resetFreestyle = resetFreestyle;
+window.fsChangeRounds = fsChangeRounds;
+window.fsChangeRoundDur = fsChangeRoundDur;
+window.fsChangeRestDur = fsChangeRestDur;
+window.toggleDouble = toggleDouble;
+window.completeFsSession = completeFsSession;
+window.endFreestyleSession = endFreestyleSession;
+window.showTier = showTier;
+window.openDrillPrep = openDrillPrep;
+window.showDrillList = showDrillList;
+window.toggleDrill = toggleDrill;
+window.nextCombo = nextCombo;
+window.drillRandom = drillRandom;
+window.endDrillMode = endDrillMode;
+window.openComboBuilder = openComboBuilder;
+window.closeComboBuilder = closeComboBuilder;
+window.kpAddPunch = kpAddPunch;
+window.kpAddDef = kpAddDef;
+window.kpToggleBody = kpToggleBody;
+window.kpDel = kpDel;
+window.kpClear = kpClear;
+window.kpRemoveAt = kpRemoveAt;
+window.showKpNameInput = showKpNameInput;
+window.closeKpNameOv = closeKpNameOv;
+window.confirmSaveCombo = confirmSaveCombo;
+window.delCustomCombo = delCustomCombo;
+window.toggleLearnCard = toggleLearnCard;
+window.openPlateCalc = openPlateCalc;
+window.closePlateCalc = closePlateCalc;
+window.calcPlates = calcPlates;
+window.setVoiceMode = setVoiceMode;
+window.updateTempo = updateTempo;
+window.toggleLegend = toggleLegend;

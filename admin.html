@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<title>8RB Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"
+  }
+}
+</script>
+<style>
+body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;padding:0;min-height:100vh;}
+.admin-loading{display:flex;align-items:center;justify-content:center;height:100vh;font-family:'DM Sans',sans-serif;color:var(--dim);}
+#admin-ui{display:none;max-width:600px;margin:0 auto;padding:24px 20px 60px;}
+.admin-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.admin-ttl{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:3px;color:#fff;}
+.admin-user{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);}
+.admin-signout{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;}
+.admin-section{margin-bottom:32px;}
+.admin-section-ttl{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:var(--accent);margin-bottom:12px;}
+.admin-section-hr{border:none;border-top:1px solid var(--border);margin:0 0 16px;}
+.admin-textarea{width:100%;min-height:200px;background:#1e1e1e;border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;padding:14px;box-sizing:border-box;resize:vertical;outline:none;}
+.admin-textarea:focus{border-color:var(--accent);}
+.admin-charcount{font-size:12px;color:var(--dim);text-align:right;margin-top:6px;}
+.admin-meta{font-size:12px;color:var(--dim);margin-top:8px;margin-bottom:16px;}
+.admin-save{display:block;width:100%;height:56px;background:var(--accent);border:none;border-radius:var(--rs);font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:#fff;cursor:pointer;}
+.admin-save:disabled{opacity:0.5;cursor:default;}
+.admin-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px;opacity:0;transition:opacity 0.2s;pointer-events:none;white-space:nowrap;}
+.admin-toast.show{opacity:1;}
+.admin-toast.err{background:var(--red);color:#fff;}
+</style>
+</head>
+<body>
+<div class="admin-loading" id="admin-loading">Checking access…</div>
+
+<div id="admin-ui">
+  <div class="admin-hd">
+    <div>
+      <div class="admin-ttl">8RB ADMIN</div>
+      <div class="admin-user" id="admin-user-name">Signed in as —</div>
+    </div>
+    <button class="admin-signout" onclick="adminSignOut()">SIGN OUT</button>
+  </div>
+
+  <div class="admin-section">
+    <div class="admin-section-ttl">COACH'S NOTES</div>
+    <hr class="admin-section-hr">
+    <textarea class="admin-textarea" id="coach-notes-ta" maxlength="1000" oninput="updateCharCount()" placeholder="Write your notes for members here…"></textarea>
+    <div class="admin-charcount"><span id="char-count">0</span> / 1000</div>
+    <div class="admin-meta" id="coach-notes-meta">Last updated: —</div>
+    <button class="admin-save" id="coach-notes-save" onclick="saveCoachNotes()">SAVE CHANGES</button>
+  </div>
+</div>
+
+<div class="admin-toast" id="admin-toast"></div>
+
+<script type="module">
+import { auth, db } from './firebase.js';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+
+var currentCoach = null;
+
+function showToast(msg, isErr) {
+  var t = document.getElementById('admin-toast');
+  t.textContent = msg;
+  t.className = 'admin-toast' + (isErr ? ' err' : '') + ' show';
+  setTimeout(function(){ t.className = 'admin-toast' + (isErr ? ' err' : ''); }, 2400);
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  var d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+
+async function loadCoachNotes() {
+  try {
+    var snap = await getDoc(doc(db, 'gym', '8RB', 'config', 'main'));
+    if (snap.exists()) {
+      var data = snap.data();
+      document.getElementById('coach-notes-ta').value = data.coachNotes || '';
+      updateCharCount();
+      var meta = document.getElementById('coach-notes-meta');
+      if (data.coachNotesUpdatedAt) {
+        meta.textContent = 'Last updated: ' + fmtDate(data.coachNotesUpdatedAt) + (data.coachNotesUpdatedBy ? ' by ' + data.coachNotesUpdatedBy : '');
+      }
+    }
+  } catch(err) {
+    console.warn('Failed to load coach notes:', err);
+  }
+}
+
+window.updateCharCount = function() {
+  var val = document.getElementById('coach-notes-ta').value;
+  document.getElementById('char-count').textContent = val.length;
+};
+
+window.saveCoachNotes = async function() {
+  var notes = document.getElementById('coach-notes-ta').value;
+  var btn = document.getElementById('coach-notes-save');
+  btn.disabled = true; btn.textContent = 'SAVING…';
+  try {
+    await setDoc(doc(db, 'gym', '8RB', 'config', 'main'), {
+      coachNotes: notes,
+      coachNotesUpdatedAt: serverTimestamp(),
+      coachNotesUpdatedBy: currentCoach ? (currentCoach.displayName || currentCoach.email) : 'coach'
+    }, { merge: true });
+    var meta = document.getElementById('coach-notes-meta');
+    meta.textContent = 'Last updated: just now by ' + (currentCoach ? (currentCoach.displayName || currentCoach.email) : 'coach');
+    showToast('COACH\'S NOTES UPDATED');
+  } catch(err) {
+    console.error('Save failed:', err);
+    showToast('SAVE FAILED — TRY AGAIN', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'SAVE CHANGES';
+  }
+};
+
+window.adminSignOut = async function() {
+  try { await signOut(auth); window.location.href = 'index.html'; } catch(e) {}
+};
+
+onAuthStateChanged(auth, async function(user) {
+  var loading = document.getElementById('admin-loading');
+  var ui = document.getElementById('admin-ui');
+  if (!user) {
+    window.location.href = 'index.html';
+    return;
+  }
+  // Check role in Firestore
+  try {
+    var profileSnap = await getDoc(doc(db, 'users', user.uid, 'profile', 'data'));
+    if (!profileSnap.exists() || profileSnap.data().role !== 'coach') {
+      loading.textContent = 'Access denied.';
+      setTimeout(function(){ window.location.href = 'index.html'; }, 1500);
+      return;
+    }
+    currentCoach = user;
+    loading.style.display = 'none';
+    ui.style.display = 'block';
+    document.getElementById('admin-user-name').textContent = 'Signed in as ' + (user.displayName || user.email);
+    await loadCoachNotes();
+  } catch(err) {
+    loading.textContent = 'Error checking access. Please try again.';
+    console.error(err);
+  }
+});
+</script>
+</body>
+</html>

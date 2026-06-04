@@ -2,7 +2,7 @@
 // DEV: Chrome DevTools → Application → Service Workers → tick "Update on reload"
 //      to bypass the SW cache during local development.
 
-const CACHE = 'boxtrack-v12';
+const CACHE = 'boxtrack-v13';
 
 // Static assets pre-cached on install.
 // index.html is intentionally excluded — it is fetched network-first on
@@ -13,11 +13,13 @@ const STATIC_ASSETS = [
   '/BoxTrack/icon.png',
   '/BoxTrack/icon-512.png',
   '/BoxTrack/styles.css',
+  '/BoxTrack/firebase.js',
   '/BoxTrack/data.js',
   '/BoxTrack/app.js',
   '/BoxTrack/train.js',
   '/BoxTrack/box.js',
   '/BoxTrack/progress.js',
+  '/BoxTrack/admin.html',
 ];
 
 self.addEventListener('install', e => {

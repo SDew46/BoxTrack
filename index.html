@@ -72,8 +72,13 @@
     <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:#fff;letter-spacing:2px">CHECK YOUR EMAIL</div>
     <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:var(--muted);margin-top:12px;line-height:1.6">We've sent a verification link to<br><strong id="verify-email-txt" style="color:var(--text)"></strong></div>
     <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--dim);margin-top:20px;line-height:1.6">Click the link in the email to activate your account. Check your spam folder if you don't see it.</div>
-    <button class="auth-btn auth-btn-outline" onclick="handleResendVerification()" style="margin-top:32px">RESEND EMAIL</button>
-    <button class="auth-link" onclick="switchToSignIn()" style="margin-top:12px">Back to sign in</button>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:28px">
+      <div class="verify-spinner"></div>
+      <span id="verify-status" style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--dim)">Waiting for verification…</span>
+    </div>
+    <button class="auth-btn auth-btn-outline" id="manual-verify-btn" onclick="handleManualVerifyCheck()" style="margin-top:20px">I've verified my email — continue</button>
+    <button class="auth-btn auth-btn-outline" onclick="handleResendVerification()" style="margin-top:12px">RESEND EMAIL</button>
+    <button class="auth-link" onclick="switchToSignIn()" style="margin-top:8px">Back to sign in</button>
   </div>
 </div>
 
@@ -582,16 +587,21 @@ import { onSplashDone } from './app.js';
 // INIT — runs after all modules have loaded
 document.getElementById('log-date').value=new Date().toISOString().split('T')[0];
 document.getElementById('boxing-date').value=new Date().toISOString().split('T')[0];
-// Splash dismiss: after animation, signal auth resolver in app.js
+// Splash dismiss — timeout fallback ensures onSplashDone fires even if
+// animationend doesn't (reduced-motion, browser quirk, animation cancelled)
 (function(){
   var sp=document.getElementById('splash');
   if(!sp)return;
   setTimeout(function(){
     sp.classList.add('hiding');
-    sp.addEventListener('animationend',function(){
-      sp.remove();
+    var fired=false;
+    function proceed(){
+      if(fired)return;fired=true;
+      if(sp.parentNode)sp.remove();
       onSplashDone();
-    });
+    }
+    sp.addEventListener('animationend',proceed);
+    setTimeout(proceed,600); // fallback if animationend never fires
   },1800);
 })();
 </script>

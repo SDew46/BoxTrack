@@ -606,5 +606,9 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
 .offline-dot.show{opacity:1;}
 .nav{position:relative;}
 
+/* ── VERIFY SPINNER ──────────────────────────────────────────────────────── */
+.verify-spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.9s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
 /* ── SETTINGS ACCOUNT ROW ────────────────────────────────────────────────── */
 #settings-user-row .sr{flex-wrap:wrap;gap:4px;}

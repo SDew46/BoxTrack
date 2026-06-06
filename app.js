@@ -2,7 +2,7 @@ import { auth, db } from './firebase.js';
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signInWithPopup, GoogleAuthProvider, signOut as fbSignOut,
-  sendEmailVerification, sendPasswordResetEmail, deleteUser, updateProfile
+  sendEmailVerification, sendPasswordResetEmail, deleteUser, updateProfile, reload
 } from 'firebase/auth';
 import {
   doc, getDoc, setDoc, getDocs, collection, addDoc, deleteDoc, serverTimestamp, writeBatch, onSnapshot
@@ -294,6 +294,11 @@ export function showEmailVerificationScreen(email) {
   showAuthForm('auth-verify');
   var emailEl = document.getElementById('verify-email-txt');
   if (emailEl) emailEl.textContent = email || '';
+  var st = document.getElementById('verify-status');
+  if (st) st.textContent = 'Waiting for verification…';
+  var btn = document.getElementById('manual-verify-btn');
+  if (btn) { btn.textContent = "I've verified my email — continue"; btn.disabled = false; }
+  startVerificationPolling();
 }
 export function showApp() {
   var appEl = document.getElementById('app-content');
@@ -371,11 +376,93 @@ var authReady = false;
 var authUser = null;
 var splashDone = false;
 
-function resolveAuth() {
+// ─── VERIFY EMAIL POLLING ──────────────────────────────────────────────────────
+var verifyPollInterval = null;
+var verifyPollCount = 0;
+
+function startVerificationPolling() {
+  stopVerificationPolling();
+  verifyPollCount = 0;
+  verifyPollInterval = setInterval(async function() {
+    verifyPollCount++;
+    if (verifyPollCount > 20) {
+      stopVerificationPolling();
+      var st = document.getElementById('verify-status');
+      if (st) st.textContent = 'Tap the button below if you\'ve verified.';
+      return;
+    }
+    if (!authUser) return;
+    try {
+      await reload(authUser);
+      if (authUser.emailVerified) {
+        stopVerificationPolling();
+        window.currentUser = authUser;
+        await ensureUserProfile(authUser);
+        await loadUserData(authUser.uid);
+        showApp();
+      }
+    } catch(e) {}
+  }, 3000);
+}
+
+function stopVerificationPolling() {
+  if (verifyPollInterval) { clearInterval(verifyPollInterval); verifyPollInterval = null; }
+}
+
+async function handleManualVerifyCheck() {
+  if (!authUser) return;
+  var btn = document.getElementById('manual-verify-btn');
+  if (btn) { btn.textContent = 'Checking…'; btn.disabled = true; }
+  try {
+    await reload(authUser);
+    if (authUser.emailVerified) {
+      stopVerificationPolling();
+      window.currentUser = authUser;
+      await ensureUserProfile(authUser);
+      await loadUserData(authUser.uid);
+      showApp();
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = 'Not verified yet — try again'; }
+      setTimeout(function() { if (btn) btn.textContent = "I've verified my email — continue"; }, 2500);
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = "I've verified my email — continue"; }
+  }
+}
+
+// ─── ENSURE USER PROFILE ──────────────────────────────────────────────────────
+// Safety net: if a verified user has no profile document, create one.
+// This recovers from sign-up flows that failed partway through.
+async function ensureUserProfile(user) {
+  try {
+    var profileRef = doc(db, 'users', user.uid, 'profile', 'data');
+    var existing = await getDoc(profileRef);
+    if (!existing.exists()) {
+      console.error('[8RB] Profile missing for verified user ' + user.uid + ' — creating now. Check sign-up flow for regressions.');
+      await setDoc(profileRef, {
+        displayName: user.displayName || '',
+        email: user.email || '',
+        gym: '8RB',
+        role: 'member',
+        joinDate: serverTimestamp(),
+        unit: 'kg',
+        accentColour: '#E63946',
+        onboarded: false
+      });
+    }
+  } catch(err) {
+    console.warn('ensureUserProfile failed:', err);
+  }
+}
+
+// ─── RESOLVE AUTH ─────────────────────────────────────────────────────────────
+async function resolveAuth() {
   if (!splashDone || !authReady) return;
   if (authUser && authUser.emailVerified) {
     window.currentUser = authUser;
-    loadUserData(authUser.uid).then(function() { showApp(); });
+    await ensureUserProfile(authUser);
+    await loadUserData(authUser.uid);
+    showApp();
   } else if (authUser && !authUser.emailVerified) {
     showEmailVerificationScreen(authUser.email);
   } else {
@@ -504,6 +591,7 @@ async function handleResendVerification() {
 // ─── SIGN OUT ─────────────────────────────────────────────────────────────────
 async function handleSignOut() {
   try {
+    stopVerificationPolling();
     await fbSignOut(auth);
     window.currentUser = null;
     userDataCache.sessions = null; userDataCache.boxingSessions = null;
@@ -650,7 +738,7 @@ export function getPrevWtFromSessions(name, sessions) {
 
 // ─── SWITCH FORMS ─────────────────────────────────────────────────────────────
 function switchToSignUp() { clearAuthErrors(); showAuthForm('auth-signup'); }
-function switchToSignIn() { clearAuthErrors(); showAuthForm('auth-signin'); }
+function switchToSignIn() { stopVerificationPolling(); clearAuthErrors(); showAuthForm('auth-signin'); }
 
 // ─── PASSWORD VISIBILITY TOGGLE ───────────────────────────────────────────────
 function togglePwVisibility(inputId, btn) {
@@ -690,6 +778,7 @@ window.handleGoogleSignIn = handleGoogleSignIn;
 window.handleSignUp = handleSignUp;
 window.handleForgotPassword = handleForgotPassword;
 window.handleResendVerification = handleResendVerification;
+window.handleManualVerifyCheck = handleManualVerifyCheck;
 window.handleSignOut = handleSignOut;
 window.confirmDeleteAccount = confirmDeleteAccount;
 window.cancelDeleteAccount = cancelDeleteAccount;

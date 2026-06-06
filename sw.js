@@ -2,30 +2,20 @@
 // DEV: Chrome DevTools → Application → Service Workers → tick "Update on reload"
 //      to bypass the SW cache during local development.
 
-const CACHE = 'boxtrack-v14';
+const CACHE = 'boxtrack-v15';
 
-// Static assets pre-cached on install.
-// index.html is intentionally excluded — it is fetched network-first on
-// every navigation so content updates are visible without a cache wipe.
+// Only pre-cache assets that never change between deploys.
+// JS and CSS are intentionally excluded — they use network-first so code
+// updates reach users immediately without requiring a cache version bump.
 const STATIC_ASSETS = [
   '/BoxTrack/manifest.json',
   '/BoxTrack/8RB.png',
   '/BoxTrack/icon.png',
   '/BoxTrack/icon-512.png',
-  '/BoxTrack/styles.css',
-  '/BoxTrack/firebase.js',
-  '/BoxTrack/data.js',
-  '/BoxTrack/app.js',
-  '/BoxTrack/train.js',
-  '/BoxTrack/box.js',
-  '/BoxTrack/progress.js',
-  '/BoxTrack/admin.html',
 ];
 
 self.addEventListener('install', e => {
   console.log('[SW] Installing', CACHE);
-  // Skip the waiting phase immediately so the new SW activates on the
-  // next clients.claim() without requiring all tabs to close first.
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE)
@@ -43,19 +33,16 @@ self.addEventListener('activate', e => {
           .filter(k => k !== CACHE)
           .map(k => { console.log('[SW] Deleting stale cache:', k); return caches.delete(k); })
       ))
-      // Take control of all open clients immediately after activation.
-      // This triggers controllerchange on each client, which the page
-      // uses to reload and pick up the latest content.
       .then(() => clients.claim())
       .then(() => console.log('[SW] Active and controlling all clients'))
   );
 });
 
 self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+
   // ── HTML navigation: network-first ───────────────────────────────────
-  // Always try the network so the user gets the latest index.html after
-  // a push, even if sw.js itself didn't change between deploys.
-  // Falls back to the cached copy when offline.
+  // Always fetch fresh so the user gets latest index.html after a push.
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request)
@@ -69,7 +56,24 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // ── Everything else: cache-first ─────────────────────────────────────
+  // ── JS and CSS: network-first with cache fallback ─────────────────────
+  // Code changes propagate immediately. Falls back to cache when offline.
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          if (res && res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // ── Everything else (images, manifest): cache-first ───────────────────
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;

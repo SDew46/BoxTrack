@@ -125,7 +125,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v10.0.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v10.1.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -238,8 +238,17 @@ function npBgTap(e) { if (e.target === document.getElementById('numpad-ov')) doc
 
 // ─── ONBOARDING ────────────────────────────────────────────────────────────────
 var obIdx = 0;
-export function initOnboarding() {
+export async function initOnboarding() {
   if (ld('onboarded', false)) return;
+  if (window.currentUser) {
+    try {
+      var profileSnap = await getDoc(doc(db, 'users', window.currentUser.uid, 'profile', 'data'));
+      if (profileSnap.exists() && profileSnap.data().onboarded === true) {
+        sv('onboarded', true);
+        return;
+      }
+    } catch(e) { /* fall through — show onboarding if Firestore read fails */ }
+  }
   var ov = document.getElementById('onboarding'); if (!ov) return;
   ov.classList.add('show'); obIdx = 0; updateObSlide();
   var wrap = ov.querySelector('.ob-slides-wrap');
@@ -255,7 +264,14 @@ function updateObSlide() {
   if (slides) slides.style.transform = 'translateX(-' + obIdx + '00%)';
   dots.forEach(function(d,i){d.classList.toggle('on', i===obIdx);});
 }
-function finishOnboarding() { sv('onboarded', true); var ov=document.getElementById('onboarding'); if(ov)ov.classList.remove('show'); }
+function finishOnboarding() {
+  sv('onboarded', true);
+  var ov = document.getElementById('onboarding'); if (ov) ov.classList.remove('show');
+  if (window.currentUser) {
+    setDoc(doc(db, 'users', window.currentUser.uid, 'profile', 'data'), { onboarded: true }, { merge: true })
+      .catch(function(e){ console.warn('[8RB] Failed to save onboarded flag:', e); });
+  }
+}
 
 // ─── OFFLINE INDICATOR ─────────────────────────────────────────────────────────
 function updateOfflineIndicator() {

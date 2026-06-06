@@ -108,19 +108,11 @@ function closeSettings(e) { if (e && e.target !== document.getElementById('setti
 function closeSettingsBtn() { document.getElementById('settings-ov').classList.remove('open'); }
 
 // ─── PROFILE TAB ───────────────────────────────────────────────────────────────
-export async function renderProfile() {
+export function renderProfile() {
   var el = document.getElementById('profile-content');
   if (!el) return;
   var user = window.currentUser;
   if (!user) { el.innerHTML = '<div class="empty" style="padding:32px 0;color:var(--dim)">Not signed in.</div>'; return; }
-  var joinDateStr = '—';
-  try {
-    var profileSnap = await getDoc(doc(db, 'users', user.uid, 'profile', 'data'));
-    if (profileSnap.exists() && profileSnap.data().joinDate) {
-      var jd = profileSnap.data().joinDate.toDate ? profileSnap.data().joinDate.toDate() : new Date(profileSnap.data().joinDate);
-      joinDateStr = jd.toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
-    }
-  } catch(e) {}
   var providerLabel = (user.providerData && user.providerData[0] && user.providerData[0].providerId === 'google.com') ? 'Google' : 'Email & password';
   var displayName = user.displayName || '—';
   var unit = getUnit();
@@ -137,7 +129,7 @@ export async function renderProfile() {
       + '</div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Email</div><div class="sr-sub">' + (user.email || '—') + '</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Signed in with</div><div class="sr-sub">' + providerLabel + '</div></div></div>'
-      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Member since</div><div class="sr-sub">' + joinDateStr + '</div></div></div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Member since</div><div class="sr-sub" id="pf-join-date">—</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Sign Out</div></div><button class="sr-act" onclick="handleSignOut()">SIGN OUT</button></div>'
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">SETTINGS</div>'
@@ -158,6 +150,14 @@ export async function renderProfile() {
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Import Data</div><div class="sr-sub">Restore sessions from a backup</div></div><button class="sr-act" onclick="document.getElementById(\'import-file\').click()">IMPORT</button></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl" style="color:var(--red)">Delete Account</div><div class="sr-sub">Permanently deletes your account and all data. Cannot be undone.</div></div><button class="sr-act dng" onclick="confirmDeleteAccount()">DELETE</button></div>'
     + '</div>';
+  // Patch in join date asynchronously — everything else renders immediately above
+  getDoc(doc(db, 'users', user.uid, 'profile', 'data')).then(function(snap) {
+    if (snap.exists() && snap.data().joinDate) {
+      var jd = snap.data().joinDate.toDate ? snap.data().joinDate.toDate() : new Date(snap.data().joinDate);
+      var joinEl = document.getElementById('pf-join-date');
+      if (joinEl) joinEl.textContent = jd.toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+    }
+  }).catch(function(){});
 }
 function editDisplayName() {
   var row = document.getElementById('pf-name-row');

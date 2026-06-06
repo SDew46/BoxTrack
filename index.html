@@ -545,51 +545,57 @@
   <div class="rfs-next" id="rfs-next"></div>
   <button class="rfs-skip" onclick="skipRest()">SKIP</button>
 </div>
-<!-- Onboarding -->
-<div id="onboarding">
-  <button class="ob-skip" onclick="finishOnboarding()">SKIP</button>
-  <div class="ob-slides-wrap"><div class="ob-slides" id="ob-slides">
-    <div class="ob-slide">
-      <img class="ob-logo" src="8RB.png" alt="8RB">
-      <div class="ob-tag">BOXING FOR EVERYONE</div>
-      <div class="ob-headline">WELCOME TO 8RB.</div>
-      <div class="ob-sub">THIS APP TRAINS WITH YOU.</div>
-      <button class="abtn ab-r abtn-xl" onclick="goToSlide(1)" style="margin-top:32px">NEXT</button>
-    </div>
-    <div class="ob-slide">
-      <div class="ob-headline">THREE SECTIONS.</div>
-      <div class="ob-rows">
-        <div class="ob-row">
-          <div class="ob-row-icon"><svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M3 8h3M18 8h3M3 16h3M18 16h3M6 12h12"/></svg></div>
-          <div><div class="ob-row-lbl">TRAIN</div><div class="ob-row-desc">Log your strength sessions and track progress.</div></div>
-        </div>
-        <div class="ob-row">
-          <div class="ob-row-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg></div>
-          <div><div class="ob-row-lbl">BOX</div><div class="ob-row-desc">Round timer and combo coach for bag work.</div></div>
-        </div>
-        <div class="ob-row">
-          <div class="ob-row-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-          <div><div class="ob-row-lbl">PROGRESS</div><div class="ob-row-desc">See your numbers improve over time.</div></div>
-        </div>
-      </div>
-      <button class="abtn ab-r abtn-xl" onclick="goToSlide(2)" style="margin-top:32px">NEXT</button>
-    </div>
-    <div class="ob-slide">
-      <div class="ob-headline">READY TO WORK?</div>
-      <div class="ob-sub">Your data is securely backed up and follows you across devices.</div>
-      <div class="ob-footer" style="width:100%;padding:0;margin-top:32px">
-        <button class="abtn ab-r abtn-xl" onclick="finishOnboarding()">LET'S GO</button>
-      </div>
-    </div>
-  </div></div>
-  <div class="ob-dots" id="ob-dots">
-    <button class="ob-dot on" onclick="goToSlide(0)"></button>
-    <button class="ob-dot" onclick="goToSlide(1)"></button>
-    <button class="ob-dot" onclick="goToSlide(2)"></button>
-  </div>
-</div>
 
 </div><!-- end #app-content -->
+
+<!-- ═══ ONBOARDING — outside #app-content so filter:brightness on app doesn't contaminate it ═══ -->
+<div id="ob-wrap" style="display:none" aria-live="polite">
+
+  <!-- Stage 2: Welcome screen -->
+  <div id="ob-welcome" style="display:none">
+    <div class="ob-logo-bg"><img src="8RB.png" alt=""></div>
+    <div class="ob-gym-label">8RB BY 8 ROUNDS BOXING</div>
+    <div class="ob-center">
+      <div class="ob-name-wrap">
+        <div class="ob-name" id="ob-name">CHAMPION</div>
+      </div>
+      <div class="ob-welcome-msg">
+        <div class="ob-wm-line1">Welcome to 8RB.</div>
+        <div class="ob-wm-line2" id="ob-wm-text">Your coach has set this up for you.</div>
+      </div>
+    </div>
+    <button class="ob-cta" id="ob-cta-welcome" aria-label="Show me around">SHOW ME AROUND</button>
+  </div>
+
+  <!-- Stages 3–6: Tour overlay -->
+  <div id="ob-overlay" style="display:none">
+    <button class="ob-skip-btn" id="ob-skip" aria-label="Skip tour">SKIP</button>
+    <div class="ob-sheet" id="ob-sheet">
+      <div class="ob-progress-track">
+        <div class="ob-progress-fill" id="ob-progress-fill"></div>
+      </div>
+      <div class="ob-sheet-label" id="ob-sheet-label">TRAIN</div>
+      <div class="ob-sheet-desc" id="ob-sheet-desc"></div>
+      <button class="ob-next-btn" id="ob-next">NEXT →</button>
+    </div>
+  </div>
+
+  <!-- Stage 7: Final screen -->
+  <div id="ob-final" style="display:none">
+    <div class="ob-logo-bg"><img src="8RB.png" alt=""></div>
+    <div class="ob-f-gym-label">8RB BY 8 ROUNDS BOXING</div>
+    <div class="ob-f-center">
+      <div class="ob-f-name-wrap">
+        <div class="ob-f-name" id="ob-f-name">CHAMPION</div>
+        <div class="ob-sweep" id="ob-sweep"></div>
+      </div>
+      <div class="ob-f-headline">NOW GO GET IT.</div>
+      <div class="ob-f-sub">Your first session is one tap away.</div>
+    </div>
+    <button class="ob-cta" id="ob-cta-final" aria-label="Start training">START TRAINING</button>
+  </div>
+
+</div><!-- end #ob-wrap -->
 
 <script type="module" src="firebase.js"></script>
 <script type="module" src="data.js"></script>
@@ -597,6 +603,7 @@
 <script type="module" src="train.js"></script>
 <script type="module" src="box.js"></script>
 <script type="module" src="progress.js"></script>
+<script type="module" src="onboarding.js"></script>
 <script type="module">
 import { onSplashDone } from './app.js';
 // INIT — runs after all modules have loaded

@@ -612,3 +612,216 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
 
 /* ── SETTINGS ACCOUNT ROW ────────────────────────────────────────────────── */
 #settings-user-row .sr{flex-wrap:wrap;gap:4px;}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ONBOARDING — design tokens and component styles
+   These only apply to #ob-wrap and its children.
+   ═══════════════════════════════════════════════════════════════════════════ */
+#ob-wrap{
+  --ob-bg:#0a0a0a;
+  --ob-bg-centre:#1a1a1a;
+  --ob-text:#ffffff;
+  --ob-muted:rgba(255,255,255,0.45);
+  --ob-dim:rgba(255,255,255,0.2);
+  --ob-red:#E63946;
+  --ob-gold:#E6A817;
+  --ob-blue:#457B9D;
+  --ob-overlay-bg:#111111;
+  --ob-sheet-height:42vh;
+  --ob-transition:250ms ease-out;
+  --ob-logo-opacity:0.07;
+  position:fixed;inset:0;z-index:10000;
+}
+
+/* ── Stage 2 & 7: full-screen containers ────────────────────────────────── */
+#ob-welcome,#ob-final{
+  position:fixed;inset:0;
+  background:radial-gradient(ellipse at 50% 50%, var(--ob-bg-centre) 0%, var(--ob-bg) 70%);
+  display:flex;flex-direction:column;align-items:center;
+  overflow:hidden;
+}
+
+/* ── Watermark logo ──────────────────────────────────────────────────────── */
+.ob-logo-bg{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:90vw;
+  opacity:var(--ob-logo-opacity);
+  pointer-events:none;
+  animation:obBreathe 3000ms ease-in-out infinite;
+}
+.ob-logo-bg img{width:100%;height:auto;display:block;}
+
+/* ── Stage 2: gym label ──────────────────────────────────────────────────── */
+.ob-gym-label{
+  position:absolute;top:52px;
+  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:4px;text-transform:uppercase;color:var(--ob-dim);
+  opacity:0;animation:obFadeIn 250ms ease-out 400ms forwards;
+}
+
+/* ── Stage 2: centre block ───────────────────────────────────────────────── */
+.ob-center{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;
+  width:100%;padding:0 24px;box-sizing:border-box;text-align:center;
+}
+.ob-name-wrap{overflow:hidden;}
+.ob-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(48px,18vw,120px);
+  color:var(--ob-text);line-height:1;
+  opacity:0;
+  animation:obScaleIn 300ms ease-out 200ms forwards;
+}
+.ob-welcome-msg{
+  margin-top:40px;
+  opacity:0;animation:obFadeIn 250ms ease-out 500ms forwards;
+}
+.ob-wm-line1{
+  font-family:'DM Sans',sans-serif;font-size:18px;font-weight:600;
+  color:var(--ob-text);margin-bottom:6px;
+}
+.ob-wm-line2{
+  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:400;
+  color:var(--ob-muted);line-height:1.6;max-width:280px;
+}
+
+/* ── CTA button (used in stages 2 and 7) ────────────────────────────────── */
+.ob-cta{
+  position:fixed;bottom:0;left:0;right:0;
+  height:64px;background:var(--ob-red);border:none;border-radius:0;
+  font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:#fff;
+  cursor:pointer;
+  opacity:0;
+  animation:obSlideUp 300ms ease-out 800ms forwards;
+}
+.ob-cta:active{filter:brightness(0.9);}
+
+/* ── Stage 3–6: overlay ──────────────────────────────────────────────────── */
+#ob-overlay{position:fixed;inset:0;}
+
+/* ── Skip button ──────────────────────────────────────────────────────────── */
+.ob-skip-btn{
+  position:fixed;top:20px;right:20px;
+  background:none;border:none;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;color:var(--ob-muted);
+  cursor:pointer;
+  padding:14px 16px; /* 44px minimum tap target */
+  line-height:1;
+}
+
+/* ── Bottom sheet ────────────────────────────────────────────────────────── */
+.ob-sheet{
+  position:fixed;bottom:0;left:0;right:0;
+  height:var(--ob-sheet-height);
+  background:var(--ob-overlay-bg);
+  border-top:3px solid var(--ob-red);
+  border-radius:16px 16px 0 0;
+  padding:24px 24px 32px;
+  box-sizing:border-box;
+  display:flex;flex-direction:column;
+  transform:translateY(100%);
+}
+.ob-sheet.ob-sheet-in{transform:translateY(0);}
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.ob-progress-track{
+  position:absolute;top:0;left:0;right:0;height:3px;
+  background:rgba(255,255,255,0.08);border-radius:16px 16px 0 0;overflow:hidden;
+}
+.ob-progress-fill{
+  height:100%;background:var(--ob-red);
+  transition:width 300ms ease-out;
+}
+
+/* ── Sheet label & description ───────────────────────────────────────────── */
+.ob-sheet-label{
+  font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--ob-text);
+  margin-bottom:8px;margin-top:12px;
+}
+.ob-sheet-desc{
+  font-family:'DM Sans',sans-serif;font-size:15px;color:var(--ob-muted);
+  line-height:1.65;flex:1;
+}
+
+/* ── Next button ──────────────────────────────────────────────────────────── */
+.ob-next-btn{
+  position:absolute;bottom:32px;right:24px;
+  background:none;border:none;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;color:var(--ob-text);
+  cursor:pointer;padding:14px 0 0 14px; /* 48px tap target */
+}
+
+/* ── Stage 7: final screen ───────────────────────────────────────────────── */
+#ob-final{opacity:0;transition:opacity 400ms ease-out;}
+#ob-final.ob-final-in{opacity:1;}
+
+.ob-f-gym-label{
+  position:absolute;top:52px;
+  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:4px;text-transform:uppercase;color:var(--ob-dim);
+  opacity:0;
+}
+.ob-f-gym-label.ob-anim{animation:obFadeIn 250ms ease-out 100ms forwards;}
+
+.ob-f-center{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-52%);
+  display:flex;flex-direction:column;align-items:center;
+  width:100%;padding:0 24px;box-sizing:border-box;text-align:center;
+}
+
+/* ── Name with light sweep ───────────────────────────────────────────────── */
+.ob-f-name-wrap{position:relative;overflow:hidden;display:inline-block;}
+.ob-f-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(48px,18vw,120px);
+  color:var(--ob-text);line-height:1;
+  opacity:0;
+}
+.ob-f-name.ob-anim{animation:obScaleIn 300ms ease-out 200ms forwards;}
+.ob-sweep{
+  position:absolute;top:0;left:0;height:100%;width:40%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.12),transparent);
+  transform:translateX(-100%);
+  pointer-events:none;
+}
+.ob-sweep.ob-anim{animation:obSweep 1200ms ease-in-out 700ms forwards;}
+
+.ob-f-headline{
+  font-family:'Bebas Neue',sans-serif;font-size:52px;
+  color:var(--ob-red);margin-top:8px;
+  opacity:0;
+}
+.ob-f-headline.ob-anim{animation:obFadeIn 250ms ease-out 400ms forwards;}
+
+.ob-f-sub{
+  font-family:'DM Sans',sans-serif;font-size:15px;color:var(--ob-muted);
+  margin-top:8px;
+  opacity:0;
+}
+.ob-f-sub.ob-anim{animation:obFadeIn 250ms ease-out 550ms forwards;}
+
+/* ── Keyframes ───────────────────────────────────────────────────────────── */
+@keyframes obFadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes obScaleIn{from{opacity:0;transform:scale(0.92);}to{opacity:1;transform:scale(1);}}
+@keyframes obSlideUp{from{opacity:0;transform:translateY(64px);}to{opacity:1;transform:translateY(0);}}
+@keyframes obBreathe{0%,100%{transform:translate(-50%,-50%) scale(0.97);}50%{transform:translate(-50%,-50%) scale(1.0);}}
+@keyframes obSweep{from{transform:translateX(-100%);}to{transform:translateX(200%);}}
+
+/* ── prefers-reduced-motion ──────────────────────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  .ob-gym-label,.ob-name,.ob-welcome-msg,.ob-cta,
+  .ob-f-gym-label,.ob-f-name,.ob-f-headline,.ob-f-sub{
+    animation:none!important;opacity:1!important;transform:none!important;
+  }
+  .ob-logo-bg{animation:none;}
+  .ob-sweep,.ob-sweep.ob-anim{animation:none;display:none;}
+  .ob-sheet{transition:none;}
+  .ob-progress-fill{transition:none;}
+  #ob-final{transition:none;}
+}

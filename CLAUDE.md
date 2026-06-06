@@ -6,7 +6,7 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 10.2.0. Step 2 (Firebase backend) complete — not yet pushed/deployed.
+Version 10.3.0. Step 2 (Firebase backend) complete — not yet pushed/deployed.
 
 **File structure — all ES modules, all acorn clean:**
 - `styles.css` — all CSS, includes Step 2 auth + offline indicator styles
@@ -230,7 +230,7 @@ Use explicit checks: obj && obj.prop not obj?.prop in these contexts.
 Steve is on Windows/PowerShell. Run commands separately, not chained with &&.
 
 ### 5. Version bump on every meaningful change
-Update version number in `renderSettingsPanel()` and `renderProfile()` in app.js. Current: 10.2.0.
+Update version number in `renderSettingsPanel()` and `renderProfile()` in app.js. Current: 10.3.0.
 
 ---
 
@@ -246,7 +246,9 @@ All JS files are ES modules (`type="module"`). Import maps in index.html and adm
 
 `data.js` — all static data constants (all exported): SESSION_NAMES, EXERCISE_LIBRARY, SESSIONS, CAT_META, TRACKED_LIFTS, EQUIP_OPTIONS, PUNCH_NAMES, DEF_DISP, DEF_CALL, COMBO_TIERS, LEGEND_COMBOS, TIER_DESCS, CORNER_QUOTES, ACCENT_COLORS, getSessName.
 
-`app.js` — auth state (onAuthStateChanged, sign-in/up/Google/signOut/delete), user data cache (userDataCache — loaded from Firestore on auth, used by ld() to route session data reads), storage utils (ld/sv), formatting helpers, toast, nav (4 tabs: Train/Box/Progress/Profile), branding, settings panel, Profile tab (renderProfile, editDisplayName, saveDisplayName), service worker registration, PR detection, numpad, onboarding. Exports all utility functions; exposes all HTML-called functions on window.
+`app.js` — auth state (onAuthStateChanged, sign-in/up/Google/signOut/delete), userProfile cache (populated by ensureUserProfile on every sign-in), user data cache (userDataCache), storage utils (ld/sv), formatting helpers, toast, nav (4 tabs: Train/Box/Progress/Profile), branding, settings panel, Profile tab (renderProfile, editDisplayName, saveDisplayName), launchApp (checks onboarded flag, calls startOnboarding or showApp), loadWelcomeMessage (reads gym/8RB/config.welcomeMessage), service worker registration, PR detection, numpad. Exports all utility functions; exposes all HTML-called functions on window.
+
+`onboarding.js` — 7-stage onboarding state machine. Entry point: window.startOnboarding(user, welcomeMsg). Stage 2: welcome screen with animated name + message. Stages 3–6: tour overlays with bottom sheet sliding over dimmed app (filter:brightness(0.4) on #app-content). Stage 7: final screen with name, "NOW GO GET IT." in red, light sweep animation, START TRAINING button. Writes onboarded:true to Firestore on completion (fire-and-forget with one retry). Calls showApp() immediately on start so app renders in background. All animations disabled when prefers-reduced-motion is set.
 
 `train.js` — deload, equipment picker, session library, swap modal, log view, plan ref overlay, warmup timer, log form, history, session complete, CSB. Writes sessions/boxing classes/custom sessions to Firestore. Defines playRestDone() (Web Audio beep, was previously undefined).
 

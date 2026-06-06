@@ -18,6 +18,7 @@ window.currentUser = null;
 // ─── USER DATA CACHE ───────────────────────────────────────────────────────────
 // null = not yet loaded from Firestore (fall back to localStorage).
 // Once loaded, ld() returns from cache instead of localStorage for these keys.
+export var userProfile = null; // populated by ensureUserProfile on every sign-in
 export const userDataCache = {
   sessions: null,
   boxingSessions: null,   // covers freestyle timer sessions + boxing class logs
@@ -139,7 +140,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v10.2.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v10.3.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -203,7 +204,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v10.2.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v10.3.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -319,42 +320,6 @@ function calcPlatesStr(kg) { var side=(kg-20)/2; if(side<=0)return ''; var plate
 function npDone() { if (npTarget && npVal !== '') npTarget.value = npVal; document.getElementById('numpad-ov').classList.remove('open'); autosaveLog(); }
 function npBgTap(e) { if (e.target === document.getElementById('numpad-ov')) document.getElementById('numpad-ov').classList.remove('open'); }
 
-// ─── ONBOARDING ────────────────────────────────────────────────────────────────
-var obIdx = 0;
-export async function initOnboarding() {
-  if (ld('onboarded', false)) return;
-  if (window.currentUser) {
-    try {
-      var profileSnap = await getDoc(doc(db, 'users', window.currentUser.uid, 'profile', 'data'));
-      if (profileSnap.exists() && profileSnap.data().onboarded === true) {
-        sv('onboarded', true);
-        return;
-      }
-    } catch(e) { /* fall through — show onboarding if Firestore read fails */ }
-  }
-  var ov = document.getElementById('onboarding'); if (!ov) return;
-  ov.classList.add('show'); obIdx = 0; updateObSlide();
-  var wrap = ov.querySelector('.ob-slides-wrap');
-  var startX = 0;
-  if (wrap) {
-    wrap.addEventListener('touchstart', function(e){startX=e.touches[0].clientX;},{passive:true});
-    wrap.addEventListener('touchend', function(e){var dx=e.changedTouches[0].clientX-startX;if(Math.abs(dx)>50){if(dx<0&&obIdx<2)obIdx++;else if(dx>0&&obIdx>0)obIdx--;updateObSlide();}},{passive:true});
-  }
-}
-function goToSlide(n) { obIdx = n; updateObSlide(); }
-function updateObSlide() {
-  var slides = document.getElementById('ob-slides'), dots = document.querySelectorAll('.ob-dot');
-  if (slides) slides.style.transform = 'translateX(-' + obIdx + '00%)';
-  dots.forEach(function(d,i){d.classList.toggle('on', i===obIdx);});
-}
-function finishOnboarding() {
-  sv('onboarded', true);
-  var ov = document.getElementById('onboarding'); if (ov) ov.classList.remove('show');
-  if (window.currentUser) {
-    setDoc(doc(db, 'users', window.currentUser.uid, 'profile', 'data'), { onboarded: true }, { merge: true })
-      .catch(function(e){ console.warn('[8RB] Failed to save onboarded flag:', e); });
-  }
-}
 
 // ─── OFFLINE INDICATOR ─────────────────────────────────────────────────────────
 function updateOfflineIndicator() {
@@ -413,7 +378,6 @@ export function showApp() {
   renderLibrary();
   checkDeload();
   updateFsPreUI();
-  initOnboarding();
   loadCoachesNotes();
   // Prompt migration if localStorage has existing session data
   checkMigration();
@@ -499,9 +463,7 @@ function startVerificationPolling() {
         authUser = user;
         window.currentUser = user;
         await user.getIdToken(true).catch(function(){});
-        await ensureUserProfile(user);
-        await loadUserData(user.uid);
-        showApp();
+        await launchApp(user);
       }
     } catch(e) { console.warn('[8RB] verify poll error:', e); }
   }, 3000);
@@ -528,9 +490,7 @@ async function handleManualVerifyCheck() {
       authUser = user;
       window.currentUser = user;
       await user.getIdToken(true).catch(function(){});
-      await ensureUserProfile(user);
-      await loadUserData(user.uid);
-      showApp();
+      await launchApp(user);
     } else {
       if (btn) { btn.disabled = false; btn.textContent = 'Not verified yet — try again'; }
       setTimeout(function() { if (btn) btn.textContent = "I've verified my email — continue"; }, 2500);
@@ -553,7 +513,7 @@ async function ensureUserProfile(user) {
     console.log('[8RB] ensureUserProfile: profile exists=' + existing.exists());
     if (!existing.exists()) {
       console.error('[8RB] ensureUserProfile: PROFILE MISSING for ' + user.uid + ' — creating now. Check sign-up flow for regressions.');
-      await setDoc(profileRef, {
+      var newProfile = {
         displayName: user.displayName || '',
         email: user.email || '',
         gym: '8RB',
@@ -562,11 +522,46 @@ async function ensureUserProfile(user) {
         unit: 'kg',
         accentColour: '#E63946',
         onboarded: false
-      });
+      };
+      await setDoc(profileRef, newProfile);
+      userProfile = { onboarded: false };
       console.log('[8RB] ensureUserProfile: profile created successfully');
+    } else {
+      userProfile = existing.data();
     }
   } catch(err) {
     console.warn('[8RB] ensureUserProfile failed (Firestore may have blocked write):', err);
+    // userProfile remains null — launchApp treats null as not onboarded
+  }
+}
+
+// ─── WELCOME MESSAGE ──────────────────────────────────────────────────────────
+export async function loadWelcomeMessage() {
+  var DEFAULT = 'Your coach has set this up for you.';
+  try {
+    var snap = await getDoc(doc(db, 'gym', '8RB', 'config', 'main'));
+    if (snap.exists()) {
+      var msg = snap.data().welcomeMessage;
+      if (msg && msg.trim()) return msg.trim().slice(0, 80);
+    }
+  } catch(e) {}
+  return DEFAULT;
+}
+
+// ─── LAUNCH APP — called after auth + data load ────────────────────────────
+// Checks onboarded flag and either starts onboarding or shows app directly.
+async function launchApp(user) {
+  await ensureUserProfile(user);
+  await loadUserData(user.uid);
+  if (!userProfile || userProfile.onboarded !== true) {
+    var wm = await loadWelcomeMessage();
+    if (typeof window.startOnboarding === 'function') {
+      window.startOnboarding(user, wm);
+    } else {
+      showApp();
+    }
+  } else {
+    showApp();
   }
 }
 
@@ -584,9 +579,7 @@ async function resolveAuth() {
     // Force ID token refresh so Firestore security rules see the latest
     // email_verified state — needed after the password-reset-as-verification flow.
     await authUser.getIdToken(true).catch(function(e){ console.warn('[8RB] getIdToken refresh failed:', e); });
-    await ensureUserProfile(authUser);
-    await loadUserData(authUser.uid);
-    showApp();
+    await launchApp(authUser);
   } else if (authUser && !authUser.emailVerified) {
     console.log('[8RB] resolveAuth: email not verified, showing verify screen');
     showEmailVerificationScreen(authUser.email);
@@ -915,8 +908,6 @@ window.npDel = npDel;
 window.npIncr = npIncr;
 window.npDone = npDone;
 window.npBgTap = npBgTap;
-window.goToSlide = goToSlide;
-window.finishOnboarding = finishOnboarding;
 window.handleSignIn = handleSignIn;
 window.handleGoogleSignIn = handleGoogleSignIn;
 window.handleSignUp = handleSignUp;
@@ -931,6 +922,7 @@ window.switchToSignUp = switchToSignUp;
 window.switchToSignIn = switchToSignIn;
 window.togglePwVisibility = togglePwVisibility;
 window.renderProfile = renderProfile;
+window.loadWelcomeMessage = loadWelcomeMessage;
 window.editDisplayName = editDisplayName;
 window.saveDisplayName = saveDisplayName;
 window.savePfBrandName = savePfBrandName;

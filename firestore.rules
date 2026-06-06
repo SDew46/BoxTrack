@@ -18,7 +18,8 @@ service cloud.firestore {
     }
 
     function isVerified() {
-      return request.auth.token.email_verified == true;
+      return request.auth.token.email_verified == true ||
+        request.auth.token.firebase.sign_in_provider == 'google.com';
     }
 
     // User profile — field-level protection

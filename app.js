@@ -1,7 +1,7 @@
 import { auth, db } from './firebase.js';
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signInWithPopup, GoogleAuthProvider, signOut as fbSignOut,
+  signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut as fbSignOut,
   sendEmailVerification, sendPasswordResetEmail, deleteUser, updateProfile, reload
 } from 'firebase/auth';
 import {
@@ -474,7 +474,12 @@ async function ensureUserProfile(user) {
 // ─── RESOLVE AUTH ─────────────────────────────────────────────────────────────
 async function resolveAuth() {
   if (!splashDone || !authReady) return;
-  console.log('[8RB] resolveAuth: user=' + (authUser ? authUser.uid : 'none') + ' emailVerified=' + (authUser ? authUser.emailVerified : 'N/A'));
+  var _cur = auth.currentUser;
+  console.log('[8RB] resolveAuth:',
+    'authUser=' + (authUser ? authUser.uid : 'none'),
+    'emailVerified=' + (authUser ? authUser.emailVerified : 'N/A'),
+    'auth.currentUser=' + (_cur ? _cur.uid : 'none'),
+    'provider=' + (_cur && _cur.providerData[0] ? _cur.providerData[0].providerId : 'unknown'));
   if (authUser && authUser.emailVerified) {
     window.currentUser = authUser;
     // Force ID token refresh so Firestore security rules see the latest
@@ -496,6 +501,19 @@ export function onSplashDone() {
   splashDone = true;
   resolveAuth();
 }
+
+// Handle return from Google signInWithRedirect — fires on page load after redirect
+getRedirectResult(auth).then(function(result) {
+  if (result && result.user) {
+    console.log('[8RB] getRedirectResult: Google redirect returned user', result.user.uid);
+    // ensureUserProfile handles profile creation via resolveAuth — no extra action needed
+  }
+}).catch(function(err) {
+  if (err.code) {
+    console.warn('[8RB] getRedirectResult error:', err.code, err.message);
+    if (!window.currentUser) showAuthError('Google sign-in failed. Please try again.');
+  }
+});
 
 // Attempt Firebase connection; fall back to localStorage-only mode on network failure
 var firebaseAvailable = true;
@@ -549,11 +567,10 @@ async function handleGoogleSignIn() {
   clearAuthErrors();
   try {
     var provider = new GoogleAuthProvider();
-    var result = await signInWithPopup(auth, provider);
-    await createUserProfile(result.user, result.user.displayName);
-    // onAuthStateChanged fires after
+    await signInWithRedirect(auth, provider);
+    // Page redirects away — nothing after this line executes until return
   } catch(err) {
-    if (err.code !== 'auth/popup-closed-by-user') showAuthError('Google sign-in failed. Please try again.');
+    showAuthError('Google sign-in failed. Please try again.');
   }
 }
 

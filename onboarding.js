@@ -219,19 +219,18 @@ function goToStage7() {
 
 // ─── COMPLETE ─────────────────────────────────────────────────────────────────
 function completeOnboarding() {
-  // Write onboarded flag — fire-and-forget, never block the user
   if (obUser) {
-    var writeOnboarded = function() {
-      setDoc(doc(db, 'users', obUser.uid, 'profile', 'data'), { onboarded: true }, { merge: true })
-        .catch(function(e) {
-          console.warn('[8RB] onboarded write failed, retrying once:', e);
-          setTimeout(function() {
-            setDoc(doc(db, 'users', obUser.uid, 'profile', 'data'), { onboarded: true }, { merge: true })
-              .catch(function(){});
-          }, 3000);
-        });
-    };
-    writeOnboarded();
+    // Write to localStorage immediately — survives fast reloads even if Firestore cache lags
+    try { localStorage.setItem('ob_done_' + obUser.uid, '1'); } catch(e) {}
+    // Write to Firestore — persists across devices and accounts
+    setDoc(doc(db, 'users', obUser.uid, 'profile', 'data'), { onboarded: true }, { merge: true })
+      .catch(function(e) {
+        console.warn('[8RB] onboarded Firestore write failed, retrying once:', e);
+        setTimeout(function() {
+          setDoc(doc(db, 'users', obUser.uid, 'profile', 'data'), { onboarded: true }, { merge: true })
+            .catch(function(){});
+        }, 3000);
+      });
   }
 
   // Navigate to TRAIN

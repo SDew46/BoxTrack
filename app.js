@@ -391,17 +391,20 @@ function startVerificationPolling() {
       if (st) st.textContent = 'Tap the button below if you\'ve verified.';
       return;
     }
-    if (!authUser) return;
+    var user = auth.currentUser;
+    if (!user) return;
     try {
-      await reload(authUser);
-      if (authUser.emailVerified) {
+      await reload(user);
+      if (user.emailVerified) {
         stopVerificationPolling();
-        window.currentUser = authUser;
-        await ensureUserProfile(authUser);
-        await loadUserData(authUser.uid);
+        authUser = user;
+        window.currentUser = user;
+        await user.getIdToken(true).catch(function(){});
+        await ensureUserProfile(user);
+        await loadUserData(user.uid);
         showApp();
       }
-    } catch(e) {}
+    } catch(e) { console.warn('[8RB] verify poll error:', e); }
   }, 3000);
 }
 
@@ -410,22 +413,31 @@ function stopVerificationPolling() {
 }
 
 async function handleManualVerifyCheck() {
-  if (!authUser) return;
+  var user = auth.currentUser;
+  console.log('[8RB] manualVerifyCheck: user=', user ? user.uid : 'null', 'emailVerified=', user ? user.emailVerified : 'N/A');
+  if (!user) {
+    console.warn('[8RB] manualVerifyCheck: no auth.currentUser — cannot proceed');
+    return;
+  }
   var btn = document.getElementById('manual-verify-btn');
   if (btn) { btn.textContent = 'Checking…'; btn.disabled = true; }
   try {
-    await reload(authUser);
-    if (authUser.emailVerified) {
+    await reload(user);
+    console.log('[8RB] manualVerifyCheck: after reload emailVerified=', user.emailVerified);
+    if (user.emailVerified) {
       stopVerificationPolling();
-      window.currentUser = authUser;
-      await ensureUserProfile(authUser);
-      await loadUserData(authUser.uid);
+      authUser = user;
+      window.currentUser = user;
+      await user.getIdToken(true).catch(function(){});
+      await ensureUserProfile(user);
+      await loadUserData(user.uid);
       showApp();
     } else {
       if (btn) { btn.disabled = false; btn.textContent = 'Not verified yet — try again'; }
       setTimeout(function() { if (btn) btn.textContent = "I've verified my email — continue"; }, 2500);
     }
   } catch(e) {
+    console.warn('[8RB] manualVerifyCheck error:', e);
     if (btn) { btn.disabled = false; btn.textContent = "I've verified my email — continue"; }
   }
 }
@@ -434,11 +446,14 @@ async function handleManualVerifyCheck() {
 // Safety net: if a verified user has no profile document, create one.
 // This recovers from sign-up flows that failed partway through.
 async function ensureUserProfile(user) {
+  var provider = user.providerData.map(function(p){return p.providerId;}).join(',');
+  console.log('[8RB] ensureUserProfile: uid=' + user.uid + ' provider=' + provider + ' emailVerified=' + user.emailVerified);
   try {
     var profileRef = doc(db, 'users', user.uid, 'profile', 'data');
     var existing = await getDoc(profileRef);
+    console.log('[8RB] ensureUserProfile: profile exists=' + existing.exists());
     if (!existing.exists()) {
-      console.error('[8RB] Profile missing for verified user ' + user.uid + ' — creating now. Check sign-up flow for regressions.');
+      console.error('[8RB] ensureUserProfile: PROFILE MISSING for ' + user.uid + ' — creating now. Check sign-up flow for regressions.');
       await setDoc(profileRef, {
         displayName: user.displayName || '',
         email: user.email || '',
@@ -449,23 +464,30 @@ async function ensureUserProfile(user) {
         accentColour: '#E63946',
         onboarded: false
       });
+      console.log('[8RB] ensureUserProfile: profile created successfully');
     }
   } catch(err) {
-    console.warn('ensureUserProfile failed:', err);
+    console.warn('[8RB] ensureUserProfile failed (Firestore may have blocked write):', err);
   }
 }
 
 // ─── RESOLVE AUTH ─────────────────────────────────────────────────────────────
 async function resolveAuth() {
   if (!splashDone || !authReady) return;
+  console.log('[8RB] resolveAuth: user=' + (authUser ? authUser.uid : 'none') + ' emailVerified=' + (authUser ? authUser.emailVerified : 'N/A'));
   if (authUser && authUser.emailVerified) {
     window.currentUser = authUser;
+    // Force ID token refresh so Firestore security rules see the latest
+    // email_verified state — needed after the password-reset-as-verification flow.
+    await authUser.getIdToken(true).catch(function(e){ console.warn('[8RB] getIdToken refresh failed:', e); });
     await ensureUserProfile(authUser);
     await loadUserData(authUser.uid);
     showApp();
   } else if (authUser && !authUser.emailVerified) {
+    console.log('[8RB] resolveAuth: email not verified, showing verify screen');
     showEmailVerificationScreen(authUser.email);
   } else {
+    console.log('[8RB] resolveAuth: no user, showing sign-in');
     showSignInScreen();
   }
 }
@@ -676,17 +698,20 @@ function loadCoachesNotes() {
 // ─── DATA MIGRATION (localStorage → Firestore) ────────────────────────────────
 function checkMigration() {
   if (!window.currentUser) return;
-  if (ld('migrationComplete', false)) return;
+  var uid = window.currentUser.uid;
+  var key = 'migrationComplete_' + uid;
+  // Carry forward old global flag so existing users aren't re-prompted
+  if (ld('migrationComplete', false) && !ld(key, false)) { sv(key, true); }
+  if (ld(key, false)) return;
   var existingSessions = JSON.parse(localStorage.getItem('sessions') || 'null');
   if (!existingSessions || !existingSessions.length) {
-    sv('migrationComplete', true); return;
+    sv(key, true); return;
   }
-  // Show migration prompt
   var msg = 'We found ' + existingSessions.length + ' session(s) on this device. Import to your account?';
   if (confirm(msg)) {
     runMigration();
   } else {
-    sv('migrationComplete', true);
+    sv(key, true);
   }
 }
 async function runMigration() {
@@ -717,7 +742,7 @@ async function runMigration() {
     for (var m = 0; m < custom.length; m++) {
       await addDoc(collection(db, 'users', uid, 'customSessions'), Object.assign({}, custom[m], {createdAt: serverTimestamp()}));
     }
-    sv('migrationComplete', true);
+    sv('migrationComplete_' + uid, true);
     await loadUserData(uid);
     renderProgress();
     toast(count + ' sessions imported successfully.');

@@ -136,7 +136,6 @@ export function renderProfile() {
     + '<div class="sg">'
       + '<div class="sr"><div class="sr-lbl">Weight Units</div><div class="unit-seg"><button class="us ' + (unit==='kg'?'on':'') + '" id="pf-unit-kg" onclick="setUnit(\'kg\')">kg</button><button class="us ' + (unit==='lbs'?'on':'') + '" id="pf-unit-lbs" onclick="setUnit(\'lbs\')">lbs</button></div></div>'
       + '<div class="sr" style="flex-direction:column;align-items:flex-start;gap:8px"><div class="sr-lbl">Accent Colour</div><div class="swatches" id="pf-color-swatches">' + swatchHtml + '</div></div>'
-      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">App Name</div><div class="sr-sub">Shown in the header</div></div><input class="brand-inp" type="text" id="pf-brand-name" placeholder="8RB" value="' + (ld('appName','') || '') + '" oninput="savePfBrandName()"></div>'
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'

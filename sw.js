@@ -2,7 +2,7 @@
 // DEV: Chrome DevTools → Application → Service Workers → tick "Update on reload"
 //      to bypass the SW cache during local development.
 
-const CACHE = 'boxtrack-v13';
+const CACHE = 'boxtrack-v14';
 
 // Static assets pre-cached on install.
 // index.html is intentionally excluded — it is fetched network-first on

@@ -1,7 +1,7 @@
 import { auth, db } from './firebase.js';
 import {
   onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut as fbSignOut,
+  signInWithPopup, getRedirectResult, GoogleAuthProvider, signOut as fbSignOut,
   sendEmailVerification, sendPasswordResetEmail, deleteUser, updateProfile, reload
 } from 'firebase/auth';
 import {
@@ -567,10 +567,13 @@ async function handleGoogleSignIn() {
   clearAuthErrors();
   try {
     var provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
-    // Page redirects away — nothing after this line executes until return
+    var result = await signInWithPopup(auth, provider);
+    // ensureUserProfile handles profile creation via resolveAuth/onAuthStateChanged
+    console.log('[8RB] Google popup sign-in complete:', result.user.uid);
   } catch(err) {
-    showAuthError('Google sign-in failed. Please try again.');
+    if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+      showAuthError('Google sign-in failed. Please try again.');
+    }
   }
 }
 

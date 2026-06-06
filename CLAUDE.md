@@ -6,7 +6,7 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 10.0.0. Step 2 (Firebase backend) complete — not yet pushed/deployed.
+Version 10.2.0. Step 2 (Firebase backend) complete — not yet pushed/deployed.
 
 **File structure — all ES modules, all acorn clean:**
 - `styles.css` — all CSS, includes Step 2 auth + offline indicator styles
@@ -54,6 +54,8 @@ Firebase sends verification emails from `noreply@rb-boxing.firebaseapp.com`. Thi
 
 **Fix required before real members use the app:**
 Firebase console → Authentication → Templates → Email address verification → configure a custom sender domain (e.g. `noreply@8roundsboxing.com`) or custom SMTP server. A custom domain dramatically improves deliverability. This is a Firebase console configuration step, no code change required.
+
+---
 
 **Step 3 security backlog (do not implement in Step 2):**
 - Fix email verification deliverability (custom sender domain in Firebase Auth Templates) — do this before member launch
@@ -228,7 +230,7 @@ Use explicit checks: obj && obj.prop not obj?.prop in these contexts.
 Steve is on Windows/PowerShell. Run commands separately, not chained with &&.
 
 ### 5. Version bump on every meaningful change
-Update version number in the settings overlay and in `renderSettingsPanel()` in app.js. Current: 10.0.0.
+Update version number in `renderSettingsPanel()` and `renderProfile()` in app.js. Current: 10.2.0.
 
 ---
 
@@ -244,13 +246,13 @@ All JS files are ES modules (`type="module"`). Import maps in index.html and adm
 
 `data.js` — all static data constants (all exported): SESSION_NAMES, EXERCISE_LIBRARY, SESSIONS, CAT_META, TRACKED_LIFTS, EQUIP_OPTIONS, PUNCH_NAMES, DEF_DISP, DEF_CALL, COMBO_TIERS, LEGEND_COMBOS, TIER_DESCS, CORNER_QUOTES, ACCENT_COLORS, getSessName.
 
-`app.js` — auth state (onAuthStateChanged, sign-in/up/Google/signOut/delete), user data cache (userDataCache — loaded from Firestore on auth, used by ld() to route session data reads), storage utils (ld/sv), formatting helpers, toast, nav, branding, settings panel, service worker registration, PR detection, numpad, onboarding. Exports all utility functions; exposes all HTML-called functions on window.
+`app.js` — auth state (onAuthStateChanged, sign-in/up/Google/signOut/delete), user data cache (userDataCache — loaded from Firestore on auth, used by ld() to route session data reads), storage utils (ld/sv), formatting helpers, toast, nav (4 tabs: Train/Box/Progress/Profile), branding, settings panel, Profile tab (renderProfile, editDisplayName, saveDisplayName), service worker registration, PR detection, numpad, onboarding. Exports all utility functions; exposes all HTML-called functions on window.
 
 `train.js` — deload, equipment picker, session library, swap modal, log view, plan ref overlay, warmup timer, log form, history, session complete, CSB. Writes sessions/boxing classes/custom sessions to Firestore. Defines playRestDone() (Web Audio beep, was previously undefined).
 
 `box.js` — freestyle timer, drill combo coach, learn reference, combo builder keypad, voice coach, bell audio. Writes freestyle sessions and custom combos to Firestore.
 
-`progress.js` — streak, lift PRs with chart, recent sessions, boxing log with delete. Reads all data from userDataCache (populated from Firestore by app.js loadUserData).
+`progress.js` — streak, lift PRs with chart, recent sessions (with delete), boxing log with delete. Reads all data from userDataCache (populated from Firestore by app.js loadUserData).
 
 `admin.html` — standalone coach admin page. Auth-checks on load (must be signed in + role=coach). Coach's Notes textarea with save to gym/8RB/config/main Firestore document. Redirect to index.html on access denied.
 

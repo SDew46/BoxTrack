@@ -112,6 +112,10 @@
     <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     <span>Progress</span>
   </button>
+  <button class="nav-btn nb-profile" onclick="showPage('profile')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    <span>Profile</span>
+  </button>
   <div id="offline-dot" class="offline-dot" title="Offline — changes sync when connected"></div>
 </nav>
 <div class="toast" id="toast"></div>
@@ -416,7 +420,7 @@
     <div class="sh-eye" style="color:var(--accent)">Stats &amp; Progress</div>
     <div class="sh-title">PROGRESS</div>
     <div class="sh-sub">Built from your logged sessions</div>
-    <div class="sh-act"><button class="ibtn" onclick="openSettings()" id="settings-btn">⚙ SETTINGS</button></div>
+    <div class="sh-act"></div>
   </div>
   <div class="sec" style="display:flex;flex-direction:column;gap:0;padding-bottom:8px">
     <div class="sec-lbl">Training Streak</div>
@@ -433,6 +437,17 @@
       <div id="boxing-log-list"></div>
     </div>
     <div id="boxing-log-empty" style="display:flex;justify-content:flex-end"><button class="ibtn" onclick="openBoxingModal()">+ Log Boxing Class</button></div>
+  </div>
+</div>
+
+<!-- ═══ PROFILE ═══ -->
+<div class="page" id="page-profile">
+  <div class="sh">
+    <div class="sh-eye" style="color:var(--accent)">Account &amp; Settings</div>
+    <div class="sh-title">PROFILE</div>
+  </div>
+  <div class="sec" style="padding-bottom:40px">
+    <div id="profile-content"></div>
   </div>
 </div>
 

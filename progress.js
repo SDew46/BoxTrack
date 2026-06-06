@@ -100,7 +100,54 @@ function renderLifts(){
     return '<div class="prog-card"><div class="pc-ttl">'+lift.name+'<span class="pc-best">Best: '+fmtWt(best)+'</span></div><div class="pc-sub">'+lift.sessLabel+'</div>'+prHtml+'<div class="pc-1rm">Est. 1RM: '+fmtWt(bestE1rm)+' <span style="font-weight:400;color:var(--dim)">(Epley)</span></div>'+narrative+chart+rows+'</div>';
   }).join('');
 }
-function renderRecentSessions(){const all=ld('sessions',[]);const el=document.getElementById('recent-list');if(!all.length){el.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="empty-state-head">NO SESSIONS YET</div><div class="empty-state-sub">Pick a session from the Train tab and log your first workout.</div></div>';return;}el.innerHTML=all.slice(-5).reverse().map(s=>{const meta=CAT_META[s.cat]||CAT_META.CUSTOM;const pills=[...s.exercises,...(s.extras||[])].filter(ex=>(ex.sets||[]).some(r=>r.kg)).map(ex=>{const maxKg=Math.max(...ex.sets.map(r=>parseFloat(r.kg)).filter(v=>!isNaN(v)));return `<span class="rs-pill" style="${ex.extra?'color:var(--gold)':''}">${ex.name} · ${fmtWt(maxKg)}</span>`;}).join('');return `<div class="rec-sess"><div class="rs-hd"><div><span class="rs-date">${fmtDate(s.date)}</span>${s.sessName?`<div style="font-size:10px;color:var(--muted);margin-top:1px">${s.sessName}</div>`:''}</div><div style="display:flex;align-items:center;gap:6px">${s.duration?`<span style="font-size:10px;color:var(--dim)">⏱${s.duration}m</span>`:''}<span class="tag" style="color:${meta.color};background:${meta.color}18">${s.cat}</span></div></div>${pills?`<div class="rs-pills">${pills}</div>`:'<div style="font-size:12px;color:var(--dim)">No weights recorded</div>'}${s.notes?`<div class="rs-note">"${s.notes}"</div>`:''}</div>`;}).join('');}
+function renderRecentSessions(){
+  const all=ld('sessions',[]);
+  const el=document.getElementById('recent-list');
+  if(!el)return;
+  if(!all.length){
+    el.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><div class="empty-state-head">NO SESSIONS YET</div><div class="empty-state-sub">Pick a session from the Train tab and log your first workout.</div></div>';
+    return;
+  }
+  el.innerHTML=all.slice(-5).reverse().map(function(s){
+    var meta=CAT_META[s.cat]||CAT_META.CUSTOM;
+    var pills=[...s.exercises,...(s.extras||[])].filter(function(ex){return (ex.sets||[]).some(function(r){return r.kg;});}).map(function(ex){
+      var maxKg=Math.max(...ex.sets.map(function(r){return parseFloat(r.kg);}).filter(function(v){return !isNaN(v);}));
+      var exStyle=ex.extra?' style="color:var(--gold)"':'';
+      return '<span class="rs-pill"'+exStyle+'>'+ex.name+' · '+fmtWt(maxKg)+'</span>';
+    }).join('');
+    var durHtml=s.duration?'<span style="font-size:10px;color:var(--dim)">⏱'+s.duration+'m</span>':'';
+    var nameHtml=s.sessName?'<div style="font-size:10px;color:var(--muted);margin-top:1px">'+s.sessName+'</div>':'';
+    var pillsHtml=pills?'<div class="rs-pills">'+pills+'</div>':'<div style="font-size:12px;color:var(--dim)">No weights recorded</div>';
+    var notesHtml=s.notes?'<div class="rs-note">"'+s.notes+'"</div>':'';
+    return '<div class="rec-sess">'
+      +'<div class="rs-hd">'
+        +'<div><span class="rs-date">'+fmtDate(s.date)+'</span>'+nameHtml+'</div>'
+        +'<div style="display:flex;align-items:center;gap:6px">'
+          +durHtml
+          +'<span class="tag" style="color:'+meta.color+';background:'+meta.color+'18">'+s.cat+'</span>'
+          +'<button class="del-x" onclick="delRecentSession('+s.id+')">×</button>'
+        +'</div>'
+      +'</div>'
+      +pillsHtml
+      +notesHtml
+    +'</div>';
+  }).join('');
+}
+function delRecentSession(id){
+  if(!confirm('Delete this session?'))return;
+  if(userDataCache.sessions!==null){
+    var idx=userDataCache.sessions.findIndex(function(s){return s.id===id;});
+    if(idx>-1){
+      var entry=userDataCache.sessions[idx];
+      if(entry&&entry._firestoreId&&window.currentUser){
+        deleteDoc(doc(db,'users',window.currentUser.uid,'sessions',entry._firestoreId)).catch(function(e){console.error('Firestore delete failed:',e);});
+      }
+      userDataCache.sessions.splice(idx,1);
+    }
+  }
+  renderProgress();
+  toast('Session deleted');
+}
 function renderBoxingLog(){const classes=ld('boxingClasses',[]),wrap=document.getElementById('boxing-log-wrap'),empty=document.getElementById('boxing-log-empty'),list=document.getElementById('boxing-log-list');if(!classes.length){wrap.style.display='none';empty.style.display='block';empty.innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg><div class="empty-state-head">NO ROUNDS LOGGED YET</div><div class="empty-state-sub">Head to the Box tab and start your first round.</div></div>';return;}wrap.style.display='block';empty.style.display='none';const fm={great:'f-gr',good:'f-gd',ok:'f-ok',hard:'f-hd'},fl={great:'Great',good:'Good',ok:'OK',hard:'Tough'};list.innerHTML=classes.slice(-8).reverse().map((c,ri)=>{const realIdx=classes.length-1-ri;return `<div class="bi"><div><span class="bi-date">${fmtDate(c.date)}</span>${c.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${c.notes}</div>`:''}</div><div style="display:flex;align-items:center;gap:7px"><span class="fp ${fm[c.feel]||'f-gd'}">${fl[c.feel]||'Good'}</span><button class="del-x" onclick="delBoxing(${realIdx})">×</button></div></div>`;}).join('');}
 function delBoxing(idx){
   if(!confirm('Delete this boxing class?'))return;
@@ -121,4 +168,5 @@ function buildChart(history,color){const vals=history.map(h=>h.kg);const min=Mat
 export { renderProgress };
 window.renderProgress = renderProgress;
 window.delBoxing = delBoxing;
+window.delRecentSession = delRecentSession;
 

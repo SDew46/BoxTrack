@@ -315,7 +315,15 @@ function addExRow(id){const cont=document.getElementById('xsr-'+id);const n=cont
 
 // SAVE SESSION
 async function saveSession(){
-  const date=document.getElementById('log-date').value;if(!date){toast('Please select a date',true);return;}if(!window.activeLogSession){toast('Select a session first',true);return;}
+  var saveBtn=document.querySelector('.save-wrap button');
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='SAVING…';}
+  function reEnableBtn(){if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='SAVE SESSION';}}
+  const date=document.getElementById('log-date').value;if(!date){toast('Please select a date',true);reEnableBtn();return;}if(!window.activeLogSession){toast('Select a session first',true);reEnableBtn();return;}
+  // Duplicate prevention — same session type + date saved within 60 seconds
+  if(userDataCache.sessions!==null){
+    var dup=userDataCache.sessions.find(function(s){return s.sessId===window.activeLogSession.id&&s.date===date&&(Date.now()-s.id)<60000;});
+    if(dup){toast('Session already saved',true);reEnableBtn();return;}
+  }
   const duration=sessionStartTime?Math.floor((Date.now()-sessionStartTime)/60000):0;
   const exercises=window.activeLogSession.exercises.map((ex,ei)=>{const st=setTypeState[ei]||'standard';if(st==='amrap'){const mins=document.getElementById('amrap-mins-'+ei)?.value||'';const score=document.getElementById('amrap-score-'+ei)?.value||'';return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:'amrap',amrapMins:mins,amrapScore:score,sets:[]};}const cont=document.getElementById('sr-'+ei);const sets=[];if(cont)cont.querySelectorAll('.set-row').forEach((row,si)=>{const k=document.getElementById('kv-'+ei+'-'+si)?.value;const r=document.getElementById('rv-'+ei+'-'+si)?.value;if(k||r)sets.push({sets:'',reps:r||'',kg:k||''});});return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:st,sets};});
   const extras=[];document.querySelectorAll('.extra-card').forEach(el=>{const id=el.id.replace('extra-','');const name=(document.getElementById('en-'+id)?.value||'').trim();if(!name)return;const cont=document.getElementById('xsr-'+id);const sets=[];if(cont)cont.querySelectorAll('.set-row').forEach((row,si)=>{const s=document.getElementById('xsv-'+id+'-'+si)?.value;const r=document.getElementById('xrv-'+id+'-'+si)?.value;const k=document.getElementById('xkv-'+id+'-'+si)?.value;if(s||r||k)sets.push({sets:s||'',reps:r||'',kg:k||''});});extras.push({name,sets,extra:true});});
@@ -398,7 +406,7 @@ function countUp(id,from,to,dur,suffix){
     if(progress<1)requestAnimationFrame(tick);
   })();
 }
-function closeDone(){document.getElementById('done-ov').classList.remove('open');}
+function closeDone(){document.getElementById('done-ov').classList.remove('open');clearActiveSession();}
 // getPrevWtFromSessions is imported from app.js — no local duplicate needed
 
 // HISTORY

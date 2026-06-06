@@ -62,13 +62,14 @@ export function toast(msg, err) {
 
 // ─── NAV ───────────────────────────────────────────────────────────────────────
 export function showPage(id) {
-  ['train','box','progress'].forEach(function(p, i) {
+  ['train','box','progress','profile'].forEach(function(p, i) {
     document.getElementById('page-'+p).classList.toggle('active', p === id);
     document.querySelectorAll('.nav-btn')[i].classList.toggle('on', p === id);
   });
   if (id === 'train') { checkDeload(); applyBranding(); }
   if (id === 'box') { initBoxPage(); }
-  if (id === 'progress') { renderProgress(); renderSettingsPanel(); }
+  if (id === 'progress') { renderProgress(); }
+  if (id === 'profile') { renderProfile(); }
 }
 export function openOverlay(id) { document.getElementById(id).classList.add('open'); }
 export function closeOverlay(id, e) {
@@ -105,6 +106,84 @@ function setAccent(val) {
 export function openSettings() { initBranding(); renderSettingsPanel(); document.getElementById('settings-ov').classList.add('open'); }
 function closeSettings(e) { if (e && e.target !== document.getElementById('settings-ov')) return; document.getElementById('settings-ov').classList.remove('open'); }
 function closeSettingsBtn() { document.getElementById('settings-ov').classList.remove('open'); }
+
+// ─── PROFILE TAB ───────────────────────────────────────────────────────────────
+export async function renderProfile() {
+  var el = document.getElementById('profile-content');
+  if (!el) return;
+  var user = window.currentUser;
+  if (!user) { el.innerHTML = '<div class="empty" style="padding:32px 0;color:var(--dim)">Not signed in.</div>'; return; }
+  var joinDateStr = '—';
+  try {
+    var profileSnap = await getDoc(doc(db, 'users', user.uid, 'profile', 'data'));
+    if (profileSnap.exists() && profileSnap.data().joinDate) {
+      var jd = profileSnap.data().joinDate.toDate ? profileSnap.data().joinDate.toDate() : new Date(profileSnap.data().joinDate);
+      joinDateStr = jd.toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+    }
+  } catch(e) {}
+  var providerLabel = (user.providerData && user.providerData[0] && user.providerData[0].providerId === 'google.com') ? 'Google' : 'Email & password';
+  var displayName = user.displayName || '—';
+  var unit = getUnit();
+  var curAccent = ld('accentColor', '#E63946');
+  var swatchHtml = ACCENT_COLORS.map(function(c) {
+    return '<div class="sw ' + (c.val === curAccent ? 'on' : '') + '" style="background:' + c.val + '" onclick="setAccent(\'' + c.val + '\')"></div>';
+  }).join('');
+  el.innerHTML =
+    '<div class="sec-lbl">ACCOUNT</div>'
+    + '<div class="sg">'
+      + '<div class="sr" id="pf-name-row">'
+        + '<div style="flex:1"><div class="sr-lbl">Display Name</div><div class="sr-sub" id="pf-name-val">' + displayName + '</div></div>'
+        + '<button class="sr-act" onclick="editDisplayName()">EDIT</button>'
+      + '</div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Email</div><div class="sr-sub">' + (user.email || '—') + '</div></div></div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Signed in with</div><div class="sr-sub">' + providerLabel + '</div></div></div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Member since</div><div class="sr-sub">' + joinDateStr + '</div></div></div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Sign Out</div></div><button class="sr-act" onclick="handleSignOut()">SIGN OUT</button></div>'
+    + '</div>'
+    + '<div class="sec-lbl" style="margin-top:24px">SETTINGS</div>'
+    + '<div class="sg">'
+      + '<div class="sr"><div class="sr-lbl">Weight Units</div><div class="unit-seg"><button class="us ' + (unit==='kg'?'on':'') + '" id="pf-unit-kg" onclick="setUnit(\'kg\')">kg</button><button class="us ' + (unit==='lbs'?'on':'') + '" id="pf-unit-lbs" onclick="setUnit(\'lbs\')">lbs</button></div></div>'
+      + '<div class="sr" style="flex-direction:column;align-items:flex-start;gap:8px"><div class="sr-lbl">Accent Colour</div><div class="swatches" id="pf-color-swatches">' + swatchHtml + '</div></div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">App Name</div><div class="sr-sub">Shown in the header</div></div><input class="brand-inp" type="text" id="pf-brand-name" placeholder="8RB" value="' + (ld('appName','') || '') + '" oninput="savePfBrandName()"></div>'
+    + '</div>'
+    + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
+    + '<div class="sg">'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v10.2.0</div></div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
+    + '</div>'
+    + '<div class="sec-lbl" style="margin-top:24px">DATA</div>'
+    + '<div class="sg">'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Export Data</div><div class="sr-sub">Download your data as a backup file</div></div><button class="sr-act" onclick="exportData()">EXPORT</button></div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Import Data</div><div class="sr-sub">Restore sessions from a backup</div></div><button class="sr-act" onclick="document.getElementById(\'import-file\').click()">IMPORT</button></div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl" style="color:var(--red)">Delete Account</div><div class="sr-sub">Permanently deletes your account and all data. Cannot be undone.</div></div><button class="sr-act dng" onclick="confirmDeleteAccount()">DELETE</button></div>'
+    + '</div>';
+}
+function editDisplayName() {
+  var row = document.getElementById('pf-name-row');
+  if (!row) return;
+  var cur = window.currentUser ? (window.currentUser.displayName || '') : '';
+  row.innerHTML = '<div style="flex:1"><div class="sr-lbl">Display Name</div><input class="brand-inp" type="text" id="pf-edit-name" value="' + cur + '" placeholder="Your name" style="margin-top:4px"></div><button class="sr-act" onclick="saveDisplayName()">SAVE</button>';
+  var inp = document.getElementById('pf-edit-name');
+  if (inp) inp.focus();
+}
+async function saveDisplayName() {
+  var inp = document.getElementById('pf-edit-name');
+  if (!inp || !window.currentUser) return;
+  var name = inp.value.trim();
+  if (!name) { toast('Please enter a name', true); return; }
+  try {
+    await updateProfile(window.currentUser, {displayName: name});
+    await setDoc(doc(db, 'users', window.currentUser.uid, 'profile', 'data'), {displayName: name}, {merge: true});
+    toast('Name updated');
+    renderProfile();
+  } catch(e) { console.error('[8RB] saveDisplayName failed:', e); toast('Failed to update name', true); }
+}
+function savePfBrandName() {
+  var inp = document.getElementById('pf-brand-name');
+  sv('appName', inp ? inp.value : '');
+  applyBranding();
+}
 export function renderSettingsPanel() {
   var u = getUnit();
   document.getElementById('unit-kg').classList.toggle('on', u === 'kg');
@@ -125,11 +204,16 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v10.1.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v10.2.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
-function setUnit(u) { sv('unit', u); document.getElementById('unit-kg').classList.toggle('on', u === 'kg'); document.getElementById('unit-lbs').classList.toggle('on', u === 'lbs'); toast('Units set to ' + u); }
+function setUnit(u) {
+  sv('unit', u);
+  ['unit-kg','pf-unit-kg'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.toggle('on',u==='kg');});
+  ['unit-lbs','pf-unit-lbs'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.toggle('on',u==='lbs');});
+  toast('Units set to ' + u);
+}
 function exportData() {
   var data = {sessions:ld('sessions',[]),boxingClasses:ld('boxingClasses',[]),customSessions:ld('customSessions',[]),customCombos:ld('customCombos',[]),equipment:ld('equipment',[]),unit:ld('unit','kg'),appName:ld('appName',''),accentColor:ld('accentColor',''),prs:ld('prs',{}),exportDate:new Date().toISOString()};
   var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
@@ -847,3 +931,7 @@ window.executeDeleteAccount = executeDeleteAccount;
 window.switchToSignUp = switchToSignUp;
 window.switchToSignIn = switchToSignIn;
 window.togglePwVisibility = togglePwVisibility;
+window.renderProfile = renderProfile;
+window.editDisplayName = editDisplayName;
+window.saveDisplayName = saveDisplayName;
+window.savePfBrandName = savePfBrandName;

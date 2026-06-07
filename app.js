@@ -553,10 +553,7 @@ export async function loadWelcomeMessage() {
 async function launchApp(user) {
   await ensureUserProfile(user);
   await loadUserData(user.uid);
-  // Fast-path: localStorage flag set by completeOnboarding — survives fast reloads
-  // even if the async Firestore write hasn't committed to IndexedDB yet.
-  var localDone = localStorage.getItem('ob_done_' + user.uid) === '1';
-  if (localDone || (userProfile && userProfile.onboarded === true)) {
+  if (userProfile && userProfile.onboarded === true) {
     showApp();
   } else {
     var wm = await loadWelcomeMessage();

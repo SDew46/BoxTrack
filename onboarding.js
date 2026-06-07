@@ -218,19 +218,16 @@ function goToStage7() {
 }
 
 // ─── COMPLETE ─────────────────────────────────────────────────────────────────
-function completeOnboarding() {
+async function completeOnboarding() {
+  // Await the Firestore write so the local cache is committed before navigation.
+  // This means Firestore remains the source of truth — changing onboarded:false
+  // in the console will re-trigger onboarding on next sign-in on any device.
   if (obUser) {
-    // Write to localStorage immediately — survives fast reloads even if Firestore cache lags
-    try { localStorage.setItem('ob_done_' + obUser.uid, '1'); } catch(e) {}
-    // Write to Firestore — persists across devices and accounts
-    setDoc(doc(db, 'users', obUser.uid, 'profile', 'data'), { onboarded: true }, { merge: true })
-      .catch(function(e) {
-        console.warn('[8RB] onboarded Firestore write failed, retrying once:', e);
-        setTimeout(function() {
-          setDoc(doc(db, 'users', obUser.uid, 'profile', 'data'), { onboarded: true }, { merge: true })
-            .catch(function(){});
-        }, 3000);
-      });
+    try {
+      await setDoc(doc(db, 'users', obUser.uid, 'profile', 'data'), { onboarded: true }, { merge: true });
+    } catch(e) {
+      console.warn('[8RB] onboarded write failed, proceeding anyway:', e);
+    }
   }
 
   // Navigate to TRAIN

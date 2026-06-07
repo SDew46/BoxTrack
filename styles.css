@@ -724,6 +724,7 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
   box-sizing:border-box;
   display:flex;flex-direction:column;
   transform:translateY(100%);
+  overflow:hidden;
 }
 .ob-sheet.ob-sheet-in{transform:translateY(0);}
 

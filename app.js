@@ -718,9 +718,10 @@ async function handleForgotPassword() {
 
 // ─── RESEND VERIFICATION ──────────────────────────────────────────────────────
 async function handleResendVerification() {
-  if (!authUser) return;
+  var user = authUser || auth.currentUser;
+  if (!user) return;
   try {
-    await sendEmailVerification(authUser);
+    await sendEmailVerification(user);
     toast('Verification email resent.');
   } catch(err) { toast('Could not resend. Please try again.', true); }
 }

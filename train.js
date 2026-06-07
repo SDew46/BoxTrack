@@ -282,9 +282,18 @@ function restoreAutosave(){const data=ld('logAutosave',null);if(!data||!activeLo
 function startRest(ei,secs){
   Object.keys(restTimers).forEach(function(k){clearInterval(restTimers[k].interval);delete restTimers[k];});
   restFsEi=ei;restFsSecs=secs;restFsRem=secs;
-  var nextEx=activeLogSession&&activeLogSession.exercises[ei+1];
   var nextEl=document.getElementById('rfs-next');
-  if(nextEl)nextEl.textContent=nextEx?'NEXT: '+nextEx.displayName:'';
+  if(nextEl){
+    var isLast=!activeLogSession||ei>=activeLogSession.exercises.length-1;
+    var setsCompleted=document.querySelectorAll('#sr-'+ei+' .set-check.done').length>0;
+    if(isLast){
+      nextEl.textContent='LAST EXERCISE';
+    }else if(setsCompleted){
+      nextEl.textContent='NEXT: '+activeLogSession.exercises[ei+1].displayName;
+    }else{
+      nextEl.textContent='';
+    }
+  }
   var rfs=document.getElementById('rest-fs');
   if(rfs){rfs.classList.add('open');}
   updateRfsCount();

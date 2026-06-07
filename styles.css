@@ -895,14 +895,14 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
 /* ─── ? button on exercise header ─────────────────────────────────────────── */
 .lex-ref-btn{
   width:28px;height:28px;
-  background:#1e1e1e;
+  background:none;
   border:1px solid var(--border);
   border-radius:50%;
   font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
   color:var(--dim);cursor:pointer;
-  /* 44px tap target via negative margin + padding */
   padding:8px;
   margin:-8px -2px;
+  box-sizing:content-box;
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;
 }

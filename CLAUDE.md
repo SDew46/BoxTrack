@@ -6,7 +6,7 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 10.3.0. Step 2 (Firebase backend) complete — not yet pushed/deployed.
+Version 10.4.0. Step 2 (Firebase backend) complete — not yet pushed/deployed.
 
 **File structure — all ES modules, all acorn clean:**
 - `styles.css` — all CSS, includes Step 2 auth + offline indicator styles
@@ -230,7 +230,7 @@ Use explicit checks: obj && obj.prop not obj?.prop in these contexts.
 Steve is on Windows/PowerShell. Run commands separately, not chained with &&.
 
 ### 5. Version bump on every meaningful change
-Update version number in `renderSettingsPanel()` and `renderProfile()` in app.js. Current: 10.3.0.
+Update version number in `renderSettingsPanel()` and `renderProfile()` in app.js. Current: 10.4.0.
 
 ---
 

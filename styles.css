@@ -826,3 +826,83 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
   .ob-progress-fill{transition:none;}
   #ob-final{transition:none;}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EXERCISE REFERENCE OVERLAY
+   z-index 4999 (backdrop) / 5000 (sheet) — below onboarding, above everything else
+   ═══════════════════════════════════════════════════════════════════════════ */
+#ex-ref-backdrop{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.5);
+  z-index:4999;
+}
+#ex-ref-sheet{
+  position:fixed;bottom:0;left:0;right:0;
+  height:52vh;
+  background:#111111;
+  border-top:3px solid var(--accent);
+  border-radius:16px 16px 0 0;
+  z-index:5000;
+  flex-direction:column;
+  overflow:hidden;
+}
+.ex-ref-handle{
+  width:36px;height:4px;
+  background:var(--border);border-radius:2px;
+  margin:10px auto 0;flex-shrink:0;
+}
+.ex-ref-close{
+  position:absolute;top:0;right:0;
+  padding:16px 16px 12px;
+  background:none;border:none;
+  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;color:var(--dim);
+  cursor:pointer;
+  min-width:44px;min-height:44px;
+  display:flex;align-items:center;justify-content:center;
+}
+.ex-ref-name{
+  font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--text);
+  margin:24px 20px 4px;flex-shrink:0;
+}
+.ex-ref-cue{
+  font-family:'DM Sans',sans-serif;font-size:14px;color:var(--muted);
+  line-height:1.5;margin:0 20px 12px;flex-shrink:0;
+}
+.ex-ref-video-wrap{
+  width:calc(100% - 40px);margin:0 20px;
+  border-radius:8px;overflow:hidden;flex-shrink:0;
+  background:#000;
+  position:relative;
+}
+.ex-ref-iframe{
+  width:100%;aspect-ratio:16/9;
+  border:none;border-radius:8px;
+  display:block;
+}
+.ex-ref-fallback{
+  width:100%;aspect-ratio:16/9;
+  flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  color:var(--dim);
+}
+.ex-ref-fallback-ttl{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);}
+.ex-ref-fallback-sub{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--dim);}
+.ex-ref-credit{
+  font-family:'DM Sans',sans-serif;font-size:11px;color:var(--dim);
+  text-align:right;padding:6px 20px 0;flex-shrink:0;
+}
+
+/* ─── ? button on exercise header ─────────────────────────────────────────── */
+.lex-ref-btn{
+  width:28px;height:28px;
+  background:#1e1e1e;
+  border:1px solid var(--border);
+  border-radius:50%;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;
+  color:var(--dim);cursor:pointer;
+  /* 44px tap target via negative margin + padding */
+  padding:8px;
+  margin:-8px -2px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}

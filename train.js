@@ -126,12 +126,15 @@ function buildLogForm(){
     var swappedBadge=ex.swapped?'<span class="lex-bdg" style="margin-left:8px">Swapped</span>':'';
     var setContent=buildSetContent(ei,ex,meta.color,st,suggestedKg,restSecs);
     var isOpen=ei===0;
+    var exLib=EXERCISE_LIBRARY.find(function(e){return e.name===ex.displayName;})||EXERCISE_LIBRARY.find(function(e){return e.name===ex.name;});
+    var refBtn=exLib&&exLib.ref?'<button class="lex-ref-btn" id="lex-ref-'+ei+'" onclick="event.stopPropagation();openExRef('+ei+')" aria-label="Technique reference for '+ex.displayName+'">?</button>':'';
     html+='<div class="lex'+(isOpen?' open':'')+'" id="lex-'+ei+'">'
       +'<div class="lex-hd" onclick="toggleExercise('+ei+')">'
         +'<div style="flex:1;min-width:0">'
           +'<div class="lex-nm">'+ex.displayName+swappedBadge+'</div>'
           +'<div class="lex-scheme">'+ex.scheme+'</div>'
         +'</div>'
+        +refBtn
         +'<button class="lex-type-btn'+typeActive+'" id="type-btn-'+ei+'" onclick="event.stopPropagation();toggleTypePicker('+ei+')">'+typeBtnLabel+'</button>'
         +'<span class="lex-chevron">&#8964;</span>'
       +'</div>'
@@ -586,6 +589,82 @@ async function saveCustomSess(){
   toast(isEdit?'Session updated!':'Session saved!');editingCustomId=null;
 }
 
+// ─── EXERCISE REFERENCE OVERLAY ──────────────────────────────────────────────
+var exRefOpener = null;
+var exRefGestureReady = false;
+
+function initExRefGestures() {
+  if (exRefGestureReady) return;
+  exRefGestureReady = true;
+  var sheet = document.getElementById('ex-ref-sheet');
+  if (sheet) {
+    var startY = 0;
+    sheet.addEventListener('touchstart', function(e){startY=e.touches[0].clientY;},{passive:true});
+    sheet.addEventListener('touchend', function(e){if(e.changedTouches[0].clientY-startY>60)closeExRef();},{passive:true});
+  }
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Escape'){var s=document.getElementById('ex-ref-sheet');if(s&&s.style.display!=='none')closeExRef();}
+  });
+}
+
+function openExRef(ei) {
+  initExRefGestures();
+  var ex=activeLogSession&&activeLogSession.exercises[ei];
+  if(!ex)return;
+  var exLib=EXERCISE_LIBRARY.find(function(e){return e.name===ex.displayName;})||EXERCISE_LIBRARY.find(function(e){return e.name===ex.name;});
+  if(!exLib||!exLib.ref)return;
+  var ref=exLib.ref;
+  exRefOpener=document.getElementById('lex-ref-'+ei);
+  var nameEl=document.getElementById('ex-ref-name');
+  var cueEl=document.getElementById('ex-ref-cue');
+  var iframeEl=document.getElementById('ex-ref-iframe');
+  var creditEl=document.getElementById('ex-ref-credit');
+  var fallbackEl=document.getElementById('ex-ref-fallback');
+  if(nameEl)nameEl.textContent=ex.displayName;
+  if(cueEl)cueEl.textContent=ref.cue;
+  if(iframeEl){
+    iframeEl.style.display='block';
+    iframeEl.src=ref.url+'?playsinline=1';
+    iframeEl.setAttribute('aria-label','Technique video for '+ex.displayName);
+    iframeEl.setAttribute('title','Technique video for '+ex.displayName);
+    iframeEl.onerror=function(){iframeEl.style.display='none';if(fallbackEl)fallbackEl.style.display='flex';};
+  }
+  if(fallbackEl)fallbackEl.style.display='none';
+  if(creditEl){
+    if(ref.credit){creditEl.textContent='Video: '+ref.credit;creditEl.style.display='block';}
+    else{creditEl.style.display='none';}
+  }
+  var backdrop=document.getElementById('ex-ref-backdrop');
+  var sheet=document.getElementById('ex-ref-sheet');
+  if(backdrop)backdrop.style.display='block';
+  if(sheet){
+    sheet.style.display='flex';
+    sheet.style.transition='none';
+    sheet.style.transform='translateY(100%)';
+    requestAnimationFrame(function(){
+      sheet.style.transition='transform 250ms ease-out';
+      sheet.style.transform='translateY(0)';
+    });
+  }
+  setTimeout(function(){var c=document.getElementById('ex-ref-close');if(c)c.focus();},260);
+}
+
+function closeExRef() {
+  var sheet=document.getElementById('ex-ref-sheet');
+  var backdrop=document.getElementById('ex-ref-backdrop');
+  if(sheet){
+    sheet.style.transition='transform 200ms ease-in';
+    sheet.style.transform='translateY(100%)';
+    setTimeout(function(){
+      sheet.style.display='none';
+      var iframe=document.getElementById('ex-ref-iframe');
+      if(iframe)iframe.src='';
+    },200);
+  }
+  if(backdrop)backdrop.style.display='none';
+  if(exRefOpener){exRefOpener.focus();exRefOpener=null;}
+}
+
 // ─── EXPOSE TO HTML ONCLICK HANDLERS ─────────────────────────────────────────
 export { checkDeload, initEquipment, renderLibrary, renderCustomLib, showLibraryView, showLogView };
 window.checkDeload = checkDeload;
@@ -647,3 +726,5 @@ window.saveCustomSess = saveCustomSess;
 window.getPrevWt = getPrevWt;
 window.autosaveLog = autosaveLog;
 window.buildLogForm = buildLogForm;
+window.openExRef = openExRef;
+window.closeExRef = closeExRef;

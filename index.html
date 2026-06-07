@@ -546,6 +546,26 @@
   <button class="rfs-skip" onclick="skipRest()">SKIP</button>
 </div>
 
+<!-- Exercise reference overlay -->
+<div id="ex-ref-backdrop" style="display:none" onclick="closeExRef()"></div>
+<div id="ex-ref-sheet" style="display:none" role="dialog" aria-modal="true">
+  <div class="ex-ref-handle"></div>
+  <button id="ex-ref-close" class="ex-ref-close" onclick="closeExRef()">CLOSE</button>
+  <div class="ex-ref-name" id="ex-ref-name"></div>
+  <div class="ex-ref-cue" id="ex-ref-cue"></div>
+  <div class="ex-ref-video-wrap">
+    <iframe id="ex-ref-iframe" class="ex-ref-iframe" src="" frameborder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowfullscreen loading="lazy" title=""></iframe>
+    <div id="ex-ref-fallback" class="ex-ref-fallback" style="display:none">
+      <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
+      <div class="ex-ref-fallback-ttl">Video unavailable</div>
+      <div class="ex-ref-fallback-sub">Ask your coach for a demo</div>
+    </div>
+  </div>
+  <div id="ex-ref-credit" class="ex-ref-credit" style="display:none"></div>
+</div>
+
 </div><!-- end #app-content -->
 
 <!-- ═══ ONBOARDING — outside #app-content so filter:brightness on app doesn't contaminate it ═══ -->

@@ -1,10 +1,10 @@
-﻿import { ld, sv, toast, fmtWt, fmtDate, fmtSecs, getUnit, getPR, openOverlay, closeOverlay, userDataCache } from './app.js';
+import { ld, sv, toast, fmtWt, fmtDate, fmtSecs, getUnit, getPR, openOverlay, closeOverlay, userDataCache } from './app.js';
 import { TRACKED_LIFTS, CAT_META } from './data.js';
 import { db } from './firebase.js';
 import { collection, deleteDoc, doc } from 'firebase/firestore';
 
 // PROGRESS
-function renderProgress(){renderStreak();renderLifts();renderRecentSessions();renderFreestyleSessions();renderBoxingLog();}
+function renderProgress(){renderWeeklySummary();renderLifts();renderRecentSessions();renderFreestyleSessions();renderBoxingLog();}
 function renderFreestyleSessions(){
   var sessions=ld('freestyleSessions',[]);
   var el=document.getElementById('freestyle-sessions-list');if(!el)return;
@@ -13,46 +13,81 @@ function renderFreestyleSessions(){
     return;
   }
   el.innerHTML=sessions.slice(-5).reverse().map(function(s){
-    return '<div class="rec-sess"><div class="rs-hd"><div><span class="rs-date">'+fmtDate(s.date)+'</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--muted)">'+(s.totalMins||s.totalMinutes||0)+' min</span><span class="tag" style="color:var(--red);background:rgba(230,57,70,0.12)">BOX</span></div></div><div class="rs-pills"><span class="rs-pill">'+s.rounds+' rounds</span><span class="rs-pill">'+(s.roundDurationMins||s.roundDuration||3)+' min rounds</span></div></div>';
+    return '<div class="rec-sess"><div class="rs-hd"><div><span class="rs-date">'+fmtDate(s.date)+'</span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--muted)">'+(s.totalMins||s.totalMinutes||0)+' min</span>'
+      +'<span class="tag" style="color:var(--red);background:rgba(230,57,70,0.12)">BOX</span>'
+      +'<button class="del-x" onclick="delFreestyleSession('+s.id+')">×</button></div></div>'
+      +'<div class="rs-pills"><span class="rs-pill">'+s.rounds+' rounds</span><span class="rs-pill">'+(s.roundDurationMins||s.roundDuration||3)+' min rounds</span></div></div>';
   }).join('');
+}
+function delFreestyleSession(id){
+  if(!confirm('Delete this session?'))return;
+  if(userDataCache.boxingSessions!==null){
+    var entry=userDataCache.boxingSessions.find(function(s){return s.id===id&&s.type==='freestyle';});
+    if(entry&&entry._firestoreId&&window.currentUser){
+      deleteDoc(doc(db,'users',window.currentUser.uid,'boxingSessions',entry._firestoreId)).catch(function(e){console.error('Firestore delete failed:',e);});
+    }
+    var idx=userDataCache.boxingSessions.indexOf(entry);
+    if(idx>-1)userDataCache.boxingSessions.splice(idx,1);
+  }
+  renderProgress();
+  toast('Session deleted');
 }
 function getMondayOfWeek(date){
   var d=new Date(date);var day=d.getDay();var diff=day===0?-6:1-day;
   d.setDate(d.getDate()+diff);d.setHours(0,0,0,0);return d;
 }
-function renderStreak(){
-  var all=ld('sessions',[]),classes=ld('boxingClasses',[]);
-  var allDates=new Set([...all.map(function(s){return s.date;}),...classes.map(function(c){return c.date;})]);
-  var streak=0;
-  var thisMonday=getMondayOfWeek(new Date());
-  for(var w=0;w<52;w++){
-    var ws=new Date(thisMonday);ws.setDate(thisMonday.getDate()-w*7);
-    var we=new Date(ws);we.setDate(ws.getDate()+6);we.setHours(23,59,59,999);
-    var hasSession=[...allDates].some(function(d){var dt=new Date(d+'T00:00:00');return dt>=ws&&dt<=we;});
-    if(hasSession){streak++;}else if(w>0){break;}
-  }
-  var total=all.length+classes.length;
-  if(total===0){
-    document.getElementById('streak-area').innerHTML='<div class="empty-state"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><div class="empty-state-head">YOUR JOURNEY STARTS HERE</div><div class="empty-state-sub">Complete your first session to start tracking progress.</div></div>';
+function getWeekMessage(sessionsThisWeek,totalSessions,dayOfWeek){
+  if(totalSessions===0)return "Your first session is waiting. Let's go.";
+  if(sessionsThisWeek===0&&(dayOfWeek===1||dayOfWeek===2||dayOfWeek===3))return "New week. What are we doing today?";
+  if(sessionsThisWeek===0&&(dayOfWeek===4||dayOfWeek===5))return "Week's not over. One session changes everything.";
+  if(sessionsThisWeek===0&&(dayOfWeek===0||dayOfWeek===6))return "Still time. Make it count.";
+  if(sessionsThisWeek===1)return "Good start. Build on it.";
+  if(sessionsThisWeek===2)return "Momentum building. Keep going.";
+  if(sessionsThisWeek===3)return "Strong week. Finish it well.";
+  if(sessionsThisWeek>=4)return "Exceptional week. Your coach would be proud.";
+}
+function renderWeeklySummary(){
+  var banner=document.getElementById('weekly-banner');
+  if(!banner)return;
+  if(window.currentUser&&userDataCache.sessions===null){
+    banner.innerHTML='<div style="width:100%;padding:20px 16px;background:#141414;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><div><span style="font-family:\'Bebas Neue\',sans-serif;font-size:48px;color:var(--dim)">—</span><span style="font-family:\'DM Sans\',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--dim);margin-left:6px;vertical-align:bottom">THIS WEEK</span></div></div><div style="font-family:\'DM Sans\',sans-serif;font-size:15px;color:var(--dim);line-height:1.5">Loading your week...</div></div>';
     return;
   }
-  var heroNum=streak>0?streak:total;
-  var heroLbl=streak>0?'WEEK STREAK':'SESSIONS LOGGED';
-  var heroSub=streak>0?'weeks with at least one session':'';
-  var heroCtx=streak>0?(streak===1?'Keep it going this week.':streak>=4?'Exceptional consistency.':'Consistency wins fights.'):'Train this week to start your streak.';
-  var freeSessions=ld('freestyleSessions',[]);
-  var totalRounds=freeSessions.reduce(function(a,s){return a+(s.rounds||0);},0);
-  var statRows='<div style="display:flex;gap:24px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">'
-    +'<div><div class="stat-n" style="color:var(--gold)">'+all.length+'</div><div class="stat-l">Gym</div></div>'
-    +'<div><div class="stat-n" style="color:var(--gold)">'+classes.length+'</div><div class="stat-l">Boxing</div></div>'
-    +'<div><div class="stat-n" style="color:var(--gold)">'+totalRounds+'</div><div class="stat-l">Rounds</div></div>'
-    +'</div>';
-  document.getElementById('streak-area').innerHTML='<div class="prog-card" style="padding:24px 20px">'
-    +'<div class="streak-big">'+heroNum+'</div>'
-    +'<div class="streak-lbl">'+heroLbl+'</div>'
-    +(heroSub?'<div style="font-size:12px;color:var(--dim);margin-top:2px;font-weight:600;letter-spacing:0.5px">'+heroSub+'</div>':'')
-    +'<div class="streak-hint">'+heroCtx+'</div>'
-    +statRows+'</div>';
+  var now=new Date();
+  var monday=getMondayOfWeek(now);
+  var sunday=new Date(monday);sunday.setDate(monday.getDate()+6);sunday.setHours(23,59,59,999);
+  var dayOfWeek=now.getDay();
+  var sessions=ld('sessions',[]);
+  var boxing=ld('boxingClasses',[]);
+  var freestyle=ld('freestyleSessions',[]);
+  function isThisWeek(dateStr){var d=new Date(dateStr+'T00:00:00');return d>=monday&&d<=sunday;}
+  var gymThisWeek=sessions.filter(function(s){return isThisWeek(s.date);}).length;
+  var boxingThisWeek=boxing.concat(freestyle).filter(function(s){return isThisWeek(s.date);}).length;
+  var sessionsThisWeek=gymThisWeek+boxingThisWeek;
+  var totalSessions=sessions.length+boxing.length+freestyle.length;
+  var msg=getWeekMessage(sessionsThisWeek,totalSessions,dayOfWeek);
+  var pillsHtml='';
+  if(sessionsThisWeek>0){
+    pillsHtml='<div style="display:flex;gap:16px;margin-top:10px">';
+    if(gymThisWeek>0)pillsHtml+='<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:var(--dim);background:#1e1e1e;padding:3px 8px;border-radius:20px">'+gymThisWeek+' GYM</span>';
+    if(boxingThisWeek>0)pillsHtml+='<span style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:var(--dim);background:#1e1e1e;padding:3px 8px;border-radius:20px">'+boxingThisWeek+' BOXING</span>';
+    pillsHtml+='</div>';
+  }
+  banner.innerHTML='<div style="width:100%;padding:20px 16px;background:#141414;border-bottom:1px solid var(--border)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">'
+      +'<div>'
+        +'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:48px;color:var(--text)">'+sessionsThisWeek+'</span>'
+        +'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--dim);margin-left:6px;vertical-align:bottom">THIS WEEK</span>'
+      +'</div>'
+      +'<div>'
+        +'<span style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--gold)">'+totalSessions+'</span>'
+        +'<span style="font-family:\'DM Sans\',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--dim);margin-left:4px">TOTAL</span>'
+      +'</div>'
+    +'</div>'
+    +'<div style="font-family:\'DM Sans\',sans-serif;font-size:15px;color:var(--muted);line-height:1.5">'+msg+'</div>'
+    +pillsHtml
+  +'</div>';
 }
 function calc1RM(weight,reps){if(reps===1)return weight;return Math.round(weight*(1+reps/30));}
 function buildNarrative(history){
@@ -64,9 +99,9 @@ function buildNarrative(history){
   var bestOld=older.length?Math.max.apply(null,older.map(function(h){return h.kg;})):null;
   if(bestNow===null||bestOld===null)return '<div style="font-size:14px;color:var(--dim);margin-bottom:8px">Keep going — trends show after 2 sessions</div>';
   var diff=+(bestNow-bestOld).toFixed(1);
-  if(diff>0)return '<div style="font-size:14px;color:var(--green);margin-bottom:8px">↑ '+diff+'kg added in the last 4 weeks</div>';
-  if(diff===0)return '<div style="font-size:14px;color:var(--muted);margin-bottom:8px">Consistent — holding '+fmtWt(bestNow)+'</div>';
-  return '<div style="font-size:14px;color:var(--muted);margin-bottom:8px">Consistent — holding '+fmtWt(bestNow)+'</div>';
+  if(diff>0)return '<span style="color:var(--green)">↑ '+fmtWt(diff)+' added in the last 4 weeks</span>';
+  if(diff<0)return '<span style="color:var(--muted)">↓ '+fmtWt(Math.abs(diff))+' in the last 4 weeks — keep pushing</span>';
+  return '<span style="color:var(--muted)">Consistent — holding '+fmtWt(bestNow)+'</span>';
 }
 function renderLifts(){
   var all=ld('sessions',[]);var liftMap={};
@@ -169,4 +204,4 @@ export { renderProgress };
 window.renderProgress = renderProgress;
 window.delBoxing = delBoxing;
 window.delRecentSession = delRecentSession;
-
+window.delFreestyleSession = delFreestyleSession;

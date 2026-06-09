@@ -2,7 +2,7 @@
 // DEV: Chrome DevTools → Application → Service Workers → tick "Update on reload"
 //      to bypass the SW cache during local development.
 
-const CACHE = 'boxtrack-v15';
+const CACHE = 'boxtrack-v16';
 
 // Only pre-cache assets that never change between deploys.
 // JS and CSS are intentionally excluded — they use network-first so code
@@ -41,11 +41,10 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // ── HTML navigation: network-first ───────────────────────────────────
-  // Always fetch fresh so the user gets latest index.html after a push.
+  // ── HTML navigation: network-first, bypass HTTP cache ────────────────
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request)
+      fetch(new Request(e.request.url, { cache: 'no-cache' }))
         .then(res => {
           const clone = res.clone();
           caches.open(CACHE).then(c => c.put(e.request, clone));
@@ -56,11 +55,12 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // ── JS and CSS: network-first with cache fallback ─────────────────────
-  // Code changes propagate immediately. Falls back to cache when offline.
+  // ── JS and CSS: network-first, bypass HTTP cache ──────────────────────
+  // cache: 'no-cache' revalidates with the server on every request so code
+  // changes propagate immediately without users needing to clear storage.
   if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
     e.respondWith(
-      fetch(e.request)
+      fetch(new Request(e.request.url, { cache: 'no-cache' }))
         .then(res => {
           if (res && res.status === 200) {
             const clone = res.clone();

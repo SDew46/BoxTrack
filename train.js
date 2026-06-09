@@ -170,7 +170,21 @@ function setSetType(ei,type){
 }
 function buildSetContent(ei,ex,color,type,suggestedKg,restSecs){
   const rs=restSecs||getGlobalRest();
-  if(type==='amrap')return `<div class="amrap-blk"><div class="amrap-row"><span class="amrap-lbl">Duration</span><input class="amrap-inp" type="number" placeholder="6" id="amrap-mins-${ei}" min="1" max="30"><span style="font-size:13px;color:var(--dim);margin-left:4px">min</span></div><div class="amrap-row"><span class="amrap-lbl">Rounds completed</span><input class="amrap-inp" type="number" placeholder="0" id="amrap-score-${ei}" min="0" step="0.5"></div></div>`;
+  if(type==='amrap')return '<div class="amrap-blk">'
+    +'<div class="amrap-row"><span class="amrap-lbl">Duration</span><div style="display:flex;align-items:center;gap:4px"><input class="amrap-inp" type="number" placeholder="6" id="amrap-mins-'+ei+'" min="1" max="30"><span class="amrap-unit">min</span></div></div>'
+    +'<div class="amrap-row"><span class="amrap-lbl">Weight</span><div style="display:flex;align-items:center;gap:4px"><input class="amrap-inp" type="number" placeholder="—" id="amrap-kg-'+ei+'" min="0" step="2.5"><span class="amrap-unit">'+getUnit()+'</span></div></div>'
+    +'<div class="amrap-row"><span class="amrap-lbl">Rounds completed</span><div style="display:flex;align-items:center;gap:4px"><input class="amrap-inp" type="number" placeholder="0" id="amrap-score-'+ei+'" min="0" step="0.5"><span class="amrap-unit"></span></div></div>'
+    +'</div>';
+  if(type==='superset'){
+    var ssPartner='<div class="ss-partner">'
+      +'<div class="ss-partner-lbl">SUPERSET WITH</div>'
+      +'<input class="ss-name-inp" type="text" placeholder="Partner exercise name..." id="ss-name-'+ei+'">'
+      +'<div class="col-row"><div class="col-h">#</div><div class="col-h">'+getUnit()+'</div><div class="col-h">REPS</div><div class="col-h"></div></div>'
+      +'<div class="set-rows" id="ssr-'+ei+'">'+makeSupersetRow(ei,0)+'</div>'
+      +'<button class="add-set" onclick="addSupersetRow('+ei+')">＋ Add set</button>'
+    +'</div>';
+    return makeSetGrid(ei,ex,color,suggestedKg,rs)+ssPartner;
+  }
   if(type==='pyramid')return `<div class="pyr-note">Pyramid: increase weight each set, decrease reps.</div>${makeSetGrid(ei,ex,color,suggestedKg,rs)}`;
   if(type==='ladder')return `<div class="pyr-note">Ladder: 1 rep, 2 reps, 3... up to target, back down.</div>${makeSetGrid(ei,ex,color,suggestedKg,rs)}`;
   return makeSetGrid(ei,ex,color,suggestedKg,rs);
@@ -275,6 +289,33 @@ function addSetRow(ei,col,prefill){
   cont.appendChild(d.firstElementChild);
 }
 function removeRow(rId,cId){document.getElementById(rId)?.remove();document.getElementById(cId)?.querySelectorAll('.set-row').forEach((r,i)=>r.querySelector('.set-n').textContent=i+1);autosaveLog();}
+function makeSupersetRow(ei,si){
+  return '<div class="set-row" id="ssrow-'+ei+'-'+si+'">'
+    +'<span class="set-n">'+(si+1)+'</span>'
+    +'<input class="si" type="text" inputmode="none" placeholder="—" id="skv-'+ei+'-'+si+'" value="" readonly onclick="openNumpad(this,\'kg\','+ei+','+si+')">'
+    +'<input class="si" type="text" inputmode="none" placeholder="—" id="srv-'+ei+'-'+si+'" readonly onclick="openNumpad(this,\'reps\','+ei+','+si+')">'
+    +'<button class="set-check" id="ssc-'+ei+'-'+si+'" onclick="completeSupersetRow('+ei+','+si+')">'
+    +'<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'
+    +'</button>'
+  +'</div>';
+}
+function addSupersetRow(ei){
+  var cont=document.getElementById('ssr-'+ei);if(!cont)return;
+  var n=cont.querySelectorAll('.set-row').length;
+  var d=document.createElement('div');d.innerHTML=makeSupersetRow(ei,n);
+  cont.appendChild(d.firstElementChild);
+}
+function completeSupersetRow(ei,si){
+  var btn=document.getElementById('ssc-'+ei+'-'+si);
+  var kInput=document.getElementById('skv-'+ei+'-'+si);
+  var rInput=document.getElementById('srv-'+ei+'-'+si);
+  if(!btn)return;
+  var wasDone=btn.classList.contains('done');
+  btn.classList.toggle('done',!wasDone);
+  if(kInput)kInput.classList.toggle('done-input',!wasDone);
+  if(rInput)rInput.classList.toggle('done-input',!wasDone);
+  if(!wasDone)autosaveLog();
+}
 function getPrevWt(name){const all=ld('sessions',[]);for(let i=all.length-1;i>=0;i--){const ex=[...(all[i].exercises||[]),...(all[i].extras||[])].find(e=>e.name===name||e.originalName===name);if(ex){const valid=(ex.sets||[]).filter(r=>r.kg&&parseFloat(r.kg)>0);if(valid.length){const maxKg=Math.max(...valid.map(r=>parseFloat(r.kg)));return{kg:maxKg,reps:valid.find(r=>parseFloat(r.kg)===maxKg)?.reps||'',date:all[i].date};}}}return null;}
 function startDurTracker(){if(sessionStartTime)return;sessionStartTime=Date.now();durInterval=setInterval(()=>{const e=Math.floor((Date.now()-sessionStartTime)/1000);const el=document.getElementById('dur-display');if(el)el.textContent=`${Math.floor(e/60)}:${(e%60).toString().padStart(2,'0')}`;},1000);}
 function autosaveLog(){if(!activeLogSession)return;const data={date:document.getElementById('log-date')?.value||'',notes:document.getElementById('session-notes')?.value||'',sets:{}};activeLogSession.exercises.forEach((ex,ei)=>{const cont=document.getElementById('sr-'+ei);if(!cont)return;data.sets[ei]=[];cont.querySelectorAll('.set-row').forEach((row,si)=>{data.sets[ei].push({k:document.getElementById('kv-'+ei+'-'+si)?.value||'',r:document.getElementById('rv-'+ei+'-'+si)?.value||''});});});sv('logAutosave',data);}
@@ -337,7 +378,7 @@ async function saveSession(){
     if(dup){toast('Session already saved',true);reEnableBtn();return;}
   }
   const duration=sessionStartTime?Math.floor((Date.now()-sessionStartTime)/60000):0;
-  const exercises=window.activeLogSession.exercises.map((ex,ei)=>{const st=setTypeState[ei]||'standard';if(st==='amrap'){const mins=document.getElementById('amrap-mins-'+ei)?.value||'';const score=document.getElementById('amrap-score-'+ei)?.value||'';return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:'amrap',amrapMins:mins,amrapScore:score,sets:[]};}const cont=document.getElementById('sr-'+ei);const sets=[];if(cont)cont.querySelectorAll('.set-row').forEach((row,si)=>{const k=document.getElementById('kv-'+ei+'-'+si)?.value;const r=document.getElementById('rv-'+ei+'-'+si)?.value;if(k||r)sets.push({sets:'',reps:r||'',kg:k||''});});return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:st,sets};});
+  const exercises=window.activeLogSession.exercises.map((ex,ei)=>{const st=setTypeState[ei]||'standard';if(st==='amrap'){const mins=document.getElementById('amrap-mins-'+ei)?.value||'';const score=document.getElementById('amrap-score-'+ei)?.value||'';const kg=document.getElementById('amrap-kg-'+ei)?.value||'';return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:'amrap',amrapMins:mins,amrapScore:score,sets:kg?[{kg,reps:score,sets:''}]:[]};}if(st==='superset'){const cont=document.getElementById('sr-'+ei);const sets=[];if(cont)cont.querySelectorAll('.set-row').forEach((row,si)=>{const k=document.getElementById('kv-'+ei+'-'+si)?.value;const r=document.getElementById('rv-'+ei+'-'+si)?.value;if(k||r)sets.push({sets:'',reps:r||'',kg:k||''});});const ssName=(document.getElementById('ss-name-'+ei)?.value||'').trim();const ssCont=document.getElementById('ssr-'+ei);const ssSets=[];if(ssCont)ssCont.querySelectorAll('.set-row').forEach((row,si)=>{const k=document.getElementById('skv-'+ei+'-'+si)?.value;const r=document.getElementById('srv-'+ei+'-'+si)?.value;if(k||r)ssSets.push({sets:'',reps:r||'',kg:k||''});});return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:'superset',sets,supersetWith:ssName?{name:ssName,sets:ssSets}:undefined};}const cont=document.getElementById('sr-'+ei);const sets=[];if(cont)cont.querySelectorAll('.set-row').forEach((row,si)=>{const k=document.getElementById('kv-'+ei+'-'+si)?.value;const r=document.getElementById('rv-'+ei+'-'+si)?.value;if(k||r)sets.push({sets:'',reps:r||'',kg:k||''});});return{name:ex.displayName,originalName:ex.name,swapped:ex.swapped,setType:st,sets};});
   const extras=[];document.querySelectorAll('.extra-card').forEach(el=>{const id=el.id.replace('extra-','');const name=(document.getElementById('en-'+id)?.value||'').trim();if(!name)return;const cont=document.getElementById('xsr-'+id);const sets=[];if(cont)cont.querySelectorAll('.set-row').forEach((row,si)=>{const s=document.getElementById('xsv-'+id+'-'+si)?.value;const r=document.getElementById('xrv-'+id+'-'+si)?.value;const k=document.getElementById('xkv-'+id+'-'+si)?.value;if(s||r||k)sets.push({sets:s||'',reps:r||'',kg:k||''});});extras.push({name,sets,extra:true});});
   const notes=document.getElementById('session-notes').value.trim();
   const record={id:Date.now(),date,cat:window.activeLogSession.cat,sessId:window.activeLogSession.id,sessName:window.activeLogSession.name,exercises,extras,notes,duration};
@@ -708,6 +749,8 @@ window.setExRest = setExRest;
 window.onSetInput = onSetInput;
 window.addSetRow = addSetRow;
 window.removeRow = removeRow;
+window.addSupersetRow = addSupersetRow;
+window.completeSupersetRow = completeSupersetRow;
 window.skipRest = skipRest;
 window.addExtra = addExtra;
 window.addExRow = addExRow;

@@ -24,6 +24,10 @@ service cloud.firestore {
 
     // User profile — field-level protection
     match /users/{userId}/profile/data {
+      // Unverified users can read their own profile —
+      // required for the auth flow to determine which
+      // screen to show post-registration. Write operations
+      // correctly require verification.
       allow read: if isAuthenticated() && isOwner(userId);
 
       // On creation: role must be member, gym must be 8RB
@@ -70,7 +74,10 @@ service cloud.firestore {
     // Gym config — all verified members read, coach only write
     match /gym/{gymId}/config/{docId} {
       allow read: if isAuthenticated() && isVerified();
-      allow write: if isCoach() && isVerified();
+      // Coach can only write to their own gym's config —
+      // scoped by the gym field on their profile document
+      allow write: if isCoach() && isVerified()
+        && gymId == get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data).data.gym;
     }
 
     // Announcements — all verified members read, coach only write

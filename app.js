@@ -9,6 +9,51 @@ import {
 } from 'firebase/firestore';
 import { EQUIP_OPTIONS, ACCENT_COLORS } from './data.js';
 
+// ─── DEBUG FLAG ───────────────────────────────────────────────────────────────
+const DEBUG = false;
+
+// ─── SECURITY UTILITIES ───────────────────────────────────────────────────────
+export function sanitise(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+export function isSafeEmbedUrl(url) {
+  return typeof url === 'string' &&
+    url.startsWith('https://www.youtube.com/embed/');
+}
+
+function sanitiseImport(obj) {
+  if (typeof obj !== 'object' || obj === null) return obj;
+  ['__proto__', 'constructor', 'prototype'].forEach(function(k) { delete obj[k]; });
+  Object.keys(obj).forEach(function(k) {
+    if (typeof obj[k] === 'object') sanitiseImport(obj[k]);
+  });
+  return obj;
+}
+
+function hasLongString(obj) {
+  if (typeof obj === 'string') return obj.length > 500;
+  if (typeof obj === 'object' && obj !== null) {
+    return Object.values(obj).some(function(v) { return hasLongString(v); });
+  }
+  return false;
+}
+
+function chunkArray(arr, size) {
+  var chunks = [];
+  for (var i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
 // ─── SHARED MUTABLE STATE ──────────────────────────────────────────────────────
 // Assigned to window so train.js / box.js can read as bare names and write as window.x
 window.activeEquipment = new Set(EQUIP_OPTIONS.map(e => e.id));
@@ -62,6 +107,7 @@ export function toast(msg, err) {
 }
 
 // ─── NAV ───────────────────────────────────────────────────────────────────────
+var lastProgressRead = 0;
 export function showPage(id) {
   ['train','box','progress','profile'].forEach(function(p, i) {
     document.getElementById('page-'+p).classList.toggle('active', p === id);
@@ -69,7 +115,15 @@ export function showPage(id) {
   });
   if (id === 'train') { checkDeload(); applyBranding(); }
   if (id === 'box') { initBoxPage(); }
-  if (id === 'progress') { renderProgress(); }
+  if (id === 'progress') {
+    var now = Date.now();
+    if (now - lastProgressRead < 60000 && userDataCache.sessions !== null) {
+      renderProgress(); // data fresh — use cache, skip Firestore re-fetch
+    } else {
+      lastProgressRead = now;
+      renderProgress();
+    }
+  }
   if (id === 'profile') { renderProfile(); }
 }
 export function openOverlay(id) { document.getElementById(id).classList.add('open'); }
@@ -94,7 +148,7 @@ export function applyBranding() {
   var el = document.getElementById('train-title');
   if (el) {
     var sub = name === '8RB' ? 'by 8 Rounds Boxing' : '';
-    el.innerHTML = '<div class="sh-wordmark-main">' + name + '</div>' + (sub ? '<div class="sh-wordmark-sub">' + sub + '</div>' : '');
+    el.innerHTML = '<div class="sh-wordmark-main">' + sanitise(name) + '</div>' + (sub ? '<div class="sh-wordmark-sub">' + sub + '</div>' : '');
   }
   var eye = document.getElementById('train-eye'); if (eye) eye.style.color = color;
 }
@@ -125,10 +179,10 @@ export function renderProfile() {
     '<div class="sec-lbl">ACCOUNT</div>'
     + '<div class="sg">'
       + '<div class="sr" id="pf-name-row">'
-        + '<div style="flex:1"><div class="sr-lbl">Display Name</div><div class="sr-sub" id="pf-name-val">' + displayName + '</div></div>'
+        + '<div style="flex:1"><div class="sr-lbl">Display Name</div><div class="sr-sub" id="pf-name-val">' + sanitise(displayName) + '</div></div>'
         + '<button class="sr-act" onclick="editDisplayName()">EDIT</button>'
       + '</div>'
-      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Email</div><div class="sr-sub">' + (user.email || '—') + '</div></div></div>'
+      + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Email</div><div class="sr-sub">' + sanitise(user.email || '—') + '</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Signed in with</div><div class="sr-sub">' + providerLabel + '</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Member since</div><div class="sr-sub" id="pf-join-date">—</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Sign Out</div></div><button class="sr-act" onclick="handleSignOut()">SIGN OUT</button></div>'
@@ -163,7 +217,7 @@ function editDisplayName() {
   var row = document.getElementById('pf-name-row');
   if (!row) return;
   var cur = window.currentUser ? (window.currentUser.displayName || '') : '';
-  row.innerHTML = '<div style="flex:1"><div class="sr-lbl">Display Name</div><input class="brand-inp" type="text" id="pf-edit-name" value="' + cur + '" placeholder="Your name" style="margin-top:4px"></div><button class="sr-act" onclick="saveDisplayName()">SAVE</button>';
+  row.innerHTML = '<div style="flex:1"><div class="sr-lbl">Display Name</div><input class="brand-inp" type="text" id="pf-edit-name" value="' + sanitise(cur) + '" placeholder="Your name" style="margin-top:4px"></div><button class="sr-act" onclick="saveDisplayName()">SAVE</button>';
   var inp = document.getElementById('pf-edit-name');
   if (inp) inp.focus();
 }
@@ -172,6 +226,7 @@ async function saveDisplayName() {
   if (!inp || !window.currentUser) return;
   var name = inp.value.trim();
   if (!name) { toast('Please enter a name', true); return; }
+  if (name.length > 50) { toast('Name must be 50 characters or less', true); return; }
   try {
     await updateProfile(window.currentUser, {displayName: name});
     await setDoc(doc(db, 'users', window.currentUser.uid, 'profile', 'data'), {displayName: name}, {merge: true});
@@ -200,7 +255,7 @@ export function renderSettingsPanel() {
   if (userRow && window.currentUser) {
     var displayName = window.currentUser.displayName || '';
     var email = window.currentUser.email || '';
-    userRow.innerHTML = '<div class="sr"><div style="flex:1"><div class="sr-lbl">' + (displayName || 'Account') + '</div><div class="sr-sub">' + email + '</div></div><button class="sr-act" onclick="handleSignOut()">SIGN OUT</button></div>';
+    userRow.innerHTML = '<div class="sr"><div style="flex:1"><div class="sr-lbl">' + sanitise(displayName || 'Account') + '</div><div class="sr-sub">' + sanitise(email) + '</div></div><button class="sr-act" onclick="handleSignOut()">SIGN OUT</button></div>';
   }
   // Version
   var verEl = document.getElementById('settings-version');
@@ -226,7 +281,14 @@ function importData(e) {
   var reader = new FileReader();
   reader.onload = function(ev) {
     try {
-      var data = JSON.parse(ev.target.result);
+      var raw = ev.target.result;
+      if (raw.length > 2 * 1024 * 1024) { toast('Import file is invalid or corrupt', true); return; }
+      var data = JSON.parse(raw);
+      sanitiseImport(data);
+      if (JSON.stringify(data).length > 2 * 1024 * 1024) { toast('Import file is invalid or corrupt', true); return; }
+      if (data.sessions !== undefined && !Array.isArray(data.sessions)) { toast('Import file is invalid or corrupt', true); return; }
+      if (data.boxingClasses !== undefined && !Array.isArray(data.boxingClasses)) { toast('Import file is invalid or corrupt', true); return; }
+      if (hasLongString(data)) { toast('Import file is invalid or corrupt', true); return; }
       if (data.sessions) sv('sessions', data.sessions);
       if (data.boxingClasses) sv('boxingClasses', data.boxingClasses);
       if (data.customSessions) sv('customSessions', data.customSessions);
@@ -475,7 +537,7 @@ function stopVerificationPolling() {
 
 async function handleManualVerifyCheck() {
   var user = auth.currentUser;
-  console.log('[8RB] manualVerifyCheck: user=', user ? user.uid : 'null', 'emailVerified=', user ? user.emailVerified : 'N/A');
+  if (DEBUG) console.log('[8RB] manualVerifyCheck: user=', user ? user.uid : 'null', 'emailVerified=', user ? user.emailVerified : 'N/A');
   if (!user) {
     console.warn('[8RB] manualVerifyCheck: no auth.currentUser — cannot proceed');
     return;
@@ -484,7 +546,7 @@ async function handleManualVerifyCheck() {
   if (btn) { btn.textContent = 'Checking…'; btn.disabled = true; }
   try {
     await reload(user);
-    console.log('[8RB] manualVerifyCheck: after reload emailVerified=', user.emailVerified);
+    if (DEBUG) console.log('[8RB] manualVerifyCheck: after reload emailVerified=', user.emailVerified);
     if (user.emailVerified) {
       stopVerificationPolling();
       authUser = user;
@@ -506,13 +568,13 @@ async function handleManualVerifyCheck() {
 // This recovers from sign-up flows that failed partway through.
 async function ensureUserProfile(user) {
   var provider = user.providerData.map(function(p){return p.providerId;}).join(',');
-  console.log('[8RB] ensureUserProfile: uid=' + user.uid + ' provider=' + provider + ' emailVerified=' + user.emailVerified);
+  if (DEBUG) console.log('[8RB] ensureUserProfile: uid=' + user.uid + ' provider=' + provider + ' emailVerified=' + user.emailVerified);
   try {
     var profileRef = doc(db, 'users', user.uid, 'profile', 'data');
     var existing = await getDoc(profileRef);
-    console.log('[8RB] ensureUserProfile: profile exists=' + existing.exists());
+    if (DEBUG) console.log('[8RB] ensureUserProfile: profile exists=' + existing.exists());
     if (!existing.exists()) {
-      console.error('[8RB] ensureUserProfile: PROFILE MISSING for ' + user.uid + ' — creating now. Check sign-up flow for regressions.');
+      console.error('[8RB] ensureUserProfile: PROFILE MISSING — creating now. Check sign-up flow for regressions.');
       var newProfile = {
         displayName: user.displayName || '',
         email: user.email || '',
@@ -525,7 +587,7 @@ async function ensureUserProfile(user) {
       };
       await setDoc(profileRef, newProfile);
       userProfile = { onboarded: false };
-      console.log('[8RB] ensureUserProfile: profile created successfully');
+      if (DEBUG) console.log('[8RB] ensureUserProfile: profile created successfully');
     } else {
       userProfile = existing.data();
     }
@@ -569,7 +631,7 @@ async function launchApp(user) {
 async function resolveAuth() {
   if (!splashDone || !authReady) return;
   var _cur = auth.currentUser;
-  console.log('[8RB] resolveAuth:',
+  if (DEBUG) console.log('[8RB] resolveAuth:',
     'authUser=' + (authUser ? authUser.uid : 'none'),
     'emailVerified=' + (authUser ? authUser.emailVerified : 'N/A'),
     'auth.currentUser=' + (_cur ? _cur.uid : 'none'),
@@ -581,10 +643,10 @@ async function resolveAuth() {
     await authUser.getIdToken(true).catch(function(e){ console.warn('[8RB] getIdToken refresh failed:', e); });
     await launchApp(authUser);
   } else if (authUser && !authUser.emailVerified) {
-    console.log('[8RB] resolveAuth: email not verified, showing verify screen');
+    if (DEBUG) console.log('[8RB] resolveAuth: email not verified, showing verify screen');
     showEmailVerificationScreen(authUser.email);
   } else {
-    console.log('[8RB] resolveAuth: no user, showing sign-in');
+    if (DEBUG) console.log('[8RB] resolveAuth: no user, showing sign-in');
     showSignInScreen();
   }
 }
@@ -597,7 +659,7 @@ export function onSplashDone() {
 // Handle return from Google signInWithRedirect — fires on page load after redirect
 getRedirectResult(auth).then(function(result) {
   if (result && result.user) {
-    console.log('[8RB] getRedirectResult: Google redirect returned user', result.user.uid);
+    if (DEBUG) console.log('[8RB] getRedirectResult: Google redirect returned user', result.user.uid);
     // ensureUserProfile handles profile creation via resolveAuth — no extra action needed
   }
 }).catch(function(err) {
@@ -661,7 +723,7 @@ async function handleGoogleSignIn() {
     var provider = new GoogleAuthProvider();
     var result = await signInWithPopup(auth, provider);
     // ensureUserProfile handles profile creation via resolveAuth/onAuthStateChanged
-    console.log('[8RB] Google popup sign-in complete:', result.user.uid);
+    if (DEBUG) console.log('[8RB] Google popup sign-in complete:', result.user.uid);
   } catch(err) {
     if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
       showAuthError('Google sign-in failed. Please try again.');
@@ -755,9 +817,13 @@ async function executeDeleteAccount() {
     var colls = ['sessions','boxingSessions','customCombos','customSessions'];
     for (var ci = 0; ci < colls.length; ci++) {
       var snap = await getDocs(collection(db, 'users', uid, colls[ci]));
-      var batch = writeBatch(db);
-      snap.docs.forEach(function(d) { batch.delete(d.ref); });
-      if (snap.docs.length > 0) await batch.commit();
+      if (snap.docs.length === 0) continue;
+      var docChunks = chunkArray(snap.docs, 499);
+      for (var ci2 = 0; ci2 < docChunks.length; ci2++) {
+        var batch = writeBatch(db);
+        docChunks[ci2].forEach(function(d) { batch.delete(d.ref); });
+        await batch.commit();
+      }
     }
     // Delete profile
     await deleteDoc(doc(db, 'users', uid, 'profile', 'data')).catch(function(){});
@@ -799,7 +865,7 @@ function loadCoachesNotes() {
     onSnapshot(doc(db, 'gym', '8RB', 'config', 'main'), function(snap) {
       if (!snap.exists() || !snap.data().coachNotes) return;
       var notes = snap.data().coachNotes;
-      var html = notes.split('\n').filter(function(l){return l.trim();}).map(function(l){return '— ' + l.trim();}).join('<br>');
+      var html = notes.split('\n').filter(function(l){return l.trim();}).map(function(l){return '— ' + sanitise(l.trim());}).join('<br>');
       localStorage.setItem('coachNotesHtml', html);
       renderCoachNotes(html);
     }, function(err) {
@@ -837,10 +903,17 @@ async function runMigration() {
     var classes = JSON.parse(localStorage.getItem('boxingClasses') || '[]');
     var combos = JSON.parse(localStorage.getItem('customCombos') || '[]');
     var custom = JSON.parse(localStorage.getItem('customSessions') || '[]');
+    var dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    var skipped = 0;
     for (var i = 0; i < sessions.length; i++) {
+      if (!sessions[i].date || !dateRegex.test(sessions[i].date) || !Array.isArray(sessions[i].exercises)) {
+        skipped++;
+        continue;
+      }
       await addDoc(collection(db, 'users', uid, 'sessions'), Object.assign({}, sessions[i], {createdAt: serverTimestamp()}));
       count++;
     }
+    if (skipped > 0) console.log('[8RB] runMigration: skipped ' + skipped + ' invalid session records');
     for (var j = 0; j < boxing.length; j++) {
       await addDoc(collection(db, 'users', uid, 'boxingSessions'), Object.assign({}, boxing[j], {type:'freestyle', createdAt: serverTimestamp()}));
       count++;

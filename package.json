@@ -3,6 +3,19 @@
     "acorn": "^8.16.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "@playwright/test": "^1.60.0",
+    "firebase-admin": "^14.0.0",
+    "jest": "^30.4.2",
     "jimp": "^1.6.1"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:jest": "jest firestore.test.js --testTimeout=30000"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000
   }
 }

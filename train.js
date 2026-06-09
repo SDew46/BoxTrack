@@ -37,7 +37,7 @@ function dismissDeload(){const s=ld('sessions',[]);sv('lastDeloadSession',s.leng
 
 // EQUIPMENT
 function initEquipment(){
-  const saved=ld('equipment',null);if(saved)activeEquipment=new Set(saved);
+  const saved=ld('equipment',null);activeEquipment=saved&&saved.length?new Set(saved):new Set(EQUIP_OPTIONS.map(function(e){return e.id;}));
   document.getElementById('equip-grid').innerHTML=EQUIP_OPTIONS.map(e=>`<div class="eq ${activeEquipment.has(e.id)?'on':''}" id="ec-${e.id}" onclick="toggleEquip('${e.id}')">${e.label}</div>`).join('');
 }
 function toggleEquip(id){activeEquipment.has(id)?activeEquipment.delete(id):activeEquipment.add(id);sv('equipment',[...activeEquipment]);document.getElementById('ec-'+id).classList.toggle('on',activeEquipment.has(id));renderLibrary();}
@@ -716,6 +716,7 @@ function closeExRef() {
 export { checkDeload, initEquipment, renderLibrary, renderCustomLib, showLibraryView, showLogView };
 window.checkDeload = checkDeload;
 window.initEquipment = initEquipment;
+window.toggleEquip = toggleEquip;
 window.renderLibrary = renderLibrary;
 window.renderCustomLib = renderCustomLib;
 window.showLibraryView = showLibraryView;

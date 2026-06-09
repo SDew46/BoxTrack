@@ -80,14 +80,11 @@ function confirmSwap(){const{sessId,exIdx,selected}=swapState;const sess=SESSION
 // USE SESSION
 function useSession(sessId){const sess=SESSIONS.find(s=>s.id===sessId);if(!sess)return;window.activeLogSession={id:sess.id,cat:sess.cat,name:getSessName(sess.id),custom:false,warmup:sess.warmup||[],exercises:sess.exercises.map((ex,i)=>({...ex,displayName:(sess._swaps&&sess._swaps[i])?sess._swaps[i]:ex.name,swapped:!!(sess._swaps&&sess._swaps[i])}))};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();}
 function useCustomSession(idx){const customs=ld('customSessions',[]),sess=customs[idx];if(!sess)return;window.activeLogSession={id:'custom-'+idx,cat:sess.cat,name:sess.name,custom:true,warmup:[],exercises:(sess.exercises||[]).map(ex=>({...ex,displayName:ex.name,swapped:false}))};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();toast('Session loaded');}
-function showLogView(){document.getElementById('train-lib').style.display='none';document.getElementById('train-log').style.display='block';const meta=CAT_META[activeLogSession.cat]||CAT_META.CUSTOM;document.getElementById('log-eye').textContent=meta.label;document.getElementById('log-eye').style.color=meta.color;document.getElementById('log-title').textContent=activeLogSession.name;document.getElementById('float-ref').classList.add('show');buildLogForm();renderWarmup();restoreAutosave();renderHistory();}
-function showLibraryView(){document.getElementById('train-lib').style.display='block';document.getElementById('train-log').style.display='none';document.getElementById('float-ref').classList.remove('show');}
+function showLogView(){document.getElementById('train-lib').style.display='none';document.getElementById('train-log').style.display='block';const meta=CAT_META[activeLogSession.cat]||CAT_META.CUSTOM;document.getElementById('log-eye').textContent=meta.label;document.getElementById('log-eye').style.color=meta.color;document.getElementById('log-title').textContent=activeLogSession.name;buildLogForm();renderWarmup();restoreAutosave();renderHistory();}
+function showLibraryView(){document.getElementById('train-lib').style.display='block';document.getElementById('train-log').style.display='none';}
 function confirmClearSess(){if(!confirm('Change session? Unsaved data will be lost.'))return;clearActiveSession();}
 function clearActiveSession(){window.activeLogSession=null;sv('activeLogSession',null);extraCount=0;restTimers={};setTypeState={};clearInterval(durInterval);sessionStartTime=null;sv('logAutosave',null);showLibraryView();}
 
-// PLAN REF
-function openPlanRef(){if(!activeLogSession){toast('No session loaded',true);return;}const meta=CAT_META[activeLogSession.cat]||CAT_META.CUSTOM;document.getElementById('prs-ttl').textContent=activeLogSession.name;document.getElementById('prs-ttl').style.color=meta.color;document.getElementById('prs-content').innerHTML=activeLogSession.exercises.map(ex=>`<div class="prs-ex"><div class="prs-nm"><span>${ex.displayName}${ex.swapped?' <span style="font-size:9px;color:var(--gold);font-weight:700">SWAP</span>':''}</span><span class="prs-sc">${ex.scheme}</span></div><div class="prs-nt">${ex.note}</div><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-top:3px">Rest: ${fmtSecs(ex.rest||60)}</div></div>`).join('');document.getElementById('prov').classList.add('open');}
-function closePlanRef(e){if(e&&e.target!==document.getElementById('prov'))return;document.getElementById('prov').classList.remove('open');}
 
 // WARMUP
 function renderWarmup(){const area=document.getElementById('warmup-area');if(!activeLogSession?.warmup?.length){area.innerHTML='';return;}const steps=activeLogSession.warmup;wuState={running:false,stepIdx:0,secsLeft:steps[0].secs,interval:null};area.innerHTML=`<div class="wu-card"><div class="wu-hd" onclick="toggleWarmup()"><div class="wu-lbl">⏱ WARM-UP</div><span style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim)">MORE ▾</span></div><div class="wu-bd" id="wu-bd"><div class="wu-in"><div id="wu-steps">${steps.map((s,i)=>`<div class="wu-row ${i===0?'act':''}" id="wu-step-${i}"><span>${s.name}</span><span>${fmtSecs(s.secs)}</span></div>`).join('')}</div><div class="wu-ctrl"><div class="wu-time" id="wu-cd">${fmtSecs(steps[0].secs)}</div><button class="wu-btn wu-go" id="wu-btn" onclick="toggleWarmupTimer()">START</button><button class="wu-btn wu-sk" onclick="skipWuStep()">SKIP</button></div></div></div></div>`;}
@@ -731,8 +728,6 @@ window.confirmSwap = confirmSwap;
 window.useSession = useSession;
 window.useCustomSession = useCustomSession;
 window.confirmClearSess = confirmClearSess;
-window.openPlanRef = openPlanRef;
-window.closePlanRef = closePlanRef;
 window.toggleWarmup = toggleWarmup;
 window.toggleWarmupTimer = toggleWarmupTimer;
 window.skipWuStep = skipWuStep;

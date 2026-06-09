@@ -120,13 +120,6 @@
 </nav>
 <div class="toast" id="toast"></div>
 
-<!-- Plan ref -->
-<div class="prov" id="prov" onclick="closePlanRef(event)">
-  <div class="prsh">
-    <div class="prs-hd"><div class="prs-ttl" id="prs-ttl" style="color:var(--blue)">Session Plan</div><button class="ibtn" onclick="closePlanRef()">CLOSE</button></div>
-    <div id="prs-content"></div>
-  </div>
-</div>
 
 <!-- Session complete -->
 <div class="done-ov" id="done-ov">
@@ -249,7 +242,6 @@
       <div class="sh-title" id="log-title">SESSION</div>
       <div class="sh-sub" id="log-sub">Auto-saved · Previous weights shown</div>
       <div class="sh-act">
-        <button class="ibtn" onclick="openPlanRef()">📋</button>
         <button class="ibtn" onclick="confirmClearSess()">CHANGE</button>
       </div>
     </div>
@@ -511,11 +503,6 @@
     </div>
     <div id="plate-result" style="min-height:60px"></div>
   </div>
-</div>
-<!-- Float ref -->
-<div class="float-ref" id="float-ref" onclick="openPlanRef()">
-  <span style="font-size:14px">📋</span>
-  <span class="fr-txt">PLAN</span>
 </div>
 <!-- Numpad overlay -->
 <div id="numpad-ov" onclick="npBgTap(event)">

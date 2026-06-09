@@ -2,14 +2,15 @@
 // DEV: Chrome DevTools → Application → Service Workers → tick "Update on reload"
 //      to bypass the SW cache during local development.
 
-const CACHE = 'boxtrack-v16';
+const CACHE = 'boxtrack-v17';
 
 // Only pre-cache assets that never change between deploys.
 // JS and CSS are intentionally excluded — they use network-first so code
 // updates reach users immediately without requiring a cache version bump.
 const STATIC_ASSETS = [
   '/BoxTrack/manifest.json',
-  '/BoxTrack/8RB.png',
+  '/BoxTrack/8RB.webp',
+  '/BoxTrack/favicon.svg',
   '/BoxTrack/icon.png',
   '/BoxTrack/icon-512.png',
 ];

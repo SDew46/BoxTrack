@@ -2,12 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="8RB by 8 Rounds Boxing — your training app for strength, boxing and conditioning.">
 <title>8RB | 8 Rounds Boxing</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icon.png">
 <link rel="manifest" href="/BoxTrack/manifest.json">
-<link rel="preload" as="image" href="8RB.png">
+<link rel="preload" as="image" href="8RB.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://rb-boxing.firebaseapp.com">
+<link rel="preconnect" href="https://apis.google.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script type="importmap">
@@ -22,13 +29,13 @@
 </head>
 <body>
 <!-- SPLASH -->
-<div id="splash"><img src="8RB.png" alt="8 Rounds Boxing"><div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-top:16px;animation:splashIn 0.7s cubic-bezier(0.22,1,0.36,1) both;">BOXING FOR EVERYONE</div></div>
+<div id="splash"><img src="8RB.webp" alt="8 Rounds Boxing"><div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-top:16px;animation:splashIn 0.7s cubic-bezier(0.22,1,0.36,1) both;">BOXING FOR EVERYONE</div></div>
 
 <!-- AUTH SCREEN -->
 <div id="auth-screen" class="auth-screen" style="display:none">
   <!-- Sign-in form -->
   <div id="auth-signin" style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:420px;padding:0 24px">
-    <img src="8RB.png" alt="8RB" style="width:80px;height:80px;object-fit:contain;margin-bottom:24px">
+    <img src="8RB.webp" alt="8RB" style="width:80px;height:80px;object-fit:contain;margin-bottom:24px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:#fff;letter-spacing:2px;text-align:center;line-height:1">WELCOME BACK</div>
     <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);margin-top:6px;margin-bottom:32px;text-align:center">8RB by 8 Rounds Boxing</div>
     <button class="auth-google-btn" onclick="handleGoogleSignIn()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style="width:20px;height:20px">Continue with Google</button>
@@ -46,7 +53,7 @@
   </div>
   <!-- Sign-up form -->
   <div id="auth-signup" style="display:none;flex-direction:column;align-items:center;width:100%;max-width:420px;padding:0 24px">
-    <img src="8RB.png" alt="8RB" style="width:80px;height:80px;object-fit:contain;margin-bottom:24px">
+    <img src="8RB.webp" alt="8RB" style="width:80px;height:80px;object-fit:contain;margin-bottom:24px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:#fff;letter-spacing:2px;text-align:center;line-height:1">JOIN 8RB</div>
     <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);margin-top:6px;margin-bottom:32px;text-align:center">8RB by 8 Rounds Boxing</div>
     <button class="auth-google-btn" onclick="handleGoogleSignIn()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" style="width:20px;height:20px">Continue with Google</button>
@@ -68,7 +75,7 @@
   </div>
   <!-- Email verification waiting -->
   <div id="auth-verify" style="display:none;flex-direction:column;align-items:center;width:100%;max-width:420px;padding:0 24px;text-align:center">
-    <img src="8RB.png" alt="8RB" style="width:80px;height:80px;object-fit:contain;margin-bottom:32px">
+    <img src="8RB.webp" alt="8RB" style="width:80px;height:80px;object-fit:contain;margin-bottom:32px">
     <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:#fff;letter-spacing:2px">CHECK YOUR EMAIL</div>
     <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:var(--muted);margin-top:12px;line-height:1.6">We've sent a verification link to<br><strong id="verify-email-txt" style="color:var(--text)"></strong></div>
     <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--dim);margin-top:20px;line-height:1.6">Click the link in the email to activate your account. Check your spam folder if you don't see it.</div>
@@ -559,7 +566,7 @@
 
   <!-- Stage 2: Welcome screen -->
   <div id="ob-welcome" style="display:none">
-    <div class="ob-logo-bg"><img src="8RB.png" alt=""></div>
+    <div class="ob-logo-bg"><img src="8RB.webp" alt=""></div>
     <div class="ob-gym-label">8RB BY 8 ROUNDS BOXING</div>
     <div class="ob-center">
       <div class="ob-name-wrap">
@@ -588,7 +595,7 @@
 
   <!-- Stage 7: Final screen -->
   <div id="ob-final" style="display:none">
-    <div class="ob-logo-bg"><img src="8RB.png" alt=""></div>
+    <div class="ob-logo-bg"><img src="8RB.webp" alt=""></div>
     <div class="ob-f-gym-label">8RB BY 8 ROUNDS BOXING</div>
     <div class="ob-f-center">
       <div class="ob-f-name-wrap">

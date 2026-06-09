@@ -81,7 +81,7 @@ export function closeOverlay(id, e) {
 // ─── BRANDING ─────────────────────────────────────────────────────────────────
 export function initBranding() {
   var sw = document.getElementById('color-swatches'); if (!sw) return;
-  var cur = ld('accentColor', '#E63946');
+  var cur = ld('accentColor', '#D63040');
   sw.innerHTML = ACCENT_COLORS.map(function(c) {
     return '<div class="sw ' + (c.val === cur ? 'on' : '') + '" style="background:' + c.val + '" onclick="setAccent(\'' + c.val + '\')"></div>';
   }).join('');
@@ -89,7 +89,7 @@ export function initBranding() {
   if (inp) { var n = ld('appName', ''); if (n) inp.value = n; }
 }
 export function applyBranding() {
-  var color = ld('accentColor', '#E63946'), name = ld('appName', '') || '8RB';
+  var color = ld('accentColor', '#D63040'), name = ld('appName', '') || '8RB';
   document.documentElement.style.setProperty('--accent', color);
   var el = document.getElementById('train-title');
   if (el) {
@@ -117,7 +117,7 @@ export function renderProfile() {
   var providerLabel = (user.providerData && user.providerData[0] && user.providerData[0].providerId === 'google.com') ? 'Google' : 'Email & password';
   var displayName = user.displayName || '—';
   var unit = getUnit();
-  var curAccent = ld('accentColor', '#E63946');
+  var curAccent = ld('accentColor', '#D63040');
   var swatchHtml = ACCENT_COLORS.map(function(c) {
     return '<div class="sw ' + (c.val === curAccent ? 'on' : '') + '" style="background:' + c.val + '" onclick="setAccent(\'' + c.val + '\')"></div>';
   }).join('');
@@ -427,7 +427,7 @@ async function createUserProfile(user, displayName) {
         role: 'member',
         joinDate: serverTimestamp(),
         unit: 'kg',
-        accentColour: '#E63946',
+        accentColour: '#D63040',
         onboarded: false
       });
     }
@@ -520,7 +520,7 @@ async function ensureUserProfile(user) {
         role: 'member',
         joinDate: serverTimestamp(),
         unit: 'kg',
-        accentColour: '#E63946',
+        accentColour: '#D63040',
         onboarded: false
       };
       await setDoc(profileRef, newProfile);

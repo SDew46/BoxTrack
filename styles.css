@@ -1,10 +1,10 @@
 ﻿*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
   --red:#E63946;--blue:#457B9D;--gold:#E6A817;--green:#2ecc71;--purple:#8B5CF6;
-  --accent:#E63946;
+  --accent:#D63040;
   --bg:#0a0a0a;--bg2:#141414;--bg3:#1e1e1e;--bg4:#1e1e1e;
   --border:#252525;--border2:#1c1c1c;
-  --text:#f0f0f0;--muted:#777;--dim:#444;--dim2:#333;
+  --text:#f0f0f0;--muted:#7a7a7a;--dim:#888888;--dim2:#333;
   --r:8px;--rs:6px;
 }
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:80px;font-size:16px;line-height:1.6;}

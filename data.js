@@ -385,4 +385,4 @@ export const CORNER_QUOTES=[
   {text:"The jab. Use the jab. Everything starts with the jab.",attr:"Corner"},
   {text:"Anyone can be beaten. The question is whether you believe it.",attr:"Corner"},
 ];
-export const ACCENT_COLORS=[{val:'#E63946'},{val:'#457B9D'},{val:'#E6A817'},{val:'#2ecc71'},{val:'#8B5CF6'},{val:'#F4623A'},{val:'#0EA5E9'},{val:'#f0f0f0'}];
+export const ACCENT_COLORS=[{val:'#D63040'},{val:'#457B9D'},{val:'#E6A817'},{val:'#2ecc71'},{val:'#8B5CF6'},{val:'#F4623A'},{val:'#0EA5E9'},{val:'#f0f0f0'}];

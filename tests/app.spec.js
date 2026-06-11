@@ -6,8 +6,12 @@ const APP_URL = '/BoxTrack/';
 const APP_CONTENT_TIMEOUT = 15000;
 
 // Helper: navigate with Firebase mocked, wait for app to load
+// Sets installGateDismissed so all standard tests skip the install gate.
 async function loadApp(page, mockFirebase, firestoreMock) {
   await mockFirebase(firestoreMock || null);
+  await page.addInitScript(() => {
+    localStorage.setItem('installGateDismissed', '1');
+  });
   await page.goto(APP_URL);
   // Wait for splash to go away and app-content to appear
   await page.waitForSelector('#app-content', { state: 'visible', timeout: APP_CONTENT_TIMEOUT });
@@ -235,4 +239,31 @@ test('Assigned session appears at top of TRAIN tab', async ({ page, mockFirebase
 
   // START SESSION button should be present
   await expect(page.locator('#assigned-sessions-area button:has-text("START SESSION")')).toBeVisible({ timeout: 5000 });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 14: Install gate shown when not running as PWA
+// ─────────────────────────────────────────────────────────────────────────────
+test('Install gate shown when not running as PWA — dismisses to auth flow', async ({ page, mockFirebase }) => {
+  // Mock Firebase but do NOT set installGateDismissed (bypasses loadApp helper)
+  await mockFirebase(null);
+  // Playwright runs in browser mode (not standalone), so isInstalledPWA() returns false
+  await page.goto(APP_URL);
+
+  // Install gate should appear after splash
+  await page.waitForSelector('#install-gate', { state: 'attached', timeout: APP_CONTENT_TIMEOUT });
+  await expect(page.locator('#install-gate')).toBeVisible({ timeout: 5000 });
+
+  // Auth screen and app content should NOT be visible yet
+  await expect(page.locator('#auth-screen')).toBeHidden({ timeout: 3000 });
+  await expect(page.locator('#app-content')).toBeHidden({ timeout: 3000 });
+
+  // Tap "Continue in browser"
+  await page.locator('#ig-continue-btn').click();
+
+  // Install gate should be gone
+  await expect(page.locator('#install-gate')).toBeHidden({ timeout: 3000 });
+
+  // App content should now be visible (Firebase mock has authenticated, onboarded user)
+  await page.waitForSelector('#app-content', { state: 'visible', timeout: APP_CONTENT_TIMEOUT });
 });

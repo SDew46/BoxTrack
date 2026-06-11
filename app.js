@@ -4,10 +4,24 @@ import {
   signInWithPopup, getRedirectResult, GoogleAuthProvider, signOut as fbSignOut,
   sendEmailVerification, sendPasswordResetEmail, deleteUser, updateProfile, reload
 } from 'firebase/auth';
+
+// ─── INSTALL PROMPT — capture before any other code runs ─────────────────────
+export var savedInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  savedInstallPrompt = e;
+});
 import {
   doc, getDoc, setDoc, getDocs, collection, addDoc, deleteDoc, serverTimestamp, writeBatch, onSnapshot, updateDoc
 } from 'firebase/firestore';
 import { EQUIP_OPTIONS, ACCENT_COLORS } from './data.js';
+
+// ─── PWA DETECTION ───────────────────────────────────────────────────────────
+function isInstalledPWA() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true ||
+    document.referrer.includes('android-app://');
+}
 
 // ─── DEBUG FLAG ───────────────────────────────────────────────────────────────
 const DEBUG = false;
@@ -197,7 +211,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v11.0.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v11.1.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -262,7 +276,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v11.0.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v11.1.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -691,7 +705,11 @@ async function resolveAuth() {
 
 export function onSplashDone() {
   splashDone = true;
-  resolveAuth();
+  if (isInstalledPWA() || localStorage.getItem('installGateDismissed') === '1') {
+    resolveAuth();
+  } else {
+    window.showInstallGate(resolveAuth);
+  }
 }
 
 // ─── iOS GOOGLE SIGN-IN FLASH FIX ────────────────────────────────────────────

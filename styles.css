@@ -896,3 +896,112 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;
 }
+
+/* ── Install Gate ──────────────────────────────────────────────────────────── */
+#install-gate{
+  position:fixed;inset:0;z-index:8000;
+  background:radial-gradient(ellipse at center,#1a1a1a 0%,#0a0a0a 100%);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.ig-watermark{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:90vw;opacity:0.07;
+  pointer-events:none;
+  animation:obBreathe 3000ms ease-in-out infinite;
+}
+.ig-gym-label{
+  position:absolute;top:52px;
+  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,0.2);
+  opacity:0;animation:igFadeIn 250ms ease-out 300ms forwards;
+}
+.ig-headline{
+  font-family:'Bebas Neue',cursive;
+  font-size:clamp(56px,18vw,96px);
+  color:#fff;margin:0;line-height:1;
+  opacity:0;animation:igScaleIn 300ms ease-out 200ms forwards;
+  position:relative;z-index:1;
+}
+.ig-subtext{
+  font-family:'DM Sans',sans-serif;font-size:15px;
+  color:rgba(255,255,255,0.45);line-height:1.6;
+  text-align:center;max-width:280px;
+  margin:16px 0 0;
+  opacity:0;animation:igFadeIn 250ms ease-out 400ms forwards;
+  position:relative;z-index:1;
+}
+.ig-platform-card{
+  background:#141414;border-radius:12px;
+  padding:20px;margin:24px 24px 0;
+  opacity:0;animation:igFadeIn 250ms ease-out 600ms forwards;
+  position:relative;z-index:1;
+}
+.ig-ios-card{
+  display:flex;flex-direction:row;align-items:center;
+  gap:8px;flex-wrap:wrap;justify-content:center;
+}
+.ig-card-label{
+  font-family:'DM Sans',sans-serif;font-size:11px;
+  text-transform:uppercase;letter-spacing:1px;
+  color:var(--dim);margin:0 0 8px 0;
+}
+.ig-ios-card .ig-card-label{margin:0;}
+.ig-card-action{
+  font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;
+  color:var(--text);margin:0;
+}
+.ig-platform-instruction{
+  font-family:'DM Sans',sans-serif;font-size:14px;
+  color:var(--muted);text-align:center;
+  padding:0 24px;margin:24px 0 0;
+  opacity:0;animation:igFadeIn 250ms ease-out 600ms forwards;
+  position:relative;z-index:1;
+}
+.ig-continue-link{
+  display:flex;align-items:center;
+  margin-top:24px;padding:12px 24px;
+  font-family:'DM Sans',sans-serif;font-size:13px;
+  color:rgba(255,255,255,0.3);
+  text-decoration:none;cursor:pointer;
+  min-height:44px;
+  opacity:0;animation:igFadeIn 250ms ease-out 900ms forwards;
+  position:relative;z-index:1;
+}
+#ig-install-btn{
+  position:fixed;bottom:0;left:0;right:0;
+  height:64px;background:var(--accent);border:none;
+  border-radius:0;color:#fff;
+  font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:2px;
+  cursor:pointer;
+  transform:translateY(64px);
+  animation:igSlideUp 300ms ease-out 700ms forwards;
+  z-index:8001;
+}
+.ig-installed-screen{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:12px;text-align:center;
+  position:relative;z-index:1;
+}
+.ig-installed-title{
+  font-family:'Bebas Neue',cursive;font-size:48px;color:#fff;margin:0;
+}
+.ig-installed-sub{
+  font-family:'DM Sans',sans-serif;font-size:15px;color:var(--muted);margin:0;
+}
+@keyframes igFadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes igScaleIn{from{opacity:0;transform:scale(0.92);}to{opacity:1;transform:scale(1);}}
+@keyframes igSlideUp{from{transform:translateY(64px);}to{transform:translateY(0);}}
+@media (prefers-reduced-motion:reduce){
+  .ig-reduced .ig-gym-label,
+  .ig-reduced .ig-headline,
+  .ig-reduced .ig-subtext,
+  .ig-reduced .ig-platform-card,
+  .ig-reduced .ig-platform-instruction,
+  .ig-reduced .ig-continue-link{animation:none;opacity:1;}
+  .ig-reduced .ig-watermark{animation:none;}
+  .ig-reduced #ig-install-btn{animation:none;transform:translateY(0);}
+}

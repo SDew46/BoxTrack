@@ -20,7 +20,7 @@ service cloud.firestore {
     function isSgptOrCoach() {
       return isAuthenticated() && isVerified() &&
         (get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data)
-          .data.role == 'sgpt' ||
+          .data.sgpt == true ||
          get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data)
           .data.role == 'coach');
     }
@@ -38,24 +38,29 @@ service cloud.firestore {
       // correctly require verification.
       allow read: if isAuthenticated() && isOwner(userId);
 
-      // On creation: role must be member, gym must be 8RB
+      // On creation: role must be member, sgpt must be false, gym must be 8RB
       allow create: if isAuthenticated()
         && isOwner(userId)
         && isVerified()
         && request.resource.data.role == 'member'
+        && request.resource.data.sgpt == false
         && request.resource.data.gym == '8RB';
 
-      // On self-update: role, gym, joinDate are immutable
+      // On self-update: role, gym, joinDate are immutable.
+      // sgpt can only be set to false (migration / no self-elevation).
       allow update: if isAuthenticated()
         && isOwner(userId)
         && isVerified()
         && !request.resource.data.diff(resource.data)
             .affectedKeys()
-            .hasAny(['role', 'gym', 'joinDate']);
+            .hasAny(['role', 'gym', 'joinDate'])
+        && (!request.resource.data.diff(resource.data)
+              .affectedKeys().hasAny(['sgpt'])
+            || request.resource.data.sgpt == false);
 
-      // Coach can update role field on other users' profiles
+      // Coach can update role and/or sgpt fields on other users' profiles
       allow update: if isCoach() && isVerified()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'sgpt']);
     }
 
     // User subcollections — owner only, verified only
@@ -116,9 +121,9 @@ service cloud.firestore {
       allow read: if isCoach() && isVerified();
       allow create: if isAuthenticated() && isVerified() && memberId == request.auth.uid;
       allow update: if (isAuthenticated() && isVerified() && memberId == request.auth.uid
-                        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+                        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'sgpt']))
                    || (isCoach() && isVerified()
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']));
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'sgpt']));
     }
 
     // Announcements — all verified members read, coach only write

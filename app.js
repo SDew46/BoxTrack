@@ -211,7 +211,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v11.1.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v11.2.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -276,7 +276,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v11.1.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v11.2.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -506,6 +506,7 @@ async function createUserProfile(user, displayName) {
         email: user.email || '',
         gym: '8RB',
         role: 'member',
+        sgpt: false,
         joinDate: serverTimestamp(),
         unit: 'kg',
         accentColour: '#D63040',
@@ -599,31 +600,39 @@ async function ensureUserProfile(user) {
         email: user.email || '',
         gym: '8RB',
         role: 'member',
+        sgpt: false,
         joinDate: serverTimestamp(),
         unit: 'kg',
         accentColour: '#D63040',
         onboarded: false
       };
       await setDoc(profileRef, newProfile);
-      userProfile = { onboarded: false, role: 'member' };
+      userProfile = { onboarded: false, role: 'member', sgpt: false };
       window.userProfile = userProfile;
       // Write to members registry for coach admin
       setDoc(doc(db, 'gym', '8RB', 'members', user.uid), {
         displayName: user.displayName || '',
         email: user.email || '',
         joinDate: serverTimestamp(),
-        role: 'member'
+        role: 'member',
+        sgpt: false
       }, { merge: true }).catch(function(){});
       if (DEBUG) console.log('[8RB] ensureUserProfile: profile created successfully');
     } else {
       userProfile = existing.data();
+      // Migration: add sgpt field silently if missing (pre-v11.1 profiles)
+      if (userProfile.sgpt === undefined) {
+        updateDoc(profileRef, { sgpt: false }).catch(function(){});
+        userProfile.sgpt = false;
+      }
       window.userProfile = userProfile;
       // Keep members registry in sync with current profile
       setDoc(doc(db, 'gym', '8RB', 'members', user.uid), {
         displayName: user.displayName || userProfile.displayName || '',
         email: user.email || userProfile.email || '',
         joinDate: userProfile.joinDate || null,
-        role: userProfile.role || 'member'
+        role: userProfile.role || 'member',
+        sgpt: userProfile.sgpt || false
       }, { merge: true }).catch(function(){});
     }
   } catch(err) {
@@ -704,11 +713,14 @@ async function resolveAuth() {
 }
 
 export function onSplashDone() {
-  splashDone = true;
   if (isInstalledPWA() || localStorage.getItem('installGateDismissed') === '1') {
+    splashDone = true;
     resolveAuth();
   } else {
-    window.showInstallGate(resolveAuth);
+    window.showInstallGate(function() {
+      splashDone = true;
+      resolveAuth();
+    });
   }
 }
 

@@ -49,9 +49,10 @@ var currentSgptCat='all';
 
 function sessionVisibleToUser(sess){
   var role=(window.userProfile&&window.userProfile.role)||'member';
+  var isSgpt=!!(window.userProfile&&window.userProfile.sgpt===true);
   if(role==='coach')return true;
-  if(!sess.active&&role!=='coach')return false;
-  if(role==='sgpt')return sess.audience.includes('all')||sess.audience.includes('sgpt');
+  if(!sess.active)return false;
+  if(sess.audience.includes('sgpt'))return isSgpt;
   return sess.audience.includes('all');
 }
 
@@ -95,9 +96,10 @@ function renderLibrary(){
 
 function renderSgptSection(){
   var role=(window.userProfile&&window.userProfile.role)||'member';
+  var isSgpt=!!(window.userProfile&&window.userProfile.sgpt===true);
   var area=document.getElementById('sgpt-section');
   if(!area)return;
-  if(role==='member'){area.style.display='none';return;}
+  if(role!=='coach'&&!isSgpt){area.style.display='none';return;}
   area.style.display='block';
   var sgptSessions=SESSIONS.filter(function(s){
     if(s.cat!=='SGPT')return false;

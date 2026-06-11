@@ -6,7 +6,7 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 11.0.0. SGPT pilot features complete.
+Version 11.2.0. SGPT access redesigned as boolean permission flag separate from role.
 
 **File structure — all ES modules, all acorn clean:**
 - `styles.css` — all CSS, includes Step 2 auth + offline indicator styles
@@ -316,21 +316,29 @@ For development: Chrome DevTools `F12` → Application → Service Workers → t
 
 ## Role System
 
-Three roles: **member**, **sgpt**, **coach**
+Two roles: **member**, **coach** — plus a separate boolean permission: **sgpt**
 
-- **member** — sees standard sessions only, no SGPT content, no assigned sessions section
-- **sgpt** — sees standard + SGPT sessions, sees assigned sessions at top of Train tab
-- **coach** — sees everything, accesses `/admin`, can assign SGPT role, can assign sessions
+Firestore profile fields:
+- `role: 'member' | 'coach'` — controls admin access; only two values
+- `sgpt: true | false` — separate permission flag, default `false` on signup
 
-Role assigned by coach in `/admin` → MEMBERS section. Default on signup: `member`.  
-Role field is immutable by the user — only coach can update other users' roles via Firestore.
+What each combination sees:
+- **member, sgpt: false** — standard sessions only, no SGPT content, no assigned sessions section
+- **member, sgpt: true** — standard + SGPT sessions, sees assigned sessions at top of Train tab
+- **coach** — sees everything regardless of sgpt flag, accesses `/admin`, can grant/revoke sgpt, can assign sessions
+
+Coach role is set manually in Firebase console (role field in profile doc). `sgpt` is granted/revoked by the coach in `/admin` → MEMBERS section via ASSIGN SGPT / REMOVE SGPT buttons.
+
+`role` is immutable by the user. `sgpt` can only be set to `false` by the user (never self-elevated to `true`) — Firestore rules enforce this. Only a coach can set `sgpt: true`.
+
+Migration: existing profiles without the `sgpt` field are silently upgraded to `sgpt: false` on next login via `ensureUserProfile()` in app.js.
 
 ## SGPT System
 
 Sessions have `audience: ['all']` (standard) or `audience: ['sgpt']` (SGPT-only).  
 SGPT sessions also have: `source: 'coach'`, `active: true/false`, `category: upper/lower/full/conditioning/recovery`.  
 Filtering in `renderLibrary()` via `sessionVisibleToUser()` in train.js.  
-SGPT section in Train tab: visible only to sgpt and coach roles — completely absent from DOM for members.
+SGPT section in Train tab: visible only to users with `sgpt: true` or `role: 'coach'` — hidden from the DOM for standard members.
 
 ## Assigned Sessions
 

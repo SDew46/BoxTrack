@@ -221,14 +221,14 @@ function renderMembers() {
     return;
   }
   list.innerHTML = allMembers.map(function(m) {
-    var badgeCls = m.role === 'coach' ? 'role-coach' : m.role === 'sgpt' ? 'role-sgpt' : 'role-member';
-    var badgeTxt = (m.role || 'member').toUpperCase();
+    var badgeCls = m.role === 'coach' ? 'role-coach' : m.sgpt === true ? 'role-sgpt' : 'role-member';
+    var badgeTxt = m.role === 'coach' ? 'COACH' : m.sgpt === true ? 'SGPT' : 'MEMBER';
     var actionBtn = '';
     if (currentCoach && m.uid !== currentCoach.uid && m.role !== 'coach') {
-      if (m.role === 'sgpt') {
-        actionBtn = '<button class="role-btn role-btn-remove" onclick="changeRole(\'' + m.uid + '\',\'member\')">REMOVE SGPT</button>';
+      if (m.sgpt === true) {
+        actionBtn = '<button class="role-btn role-btn-remove" onclick="toggleSgpt(\'' + m.uid + '\',false)">REMOVE SGPT</button>';
       } else {
-        actionBtn = '<button class="role-btn role-btn-assign" onclick="changeRole(\'' + m.uid + '\',\'sgpt\')">ASSIGN SGPT</button>';
+        actionBtn = '<button class="role-btn role-btn-assign" onclick="toggleSgpt(\'' + m.uid + '\',true)">ASSIGN SGPT</button>';
       }
     }
     return '<div class="member-card" id="mcard-' + m.uid + '">'
@@ -243,15 +243,15 @@ function renderMembers() {
   }).join('');
 }
 
-window.changeRole = async function(uid, newRole) {
+window.toggleSgpt = async function(uid, grantSgpt) {
   try {
-    await updateDoc(doc(db, 'users', uid, 'profile', 'data'), { role: newRole });
-    await updateDoc(doc(db, 'gym', '8RB', 'members', uid), { role: newRole });
+    await updateDoc(doc(db, 'users', uid, 'profile', 'data'), { sgpt: grantSgpt });
+    await updateDoc(doc(db, 'gym', '8RB', 'members', uid), { sgpt: grantSgpt });
     var m = allMembers.find(function(x) { return x.uid === uid; });
-    if (m) m.role = newRole;
+    if (m) m.sgpt = grantSgpt;
     renderMembers();
     populateMemberChecklist();
-    showToast(newRole === 'sgpt' ? 'SGPT ACCESS GRANTED' : 'SGPT ACCESS REMOVED');
+    showToast(grantSgpt ? 'SGPT ACCESS GRANTED' : 'SGPT ACCESS REMOVED');
   } catch(err) {
     showToast('UPDATE FAILED — TRY AGAIN', true);
   }
@@ -287,7 +287,7 @@ window.setSendMode = function(mode) {
 };
 
 function populateMemberChecklist() {
-  var sgpt = allMembers.filter(function(m) { return m.role === 'sgpt'; });
+  var sgpt = allMembers.filter(function(m) { return m.sgpt === true; });
   var cl = document.getElementById('member-checklist');
   if (!sgpt.length) {
     cl.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:8px 0">No SGPT members yet.</div>';
@@ -307,7 +307,7 @@ window.checkAssignReady = function() {
   var sessOk = !!document.getElementById('assign-session-select').value;
   var dateOk = !!document.getElementById('assign-date').value;
   var recipientOk = sendMode === 'all'
-    ? allMembers.some(function(m) { return m.role === 'sgpt'; })
+    ? allMembers.some(function(m) { return m.sgpt === true; })
     : document.querySelectorAll('#member-checklist input:checked').length > 0;
   document.getElementById('assign-btn').disabled = !(sessOk && dateOk && recipientOk);
 };
@@ -319,7 +319,7 @@ window.assignSession = async function() {
   if (!sess || !forDate) return;
   var recipients;
   if (sendMode === 'all') {
-    recipients = allMembers.filter(function(m) { return m.role === 'sgpt'; }).map(function(m) { return m.uid; });
+    recipients = allMembers.filter(function(m) { return m.sgpt === true; }).map(function(m) { return m.uid; });
   } else {
     recipients = Array.from(document.querySelectorAll('#member-checklist input:checked')).map(function(el) { return el.value; });
   }

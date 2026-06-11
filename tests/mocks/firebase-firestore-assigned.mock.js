@@ -7,6 +7,7 @@ const PROFILE_DATA = {
   email: 'playwright@8roundsboxing.com',
   displayName: 'Playwright Tester',
   role: 'member',
+  sgpt: false,
   gym: '8RB',
   joinDate: '2024-01-01',
   onboarded: true,

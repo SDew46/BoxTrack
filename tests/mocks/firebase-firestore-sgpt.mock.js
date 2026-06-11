@@ -1,10 +1,11 @@
-// SGPT member profile mock — role: 'sgpt', onboarded: true
+// SGPT member profile mock — role: 'member', sgpt: true, onboarded: true
 
 const SGPT_PROFILE = {
   uid: 'test-uid-playwright',
   email: 'playwright@8roundsboxing.com',
   displayName: 'SGPT Tester',
-  role: 'sgpt',
+  role: 'member',
+  sgpt: true,
   gym: '8RB',
   joinDate: '2024-01-01',
   onboarded: true,

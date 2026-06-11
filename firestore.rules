@@ -12,9 +12,17 @@ service cloud.firestore {
     }
 
     function isCoach() {
-      return isAuthenticated() &&
+      return isAuthenticated() && isVerified() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data)
           .data.role == 'coach';
+    }
+
+    function isSgptOrCoach() {
+      return isAuthenticated() && isVerified() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data)
+          .data.role == 'sgpt' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data)
+          .data.role == 'coach');
     }
 
     function isVerified() {
@@ -37,13 +45,17 @@ service cloud.firestore {
         && request.resource.data.role == 'member'
         && request.resource.data.gym == '8RB';
 
-      // On update: role, gym, joinDate are immutable
+      // On self-update: role, gym, joinDate are immutable
       allow update: if isAuthenticated()
         && isOwner(userId)
         && isVerified()
         && !request.resource.data.diff(resource.data)
             .affectedKeys()
             .hasAny(['role', 'gym', 'joinDate']);
+
+      // Coach can update role field on other users' profiles
+      allow update: if isCoach() && isVerified()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']);
     }
 
     // User subcollections — owner only, verified only
@@ -71,13 +83,42 @@ service cloud.firestore {
         && isVerified();
     }
 
-    // Gym config — all verified members read, coach only write
+    // Assigned sessions — member reads/updates own (status+completedAt only), coach full access
+    match /users/{userId}/assignedSessions/{sessionId} {
+      allow read: if isAuthenticated() && isVerified() && isOwner(userId);
+      allow create: if isCoach() && isVerified();
+      allow update: if isAuthenticated() && isVerified() && isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'completedAt']);
+      allow delete: if isCoach() && isVerified();
+      // Coach can read and write all users' assigned sessions
+      allow read, write: if isCoach() && isVerified();
+    }
+
+    // Gym config — all verified members read, coach only write (own gym)
     match /gym/{gymId}/config/{docId} {
       allow read: if isAuthenticated() && isVerified();
       // Coach can only write to their own gym's config —
       // scoped by the gym field on their profile document
       allow write: if isCoach() && isVerified()
         && gymId == get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data).data.gym;
+    }
+
+    // SGPT sessions — sgpt and coach can read, coach only can write (own gym)
+    match /gym/{gymId}/sgptSessions/{sessionId} {
+      allow read: if isSgptOrCoach();
+      allow write: if isCoach() && isVerified()
+        && gymId == get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data).data.gym;
+    }
+
+    // Members registry — coach reads all, members write their own entry
+    match /gym/{gymId}/members/{memberId} {
+      allow read: if isCoach() && isVerified();
+      allow create: if isAuthenticated() && isVerified() && memberId == request.auth.uid;
+      allow update: if (isAuthenticated() && isVerified() && memberId == request.auth.uid
+                        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+                   || (isCoach() && isVerified()
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']));
     }
 
     // Announcements — all verified members read, coach only write

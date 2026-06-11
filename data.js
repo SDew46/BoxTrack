@@ -88,7 +88,7 @@ export const EXERCISE_LIBRARY=[
   {name:'Jump Rope',cat:'BW',equip:['bodyweight'],muscles:'Cardio, footwork, coordination'},
 ];
 export const SESSIONS=[
-  {id:'GU1',cat:'GU',name:'GU1 — Barbell',sub:'Back squat led · Barbell focus',equip:['barbell','dumbbells','landmine','bags'],
+  {id:'GU1',cat:'GU',audience:['all'],source:'standard',active:true,name:'GU1 — Barbell',sub:'Back squat led · Barbell focus',equip:['barbell','dumbbells','landmine','bags'],
    warmup:[{name:'Hip 90/90 Rotations',secs:40},{name:'Goblet Squat Hold',secs:30},{name:'Shadow Box',secs:90}],
    exercises:[
     {name:'Back Squat',scheme:'4×5',rest:60,note:'~75-80% max. Control the descent, drive through the floor.',alts:[{name:'Trap Bar Deadlift',reason:'If rack is taken.'},{name:'KB Goblet Squat',reason:'Lower load, same pattern.'}]},
@@ -97,7 +97,7 @@ export const SESSIONS=[
     {name:'Dumbbell Row',scheme:'3×10-12 each',rest:60,note:'Chest supported or bent over.',alts:[{name:'Barbell Row',reason:'More total load.'},{name:'Landmine Row',reason:'Rotational pull.'}]},
     {name:'Landmine Press',scheme:'3×8 each',rest:60,note:'Staggered stance, drive from the hip.',alts:[{name:'DB Shoulder Press',reason:'If landmine unavailable.'},{name:'KB Shoulder Press',reason:'Single arm version.'}]},
    ],finisher:'Heavy Bag Intervals - 4x30s hard / 30s rest.'},
-  {id:'GU2',cat:'GU',name:'GU2 — KB & DB',sub:'Goblet squat led · No barbell',equip:['kettlebells','dumbbells','bags'],
+  {id:'GU2',cat:'GU',audience:['all'],source:'standard',active:true,name:'GU2 — KB & DB',sub:'Goblet squat led · No barbell',equip:['kettlebells','dumbbells','bags'],
    warmup:[{name:'Hip 90/90 Rotations',secs:40},{name:'KB Deadlift Hold',secs:30},{name:'Shadow Box',secs:90}],
    exercises:[
     {name:'KB Goblet Squat',scheme:'4×8',rest:60,note:'Hold KB at chest. Sit deep.',alts:[{name:'DB Goblet Squat',reason:'Direct swap.'}]},
@@ -106,7 +106,7 @@ export const SESSIONS=[
     {name:'DB Chest Supported Row',scheme:'3×10-12 each',rest:60,note:'Face down on incline.',alts:[{name:'Dumbbell Row',reason:'Standing version.'},{name:'Inverted Row',reason:'Bodyweight.'}]},
     {name:'KB Windmill',scheme:'3×6 each',rest:60,note:'Light KB. Shoulder and lateral hip stability.',alts:[{name:'KB Turkish Get-Up',reason:'Full body control.'},{name:'KB Suitcase Carry',reason:'Walk 20m each side.'}]},
    ],finisher:'KB Complex - 4 rounds: 5 swings, 5 cleans, 5 goblet squats. Rest 60s.'},
-  {id:'GU3',cat:'GU',name:'GU3 — Unilateral',sub:'Split squat led · Fixes imbalances',equip:['dumbbells','landmine','bags'],
+  {id:'GU3',cat:'GU',audience:['all'],source:'standard',active:true,name:'GU3 — Unilateral',sub:'Split squat led · Fixes imbalances',equip:['dumbbells','landmine','bags'],
    warmup:[{name:'Hip 90/90 Rotations',secs:40},{name:'Single Leg Glute Bridge',secs:30},{name:'Shadow Box',secs:90}],
    exercises:[
     {name:'DB Bulgarian Split Squat',scheme:'4×8 each',rest:60,note:'Slow descent, front heel drive.',alts:[{name:'DB Reverse Lunge',reason:'Lower balance demand.'},{name:'KB Goblet Squat',reason:'Bilateral fallback.'}]},
@@ -115,7 +115,7 @@ export const SESSIONS=[
     {name:'Landmine Row',scheme:'3×10 each',rest:60,note:'Single arm, rotate into the pull.',alts:[{name:'Dumbbell Row',reason:'Direct swap.'},{name:'Inverted Row',reason:'Bodyweight.'}]},
     {name:'Landmine Rotation',scheme:'3×10 each',rest:60,note:'As boxing-specific as it gets.',alts:[{name:'Landmine 180',reason:'Greater range.'},{name:'KB Halo',reason:'More controlled.'}]},
    ],finisher:'Heavy Bag Intervals - 4x30s hard / 30s rest. Focus on hip rotation.'},
-  {id:'TD1',cat:'TD',name:'TD1 — Barbell',sub:'Bench & deadlift led',equip:['barbell','ezbar','dumbbells','kettlebells','pullupbar','bags'],
+  {id:'TD1',cat:'TD',audience:['all'],source:'standard',active:true,name:'TD1 — Barbell',sub:'Bench & deadlift led',equip:['barbell','ezbar','dumbbells','kettlebells','pullupbar','bags'],
    warmup:[{name:'Thoracic Spine Rotations',secs:40},{name:'Scapular Push-Ups',secs:30},{name:'Shadow Box',secs:90}],
    exercises:[
     {name:'Barbell Bench Press',scheme:'4×5',rest:60,note:'~75-80% max. Controlled descent, powerful press.',alts:[{name:'Dumbbell Bench Press',reason:'If no rack free.'},{name:'DB Floor Press',reason:'Limits ROM.'}]},
@@ -125,7 +125,7 @@ export const SESSIONS=[
     {name:'Overhead Tricep Extension',scheme:'3×10-12',rest:60,note:'EZ Bar or DB. Superset with curls.',alts:[{name:'DB Skull Crusher',reason:'Lying version.'},{name:'Tricep Dip',reason:'Bodyweight.'}]},
     {name:'KB Swing',scheme:'3×15',rest:60,note:'Builds the snap in your punches.',alts:[{name:'KB Clean',reason:'More complex hip power.'}]},
    ],finisher:'AMRAP 6 min - 10 KB swings, 8 push-ups, 6 reverse lunges.'},
-  {id:'TD2',cat:'TD',name:'TD2 — DB & KB',sub:'Shoulder press led · No barbell',equip:['dumbbells','kettlebells','bags'],
+  {id:'TD2',cat:'TD',audience:['all'],source:'standard',active:true,name:'TD2 — DB & KB',sub:'Shoulder press led · No barbell',equip:['dumbbells','kettlebells','bags'],
    warmup:[{name:'Thoracic Spine Rotations',secs:40},{name:'Scapular Push-Ups',secs:30},{name:'Shadow Box',secs:90}],
    exercises:[
     {name:'DB Shoulder Press',scheme:'4×8-10',rest:60,note:'Drive overhead. Do not arch lower back.',alts:[{name:'KB Shoulder Press',reason:'Single arm version.'},{name:'DB Arnold Press',reason:'Full shoulder development.'}]},
@@ -135,7 +135,7 @@ export const SESSIONS=[
     {name:'DB Skull Crusher',scheme:'3×10-12',rest:60,note:'Lying. Superset with curls.',alts:[{name:'Overhead Tricep Extension',reason:'Standing version.'},{name:'Tricep Dip',reason:'Bodyweight.'}]},
     {name:'KB Swing',scheme:'3×15',rest:60,note:'Hinge hard at the hip.',alts:[{name:'KB Clean',reason:'More complex.'}]},
    ],finisher:'AMRAP 6 min - 10 KB swings, 8 push-ups, 6 reverse lunges.'},
-  {id:'TD3',cat:'TD',name:'TD3 — Bodyweight Upper',sub:'Minimal equipment',equip:['bodyweight','kettlebells','pullupbar'],
+  {id:'TD3',cat:'TD',audience:['all'],source:'standard',active:true,name:'TD3 — Bodyweight Upper',sub:'Minimal equipment',equip:['bodyweight','kettlebells','pullupbar'],
    warmup:[{name:'Thoracic Spine Rotations',secs:40},{name:'Scapular Push-Ups',secs:30},{name:'Shadow Box',secs:90}],
    exercises:[
     {name:'Weighted Pull-Ups',scheme:'4×max',rest:60,note:'Add weight if easy, band if hard.',alts:[{name:'Inverted Row',reason:'More horizontal equals harder.'},{name:'Dumbbell Row',reason:'If no bar.'}]},
@@ -145,7 +145,7 @@ export const SESSIONS=[
     {name:'Diamond Push-Up',scheme:'3×10-12',rest:60,note:'Pause at bottom.',alts:[{name:'Overhead Tricep Extension',reason:'Load the triceps.'},{name:'Tricep Dip',reason:'Bodyweight dip.'}]},
     {name:'KB Halo',scheme:'3×10 each',rest:60,note:'Shoulder stability and rotation.',alts:[{name:'KB Suitcase Carry',reason:'Core and shoulder stability.'}]},
    ],finisher:'AMRAP 6 min - 10 push-ups, 8 KB swings, 6 burpees.'},
-  {id:'CORE1',cat:'CORE',name:'Core 1 — Foundation',sub:'Anti-rotation · Stability focus',equip:['bodyweight','kettlebells'],
+  {id:'CORE1',cat:'CORE',audience:['all'],source:'standard',active:true,name:'Core 1 — Foundation',sub:'Anti-rotation · Stability focus',equip:['bodyweight','kettlebells'],
    warmup:[{name:'Cat-Cow Stretch',secs:30},{name:'Dead Bug Hold',secs:20},{name:'Shadow Box',secs:60}],
    exercises:[
     {name:'Dead Bug',scheme:'3×10 each',rest:45,note:'Lower opposite arm and leg slowly.',alts:[{name:'Bird Dog',reason:'Similar demand, easier.'},{name:'Plank',reason:'Static fallback.'}]},
@@ -154,7 +154,7 @@ export const SESSIONS=[
     {name:'Pallof Press',scheme:'3×10 each',rest:45,note:'Anti-rotation. Use KB or band.',alts:[{name:'Bird Dog',reason:'Bodyweight fallback.'}]},
     {name:'KB Suitcase Carry',scheme:'3×20m each',rest:45,note:'Heavy KB in one hand. Walk tall.',alts:[{name:'Side Plank',reason:'Static lateral core.'}]},
    ],finisher:'3 rounds: 30s plank, 15s hollow hold, 30s rest.'},
-  {id:'CORE2',cat:'CORE',name:'Core 2 — Rotational Power',sub:'Boxing-specific · Hip rotation',equip:['kettlebells','landmine'],
+  {id:'CORE2',cat:'CORE',audience:['all'],source:'standard',active:true,name:'Core 2 — Rotational Power',sub:'Boxing-specific · Hip rotation',equip:['kettlebells','landmine'],
    warmup:[{name:'Hip Circles',secs:30},{name:'Cat-Cow',secs:30},{name:'Shadow Box',secs:60}],
    exercises:[
     {name:'Landmine Rotation',scheme:'3×12 each',rest:60,note:'Rotate through hips, not just arms.',alts:[{name:'Landmine 180',reason:'Greater range.'},{name:'KB Halo',reason:'More controlled.'}]},
@@ -163,7 +163,7 @@ export const SESSIONS=[
     {name:'Hanging Leg Raise',scheme:'3×10',rest:60,note:'Controlled. Do not swing.',alts:[{name:'Hanging Knee Raise',reason:'Easier.'},{name:'V-Up',reason:'Floor version.'}]},
     {name:'Ab Wheel Rollout',scheme:'3×8',rest:60,note:'Slow out, controlled back. Start from knees.',alts:[{name:'Dead Bug',reason:'Lower demand.'}]},
    ],finisher:'3 rounds: 10 Landmine rotations each side, 10 hanging knee raises, 30s rest.'},
-  {id:'CORE3',cat:'CORE',name:'Core 3 — Finisher Circuit',sub:'Add to any session · 6 minutes',equip:['bodyweight','kettlebells'],
+  {id:'CORE3',cat:'CORE',audience:['all'],source:'standard',active:true,name:'Core 3 — Finisher Circuit',sub:'Add to any session · 6 minutes',equip:['bodyweight','kettlebells'],
    warmup:[],
    exercises:[
     {name:'Plank',scheme:'3×45s',rest:15,note:'Brace hard. Hips level.',alts:[{name:'Hollow Hold',reason:'More demanding.'}]},
@@ -171,7 +171,7 @@ export const SESSIONS=[
     {name:'V-Up',scheme:'3×12',rest:20,note:'Meet hands and feet at top.',alts:[{name:'Hanging Knee Raise',reason:'If bar available.'}]},
     {name:'Bird Dog',scheme:'3×10 each',rest:20,note:'Opposite arm and leg. Slow and controlled.',alts:[{name:'Dead Bug',reason:'Similar demand.'}]},
    ],finisher:'None - this session IS the finisher.'},
-  {id:'BW1',cat:'BW',name:'BW1 — Full Body Power',sub:'No equipment · Explosive focus',equip:['bodyweight'],
+  {id:'BW1',cat:'BW',audience:['all'],source:'standard',active:true,name:'BW1 — Full Body Power',sub:'No equipment · Explosive focus',equip:['bodyweight'],
    warmup:[{name:'Arm Circles',secs:20},{name:'Leg Swings',secs:20},{name:'Shadow Box',secs:90}],
    exercises:[
     {name:'Squat Jump',scheme:'4×8',rest:60,note:'Land soft. Explosive drive upward.',alts:[{name:'Broad Jump',reason:'Horizontal power.'}]},
@@ -180,7 +180,7 @@ export const SESSIONS=[
     {name:'Burpee',scheme:'3×10',rest:60,note:'Full extension at top.',alts:[{name:'Mountain Climber',reason:'Lower impact.'}]},
     {name:'Single Leg Glute Bridge',scheme:'3×12 each',rest:45,note:'Full hip extension at top.',alts:[{name:'Glute Bridge',reason:'Both legs.'}]},
    ],finisher:'Tabata: 20s work / 10s rest x8 - push-ups and squat jumps alternating.'},
-  {id:'BW2',cat:'BW',name:'BW2 — Upper Body',sub:'Push and pull · Pull-up bar helpful',equip:['bodyweight','pullupbar'],
+  {id:'BW2',cat:'BW',audience:['all'],source:'standard',active:true,name:'BW2 — Upper Body',sub:'Push and pull · Pull-up bar helpful',equip:['bodyweight','pullupbar'],
    warmup:[{name:'Arm Circles',secs:20},{name:'Scapular Push-Ups',secs:20},{name:'Shadow Box',secs:90}],
    exercises:[
     {name:'Pull-Up',scheme:'5×max',rest:60,note:'Aim to add reps each week.',alts:[{name:'Chin-Up',reason:'Bicep focused.'},{name:'Inverted Row',reason:'Scalable fallback.'}]},
@@ -189,7 +189,7 @@ export const SESSIONS=[
     {name:'Inverted Row',scheme:'3×12',rest:60,note:'More horizontal equals harder.',alts:[{name:'Pull-Up',reason:'If this becomes easy.'}]},
     {name:'Pike Push-Up',scheme:'3×10',rest:60,note:'Shoulder press mechanics.',alts:[{name:'Diamond Push-Up',reason:'Tricep focused.'}]},
    ],finisher:'3 rounds: max pull-ups, 20 push-ups, 60s rest.'},
-  {id:'BW3',cat:'BW',name:'BW3 — Boxing Conditioning',sub:'Shadow boxing · No equipment',equip:['bodyweight'],
+  {id:'BW3',cat:'BW',audience:['all'],source:'standard',active:true,name:'BW3 — Boxing Conditioning',sub:'Shadow boxing · No equipment',equip:['bodyweight'],
    warmup:[{name:'Shadow Box',secs:120},{name:'Hip Circles',secs:30},{name:'Arm Circles',secs:20}],
    exercises:[
     {name:'Shadow Box',scheme:'4×2min',rest:60,note:'Technique and movement. Every punch with intent.',alts:[{name:'Mountain Climber',reason:'Conditioning fallback.'},{name:'Burpee',reason:'Full body power.'}]},
@@ -198,6 +198,31 @@ export const SESSIONS=[
     {name:'Single Leg Glute Bridge',scheme:'3×10 each',rest:45,note:'Balance and hip strength.',alts:[{name:'Glute Bridge',reason:'Bilateral fallback.'}]},
     {name:'Jump Rope',scheme:'3×90s',rest:45,note:'Double-unders when comfortable.',alts:[{name:'Shadow Box',reason:'If no rope.'}]},
    ],finisher:'3 rounds: 30s shadow box, 10 burpees, 60s rest.'},
+  {id:'SGPT1',cat:'SGPT',category:'upper',audience:['sgpt'],source:'coach',active:true,name:'SGPT Upper A',description:'Coach-programmed upper body session',
+   exercises:[
+    {name:'Barbell Bench Press',displayName:'Barbell Bench Press',scheme:'3×5',sets:3,reps:5,rest:90,note:'',alts:[]},
+    {name:'Barbell Row',displayName:'Barbell Row',scheme:'3×5',sets:3,reps:5,rest:90,note:'',alts:[]},
+    {name:'Overhead Press',displayName:'Overhead Press',scheme:'3×8',sets:3,reps:8,rest:90,note:'',alts:[]},
+    {name:'Weighted Pull-Up',displayName:'Weighted Pull-Up',scheme:'3×6',sets:3,reps:6,rest:90,note:'',alts:[]},
+    {name:'DB Hammer Curl',displayName:'DB Hammer Curl',scheme:'3×10',sets:3,reps:10,rest:60,note:'',alts:[]},
+    {name:'Overhead Tricep Extension',displayName:'Overhead Tricep Extension',scheme:'3×10',sets:3,reps:10,rest:60,note:'',alts:[]},
+   ]},
+  {id:'SGPT2',cat:'SGPT',category:'lower',audience:['sgpt'],source:'coach',active:true,name:'SGPT Lower A',description:'Coach-programmed lower body session',
+   exercises:[
+    {name:'Back Squat',displayName:'Back Squat',scheme:'3×5',sets:3,reps:5,rest:120,note:'',alts:[]},
+    {name:'Romanian Deadlift',displayName:'Romanian Deadlift',scheme:'3×8',sets:3,reps:8,rest:90,note:'',alts:[]},
+    {name:'Bulgarian Split Squat',displayName:'Bulgarian Split Squat',scheme:'3×8',sets:3,reps:8,rest:90,note:'',alts:[]},
+    {name:'KB Swing',displayName:'KB Swing',scheme:'3×15',sets:3,reps:15,rest:60,note:'',alts:[]},
+    {name:'Single Leg Glute Bridge',displayName:'Single Leg Glute Bridge',scheme:'3×12',sets:3,reps:12,rest:60,note:'',alts:[]},
+   ]},
+  {id:'SGPT3',cat:'SGPT',category:'conditioning',audience:['sgpt'],source:'coach',active:true,name:'SGPT Conditioning',description:'Coach-programmed conditioning circuit',
+   exercises:[
+    {name:'Burpee',displayName:'Burpee',scheme:'3×10',sets:3,reps:10,rest:45,note:'',alts:[]},
+    {name:'KB Swing',displayName:'KB Swing',scheme:'3×15',sets:3,reps:15,rest:45,note:'',alts:[]},
+    {name:'Mountain Climber',displayName:'Mountain Climber',scheme:'3×20',sets:3,reps:20,rest:45,note:'',alts:[]},
+    {name:'Squat Jump',displayName:'Squat Jump',scheme:'3×10',sets:3,reps:10,rest:45,note:'',alts:[]},
+    {name:'Push-Up',displayName:'Push-Up',scheme:'3×15',sets:3,reps:15,rest:60,note:'',alts:[]},
+   ]},
 ];
 export const CAT_META={
   GU:{label:'Ground Up',color:'var(--red)',abtn:'ab-r'},
@@ -205,6 +230,7 @@ export const CAT_META={
   CORE:{label:'Core',color:'var(--green)',abtn:'ab-gr'},
   BW:{label:'Bodyweight',color:'var(--muted)',abtn:'ab-gh'},
   CUSTOM:{label:'Custom',color:'var(--purple)',abtn:'ab-p'},
+  SGPT:{label:'SGPT',color:'var(--gold)',abtn:'ab-g'},
 };
 export const TRACKED_LIFTS=[
   {name:'Back Squat',color:'#E6A817',sess:'GU',sessLabel:'Ground Up'},

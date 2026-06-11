@@ -5,7 +5,7 @@ import {
   sendEmailVerification, sendPasswordResetEmail, deleteUser, updateProfile, reload
 } from 'firebase/auth';
 import {
-  doc, getDoc, setDoc, getDocs, collection, addDoc, deleteDoc, serverTimestamp, writeBatch, onSnapshot
+  doc, getDoc, setDoc, getDocs, collection, addDoc, deleteDoc, serverTimestamp, writeBatch, onSnapshot, updateDoc
 } from 'firebase/firestore';
 import { EQUIP_OPTIONS, ACCENT_COLORS } from './data.js';
 
@@ -59,6 +59,8 @@ function chunkArray(arr, size) {
 window.activeEquipment = new Set(EQUIP_OPTIONS.map(e => e.id));
 window.activeLogSession = null;
 window.currentUser = null;
+window.userProfile = null;
+window.activeAssignedSessionId = null;
 
 // ─── USER DATA CACHE ───────────────────────────────────────────────────────────
 // null = not yet loaded from Firestore (fall back to localStorage).
@@ -68,7 +70,8 @@ export const userDataCache = {
   sessions: null,
   boxingSessions: null,   // covers freestyle timer sessions + boxing class logs
   customCombos: null,
-  customSessions: null
+  customSessions: null,
+  assignedSessions: null
 };
 
 // ─── STORAGE ───────────────────────────────────────────────────────────────────
@@ -194,7 +197,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v10.5.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v11.0.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -259,7 +262,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v10.5.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v11.0.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -460,16 +463,18 @@ function showAuthError(msg) {
 // ─── LOAD USER DATA FROM FIRESTORE ────────────────────────────────────────────
 export async function loadUserData(uid) {
   try {
-    var [sessSnap, boxSnap, combosSnap, customSnap] = await Promise.all([
+    var [sessSnap, boxSnap, combosSnap, customSnap, assignedSnap] = await Promise.all([
       getDocs(collection(db, 'users', uid, 'sessions')),
       getDocs(collection(db, 'users', uid, 'boxingSessions')),
       getDocs(collection(db, 'users', uid, 'customCombos')),
-      getDocs(collection(db, 'users', uid, 'customSessions'))
+      getDocs(collection(db, 'users', uid, 'customSessions')),
+      getDocs(collection(db, 'users', uid, 'assignedSessions'))
     ]);
     userDataCache.sessions = sessSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());}).sort(function(a,b){return a.date.localeCompare(b.date);});
     userDataCache.boxingSessions = boxSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());}).sort(function(a,b){return a.date.localeCompare(b.date);});
     userDataCache.customCombos = combosSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());});
     userDataCache.customSessions = customSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());});
+    userDataCache.assignedSessions = assignedSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());});
   } catch(err) {
     console.warn('Failed to load from Firestore, using localStorage:', err);
     // userDataCache remains null — ld() will fall back to localStorage
@@ -586,10 +591,26 @@ async function ensureUserProfile(user) {
         onboarded: false
       };
       await setDoc(profileRef, newProfile);
-      userProfile = { onboarded: false };
+      userProfile = { onboarded: false, role: 'member' };
+      window.userProfile = userProfile;
+      // Write to members registry for coach admin
+      setDoc(doc(db, 'gym', '8RB', 'members', user.uid), {
+        displayName: user.displayName || '',
+        email: user.email || '',
+        joinDate: serverTimestamp(),
+        role: 'member'
+      }, { merge: true }).catch(function(){});
       if (DEBUG) console.log('[8RB] ensureUserProfile: profile created successfully');
     } else {
       userProfile = existing.data();
+      window.userProfile = userProfile;
+      // Keep members registry in sync with current profile
+      setDoc(doc(db, 'gym', '8RB', 'members', user.uid), {
+        displayName: user.displayName || userProfile.displayName || '',
+        email: user.email || userProfile.email || '',
+        joinDate: userProfile.joinDate || null,
+        role: userProfile.role || 'member'
+      }, { merge: true }).catch(function(){});
     }
   } catch(err) {
     console.warn('[8RB] ensureUserProfile failed (Firestore may have blocked write):', err);
@@ -610,11 +631,28 @@ export async function loadWelcomeMessage() {
   return DEFAULT;
 }
 
+// ─── EXPIRE OLD ASSIGNED SESSIONS ────────────────────────────────────────────
+async function expireOldAssignedSessions(uid) {
+  var cache = userDataCache.assignedSessions || [];
+  var sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  var toExpire = cache.filter(function(s) {
+    return s.status === 'pending' && new Date(s.assignedFor) < sevenDaysAgo;
+  });
+  for (var i = 0; i < toExpire.length; i++) {
+    try {
+      await updateDoc(doc(db, 'users', uid, 'assignedSessions', toExpire[i]._firestoreId), { status: 'expired' });
+      toExpire[i].status = 'expired';
+    } catch(e) {}
+  }
+}
+
 // ─── LAUNCH APP — called after auth + data load ────────────────────────────
 // Checks onboarded flag and either starts onboarding or shows app directly.
 async function launchApp(user) {
   await ensureUserProfile(user);
   await loadUserData(user.uid);
+  await expireOldAssignedSessions(user.uid);
   if (userProfile && userProfile.onboarded === true) {
     showApp();
   } else {
@@ -656,13 +694,42 @@ export function onSplashDone() {
   resolveAuth();
 }
 
+// ─── iOS GOOGLE SIGN-IN FLASH FIX ────────────────────────────────────────────
+// Show a loading screen immediately on redirect return so the sign-in form
+// never flashes before auth state resolves.
+function showGoogleLoadingScreen() {
+  var authEl = document.getElementById('auth-screen');
+  var appEl = document.getElementById('app-content');
+  if (appEl) appEl.style.display = 'none';
+  if (authEl) {
+    authEl.style.display = 'flex';
+    authEl.innerHTML =
+      '<div style="display:flex;flex-direction:column;align-items:center;' +
+      'justify-content:center;height:100%;gap:16px">' +
+      '<img src="8RB.webp" style="width:80px;opacity:0.8;' +
+      'animation:obBreathe 3s ease-in-out infinite">' +
+      '<div style="font-family:\'DM Sans\',sans-serif;font-size:14px;' +
+      'color:var(--muted)">Signing you in...</div>' +
+      '</div>';
+  }
+}
+
+if (sessionStorage.getItem('googleRedirectPending')) {
+  showGoogleLoadingScreen();
+}
+
 // Handle return from Google signInWithRedirect — fires on page load after redirect
 getRedirectResult(auth).then(function(result) {
+  sessionStorage.removeItem('googleRedirectPending');
   if (result && result.user) {
     if (DEBUG) console.log('[8RB] getRedirectResult: Google redirect returned user', result.user.uid);
     // ensureUserProfile handles profile creation via resolveAuth — no extra action needed
+  } else if (sessionStorage.getItem('googleRedirectPending') === null && !window.currentUser) {
+    // Flag was set but no user returned — restore sign-in screen
+    showSignInScreen();
   }
 }).catch(function(err) {
+  sessionStorage.removeItem('googleRedirectPending');
   if (err.code) {
     console.warn('[8RB] getRedirectResult error:', err.code, err.message);
     if (!window.currentUser) showAuthError('Google sign-in failed. Please try again.');
@@ -719,12 +786,15 @@ async function handleSignIn() {
 // ─── GOOGLE SIGN IN ───────────────────────────────────────────────────────────
 async function handleGoogleSignIn() {
   clearAuthErrors();
+  sessionStorage.setItem('googleRedirectPending', '1');
   try {
     var provider = new GoogleAuthProvider();
     var result = await signInWithPopup(auth, provider);
+    sessionStorage.removeItem('googleRedirectPending');
     // ensureUserProfile handles profile creation via resolveAuth/onAuthStateChanged
     if (DEBUG) console.log('[8RB] Google popup sign-in complete:', result.user.uid);
   } catch(err) {
+    sessionStorage.removeItem('googleRedirectPending');
     if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
       showAuthError('Google sign-in failed. Please try again.');
     }
@@ -793,6 +863,8 @@ async function handleSignOut() {
     window.currentUser = null;
     userDataCache.sessions = null; userDataCache.boxingSessions = null;
     userDataCache.customCombos = null; userDataCache.customSessions = null;
+    userDataCache.assignedSessions = null;
+    window.userProfile = null; userProfile = null;
     closeSettingsBtn();
     showSignInScreen();
   } catch(err) { toast('Sign out failed. Try again.', true); }

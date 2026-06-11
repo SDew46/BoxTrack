@@ -6,7 +6,7 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 10.5.0. Step 2 (Firebase backend) complete — not yet pushed/deployed.
+Version 11.0.0. SGPT pilot features complete.
 
 **File structure — all ES modules, all acorn clean:**
 - `styles.css` — all CSS, includes Step 2 auth + offline indicator styles
@@ -313,6 +313,46 @@ For development: Chrome DevTools `F12` → Application → Service Workers → t
 - Test new versions in Chrome incognito to bypass service worker cache
 
 ---
+
+## Role System
+
+Three roles: **member**, **sgpt**, **coach**
+
+- **member** — sees standard sessions only, no SGPT content, no assigned sessions section
+- **sgpt** — sees standard + SGPT sessions, sees assigned sessions at top of Train tab
+- **coach** — sees everything, accesses `/admin`, can assign SGPT role, can assign sessions
+
+Role assigned by coach in `/admin` → MEMBERS section. Default on signup: `member`.  
+Role field is immutable by the user — only coach can update other users' roles via Firestore.
+
+## SGPT System
+
+Sessions have `audience: ['all']` (standard) or `audience: ['sgpt']` (SGPT-only).  
+SGPT sessions also have: `source: 'coach'`, `active: true/false`, `category: upper/lower/full/conditioning/recovery`.  
+Filtering in `renderLibrary()` via `sessionVisibleToUser()` in train.js.  
+SGPT section in Train tab: visible only to sgpt and coach roles — completely absent from DOM for members.
+
+## Assigned Sessions
+
+Firestore path: `users/{uid}/assignedSessions/{docId}`  
+Fields: `sessionData` (full session object), `sessionName`, `assignedBy` (coach uid), `assignedAt` (timestamp), `assignedFor` (YYYY-MM-DD), `status` (pending/completed/expired), `completedAt` (optional).  
+Expiry: pending sessions older than 7 days auto-expire on app load via `expireOldAssignedSessions()`.  
+Completion: status updates to `completed` when member saves the session in `saveSession()`.  
+"ASSIGNED BY YOUR COACH" section shown at top of Train tab when pending sessions exist for today or earlier.
+
+## Members Registry
+
+Firestore path: `gym/8RB/members/{uid}` — written by `ensureUserProfile()` on every sign-in.  
+Fields: `displayName`, `email`, `joinDate`, `role`.  
+Used by coach admin to list members, assign roles, and track assignments.  
+Coach reads all; members can write their own entry (role field protected by rules).
+
+## Backlog (post-v11)
+- Dynamic SGPT sessions from Firestore (currently hardcoded in data.js)
+- Individual session notes from coach per assignment
+- Member completion analytics for coach
+- Firebase App Check (bot/spam protection)
+- Shared Firebase admin email setup
 
 ## What Makes This Different — Do Not Lose These
 - Only app combining gym S&C programming with boxing-specific training

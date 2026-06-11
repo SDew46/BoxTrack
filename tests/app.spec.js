@@ -1,5 +1,6 @@
 // @ts-check
 const { test, expect } = require('./fixtures');
+const path = require('path');
 
 const APP_URL = '/BoxTrack/';
 const APP_CONTENT_TIMEOUT = 15000;
@@ -182,4 +183,56 @@ test('Onboarding shows for a new user with no profile', async ({ page, mockFireb
   // Onboarding wraps in #ob-wrap (outside #app-content so brightness filter doesn't affect it)
   await page.waitForSelector('#ob-wrap', { state: 'visible', timeout: APP_CONTENT_TIMEOUT });
   await expect(page.locator('#ob-wrap')).toBeVisible();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 11: SGPT member sees SGPT section in TRAIN tab
+// ─────────────────────────────────────────────────────────────────────────────
+test('SGPT member sees SGPT sessions section in TRAIN tab', async ({ page, mockFirebaseAsSgpt }) => {
+  await mockFirebaseAsSgpt(null);
+  await page.goto(APP_URL);
+  await page.waitForSelector('#app-content', { state: 'visible', timeout: APP_CONTENT_TIMEOUT });
+
+  await page.locator('.nb-train').click();
+  await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
+
+  // SGPT section should be visible
+  await expect(page.locator('#sgpt-section')).toBeVisible({ timeout: 5000 });
+
+  // At least one SGPT session card should be present inside the section
+  await expect(page.locator('#sgpt-section .sc').first()).toBeVisible({ timeout: 5000 });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 12: Standard member does NOT see SGPT section
+// ─────────────────────────────────────────────────────────────────────────────
+test('Standard member does not see SGPT sessions section', async ({ page, mockFirebase }) => {
+  await loadApp(page, mockFirebase);
+
+  await page.locator('.nb-train').click();
+  await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
+
+  // SGPT section should NOT be visible for standard member
+  const sgptSection = page.locator('#sgpt-section');
+  // Either hidden or display:none — not visible
+  await expect(sgptSection).toBeHidden({ timeout: 3000 });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Test 13: Assigned session appears at top of TRAIN tab
+// ─────────────────────────────────────────────────────────────────────────────
+test('Assigned session appears at top of TRAIN tab', async ({ page, mockFirebase }) => {
+  // Use the assigned-session mock which seeds a pending session for today
+  await mockFirebase('firebase-firestore-assigned.mock.js');
+  await page.goto(APP_URL);
+  await page.waitForSelector('#app-content', { state: 'visible', timeout: APP_CONTENT_TIMEOUT });
+
+  await page.locator('.nb-train').click();
+  await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
+
+  // Assigned sessions area should contain the "ASSIGNED BY YOUR COACH" label
+  await expect(page.locator('#assigned-sessions-area')).toContainText('ASSIGNED BY YOUR COACH', { timeout: 5000 });
+
+  // START SESSION button should be present
+  await expect(page.locator('#assigned-sessions-area button:has-text("START SESSION")')).toBeVisible({ timeout: 5000 });
 });

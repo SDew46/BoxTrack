@@ -1,7 +1,7 @@
-﻿import { ld, sv, toast, showPage, openOverlay, closeOverlay, fmtWt, fmtDate, fmtSecs, getUnit, detectPRs, getPR, getPrevWtFromSessions, userDataCache } from './app.js';
+﻿import { ld, sv, toast, showPage, openOverlay, closeOverlay, fmtWt, fmtDate, fmtSecs, getUnit, detectPRs, getPR, getPrevWtFromSessions, userDataCache, userProfile } from './app.js';
 import { SESSIONS, EQUIP_OPTIONS, CAT_META, EXERCISE_LIBRARY, getSessName } from './data.js';
 import { db } from './firebase.js';
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 // ─── TRAIN-ONLY STATE ─────────────────────────────────────────────────────────
 let extraCount=0,restTimers={},selectedFeel='',csbExercises=[],editingCustomId=null;
@@ -45,24 +45,102 @@ function sessAvail(sess){return(sess.equip||[]).every(e=>activeEquipment.has(e))
 
 // LIBRARY
 let currentCat='gu';
+var currentSgptCat='all';
+
+function sessionVisibleToUser(sess){
+  var role=(window.userProfile&&window.userProfile.role)||'member';
+  if(role==='coach')return true;
+  if(!sess.active&&role!=='coach')return false;
+  if(role==='sgpt')return sess.audience.includes('all')||sess.audience.includes('sgpt');
+  return sess.audience.includes('all');
+}
+
 function showCat(cat){
   currentCat=cat;
   const clsMap={gu:'on',td:'on-b',core:'on-g',bw:'on-m',custom:'on-p'};
   ['gu','td','core','bw','custom'].forEach(c=>{document.getElementById('lib-'+c).style.display=c===cat?'flex':'none';const btn=document.getElementById('ct-'+c);if(btn)btn.className='cat-btn'+(c===cat?' '+clsMap[c]:'');});
   if(cat==='custom')renderCustomLib();
 }
+
+function showSgptCat(cat){
+  currentSgptCat=cat;
+  document.querySelectorAll('.sgpt-cat-btn').forEach(function(b){b.classList.toggle('on-m',b.dataset.cat===cat);});
+  renderSgptSection();
+}
+
 function renderLibrary(){
+  var role=(window.userProfile&&window.userProfile.role)||'member';
   const catMap={gu:'GU',td:'TD',core:'CORE',bw:'BW'};
   Object.entries(catMap).forEach(([key,catId])=>{
     const cont=document.getElementById('lib-'+key);if(!cont)return;
     const meta=CAT_META[catId];
-    cont.innerHTML=SESSIONS.filter(s=>s.cat===catId).map(sess=>{
+    cont.innerHTML=SESSIONS.filter(s=>s.cat===catId&&sessionVisibleToUser(s)).map(sess=>{
       const avail=sessAvail(sess);
-      const exRows=sess.exercises.map((ex,ei)=>`<div class="ex-row"><div style="flex:1"><div class="ex-nm" id="pn-${sess.id}-${ei}">${ex.name}</div><div class="ex-nt">${ex.note}</div></div><div class="ex-rt"><span class="ex-sc">${ex.scheme}</span><button class="sw-pill ${(sess._swaps&&sess._swaps[ei])?'on':''}" id="sb-${sess.id}-${ei}" onclick="event.stopPropagation();openSwap('${sess.id}',${ei})">${(sess._swaps&&sess._swaps[ei])?'SWAPPED':'SWAP'}</button></div></div>`).join('');
-      var dname=getSessName(sess.id);
-      return '<div class="sc '+(avail?'':'na')+'" id="sc-'+sess.id+'"><div class="sc-hd" onclick="toggleSC(\''+sess.id+'\')"><div><div class="sc-nm" style="color:'+meta.color+'">'+dname+'</div><div class="sc-sb">'+sess.sub+'</div></div><div style="display:flex;align-items:center;gap:8px"><div class="dot '+(avail?'dot-on':'dot-off')+'"></div><span id="chev-'+sess.id+'" style="color:var(--dim);font-size:12px;transition:transform 0.25s">▾</span></div></div><div class="sc-bd" id="scb-'+sess.id+'"><div class="sc-in">'+exRows+'<div class="fin-strip"><div class="fin-lbl">Finisher</div><div class="fin-txt">'+sess.finisher+'</div></div><button class="abtn '+meta.abtn+' abtn-xl" onclick="useSession(\''+sess.id+'\')" style="margin-top:16px">LET\'S WORK</button></div></div></div>';
+      const exRows=sess.exercises.map((ex,ei)=>{
+        var scheme=ex.scheme||(ex.sets+'×'+ex.reps);
+        var hasAlts=ex.alts&&ex.alts.length>0;
+        var swapBtn=hasAlts?'<button class="sw-pill '+(sess._swaps&&sess._swaps[ei]?'on':'')+'" id="sb-'+sess.id+'-'+ei+'" onclick="event.stopPropagation();openSwap(\''+sess.id+'\','+ei+')">'+(sess._swaps&&sess._swaps[ei]?'SWAPPED':'SWAP')+'</button>':'';
+        return '<div class="ex-row"><div style="flex:1"><div class="ex-nm" id="pn-'+sess.id+'-'+ei+'">'+ex.name+'</div>'+(ex.note?'<div class="ex-nt">'+ex.note+'</div>':'')+'</div><div class="ex-rt"><span class="ex-sc">'+scheme+'</span>'+swapBtn+'</div></div>';
+      }).join('');
+      var dname=getSessName(sess.id)||sess.name;
+      var inactiveBadge=!sess.active&&role==='coach'?'<span style="font-size:9px;font-weight:700;letter-spacing:1px;background:var(--border);color:var(--dim);padding:2px 6px;border-radius:10px;margin-left:6px">INACTIVE</span>':'';
+      var opacity=!sess.active&&role==='coach'?'opacity:0.5;':'';
+      var finisherHtml=sess.finisher?'<div class="fin-strip"><div class="fin-lbl">Finisher</div><div class="fin-txt">'+sess.finisher+'</div></div>':'';
+      return '<div class="sc '+(avail?'':'na')+'" id="sc-'+sess.id+'" style="'+opacity+'"><div class="sc-hd" onclick="toggleSC(\''+sess.id+'\')"><div><div class="sc-nm" style="color:'+meta.color+'">'+dname+inactiveBadge+'</div><div class="sc-sb">'+(sess.sub||sess.description||'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><div class="dot '+(avail?'dot-on':'dot-off')+'"></div><span id="chev-'+sess.id+'" style="color:var(--dim);font-size:12px;transition:transform 0.25s">▾</span></div></div><div class="sc-bd" id="scb-'+sess.id+'"><div class="sc-in">'+exRows+finisherHtml+'<button class="abtn '+meta.abtn+' abtn-xl" onclick="useSession(\''+sess.id+'\')" style="margin-top:16px">LET\'S WORK</button></div></div></div>';
     }).join('');
   });
+  renderSgptSection();
+  renderAssignedSessions();
+}
+
+function renderSgptSection(){
+  var role=(window.userProfile&&window.userProfile.role)||'member';
+  var area=document.getElementById('sgpt-section');
+  if(!area)return;
+  if(role==='member'){area.style.display='none';return;}
+  area.style.display='block';
+  var sgptSessions=SESSIONS.filter(function(s){
+    if(s.cat!=='SGPT')return false;
+    if(role!=='coach'&&!s.active)return false;
+    if(currentSgptCat==='all')return true;
+    return s.category===currentSgptCat;
+  });
+  var cats=['all','upper','lower','full','conditioning','recovery'];
+  var tabsHtml=cats.map(function(c){return '<button class="cat-btn sgpt-cat-btn'+(currentSgptCat===c?' on-m':'')+'" data-cat="'+c+'" onclick="showSgptCat(\''+c+'\')">'+c.toUpperCase()+'</button>';}).join('');
+  var cardsHtml='';
+  if(!sgptSessions.length){
+    cardsHtml='<div class="sc"><div class="sc-hd" style="cursor:default"><div><div class="sc-nm" style="color:var(--muted)">Sessions coming soon</div><div class="sc-sb">Your coach is setting up your programming.</div></div></div></div>';
+  } else {
+    cardsHtml=sgptSessions.map(function(sess){
+      var exRows=sess.exercises.map(function(ex,ei){
+        var scheme=ex.scheme||(ex.sets+'×'+ex.reps);
+        return '<div class="ex-row"><div style="flex:1"><div class="ex-nm">'+ex.name+'</div></div><div class="ex-rt"><span class="ex-sc">'+scheme+'</span></div></div>';
+      }).join('');
+      var inactiveBadge=!sess.active&&role==='coach'?'<span style="font-size:9px;font-weight:700;letter-spacing:1px;background:var(--border);color:var(--dim);padding:2px 6px;border-radius:10px;margin-left:6px">INACTIVE</span>':'';
+      var opacity=!sess.active&&role==='coach'?'opacity:0.5;':'';
+      return '<div class="sc" id="sc-'+sess.id+'" style="'+opacity+'"><div class="sc-hd" onclick="toggleSC(\''+sess.id+'\')"><div><div class="sc-nm" style="color:var(--gold)">'+sess.name+inactiveBadge+'</div><div class="sc-sb">'+(sess.description||'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);background:rgba(230,168,23,0.12);padding:2px 7px;border-radius:10px">'+sess.category.toUpperCase()+'</span><span id="chev-'+sess.id+'" style="color:var(--dim);font-size:12px;transition:transform 0.25s">▾</span></div></div><div class="sc-bd" id="scb-'+sess.id+'"><div class="sc-in">'+exRows+'<button class="abtn ab-g abtn-xl" onclick="useSession(\''+sess.id+'\')" style="margin-top:16px">LET\'S WORK</button></div></div></div>';
+    }).join('');
+  }
+  document.getElementById('sgpt-section').innerHTML='<div style="padding:0 16px 4px"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;letter-spacing:2px;color:var(--accent)">SGPT</div><div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);margin-bottom:10px">Your coach\'s programming</div><div class="cat-row" style="margin:0 -16px 0;padding:0 16px">'+tabsHtml+'</div></div><div class="slist" style="display:flex">'+cardsHtml+'</div>';
+}
+
+function renderAssignedSessions(){
+  var area=document.getElementById('assigned-sessions-area');
+  if(!area)return;
+  var today=new Date().toISOString().split('T')[0];
+  var assigned=(userDataCache.assignedSessions||[]).filter(function(s){
+    return s.status==='pending'&&s.assignedFor<=today;
+  }).sort(function(a,b){return a.assignedFor.localeCompare(b.assignedFor);});
+  if(!assigned.length){area.innerHTML='';return;}
+  area.innerHTML=assigned.map(function(s){
+    var dateLabel=s.assignedFor===today?'For today':(s.assignedFor<today?'For '+fmtDate(s.assignedFor)+' — complete when ready':'For '+fmtDate(s.assignedFor));
+    return '<div style="background:rgba(230,168,23,0.07);border:1px solid rgba(230,168,23,0.3);border-radius:8px;padding:16px;margin-bottom:8px">'
+      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:6px">ASSIGNED BY YOUR COACH</div>'
+      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--text);margin-bottom:4px">'+sanitiseTrainStr(s.sessionName||'Session')+'</div>'
+      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);margin-bottom:12px">'+dateLabel+'</div>'
+      +'<button class="abtn ab-r" style="width:100%;height:56px;font-size:20px" onclick="startAssignedSession(\''+s._firestoreId+'\')">START SESSION</button>'
+    +'</div>';
+  }).join('');
 }
 function toggleSC(id){const b=document.getElementById('scb-'+id),c=document.getElementById('chev-'+id);const o=b.classList.toggle('open');if(c)c.style.transform=o?'rotate(180deg)':'';}
 function renderCustomLib(){
@@ -77,11 +155,37 @@ function openSwap(sessId,exIdx){const sess=SESSIONS.find(s=>s.id===sessId);if(!s
 function selAlt(i,name){document.querySelectorAll('.alt-opt').forEach((el,j)=>el.classList.toggle('sel',j===i));swapState.selected=name;}
 function confirmSwap(){const{sessId,exIdx,selected}=swapState;const sess=SESSIONS.find(s=>s.id===sessId);if(!sess||!selected)return;const orig=sess.exercises[exIdx].name;const isOrig=selected===orig;if(!sess._swaps)sess._swaps={};isOrig?delete sess._swaps[exIdx]:sess._swaps[exIdx]=selected;const n=document.getElementById(`pn-${sessId}-${exIdx}`);if(n)n.textContent=selected;const sb=document.getElementById(`sb-${sessId}-${exIdx}`);if(sb){sb.classList.toggle('on',!isOrig);sb.textContent=isOrig?'SWAP':'SWAPPED';}closeOverlay('swap-modal');toast('Exercise updated');}
 
+function sanitiseTrainStr(str){if(typeof str!=='string')return '';return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
 // USE SESSION
-function useSession(sessId){const sess=SESSIONS.find(s=>s.id===sessId);if(!sess)return;window.activeLogSession={id:sess.id,cat:sess.cat,name:getSessName(sess.id),custom:false,warmup:sess.warmup||[],exercises:sess.exercises.map((ex,i)=>({...ex,displayName:(sess._swaps&&sess._swaps[i])?sess._swaps[i]:ex.name,swapped:!!(sess._swaps&&sess._swaps[i])}))};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();}
+function useSession(sessId){const sess=SESSIONS.find(s=>s.id===sessId);if(!sess)return;window.activeLogSession={id:sess.id,cat:sess.cat,name:sess.name||getSessName(sess.id),custom:false,warmup:sess.warmup||[],exercises:sess.exercises.map((ex,i)=>({...ex,scheme:ex.scheme||(ex.sets+'×'+ex.reps),displayName:(sess._swaps&&sess._swaps[i])?sess._swaps[i]:(ex.displayName||ex.name),swapped:!!(sess._swaps&&sess._swaps[i])}))};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();}
+
+function startAssignedSession(firestoreId){
+  var s=(userDataCache.assignedSessions||[]).find(function(a){return a._firestoreId===firestoreId;});
+  if(!s||!s.sessionData)return;
+  window.activeAssignedSessionId=firestoreId;
+  var sd=s.sessionData;
+  window.activeLogSession={
+    id:sd.id||'assigned-'+firestoreId,
+    cat:sd.cat||'SGPT',
+    name:s.sessionName||sd.name||'Assigned Session',
+    custom:false,
+    warmup:sd.warmup||[],
+    exercises:(sd.exercises||[]).map(function(ex){
+      return Object.assign({},ex,{
+        scheme:ex.scheme||(ex.sets+'×'+ex.reps),
+        displayName:ex.displayName||ex.name,
+        swapped:false
+      });
+    })
+  };
+  sv('activeLogSession',window.activeLogSession);
+  restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);
+  showLogView();
+}
 function useCustomSession(idx){const customs=ld('customSessions',[]),sess=customs[idx];if(!sess)return;window.activeLogSession={id:'custom-'+idx,cat:sess.cat,name:sess.name,custom:true,warmup:[],exercises:(sess.exercises||[]).map(ex=>({...ex,displayName:ex.name,swapped:false}))};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();toast('Session loaded');}
 function showLogView(){document.getElementById('train-lib').style.display='none';document.getElementById('train-log').style.display='block';const meta=CAT_META[activeLogSession.cat]||CAT_META.CUSTOM;document.getElementById('log-eye').textContent=meta.label;document.getElementById('log-eye').style.color=meta.color;document.getElementById('log-title').textContent=activeLogSession.name;buildLogForm();renderWarmup();restoreAutosave();renderHistory();}
-function showLibraryView(){document.getElementById('train-lib').style.display='block';document.getElementById('train-log').style.display='none';}
+function showLibraryView(){document.getElementById('train-lib').style.display='block';document.getElementById('train-log').style.display='none';renderAssignedSessions();}
 function confirmClearSess(){if(!confirm('Change session? Unsaved data will be lost.'))return;clearActiveSession();}
 function clearActiveSession(){window.activeLogSession=null;sv('activeLogSession',null);extraCount=0;restTimers={};setTypeState={};clearInterval(durInterval);sessionStartTime=null;sv('logAutosave',null);showLibraryView();}
 
@@ -394,6 +498,16 @@ async function saveSession(){
       const docRef=await addDoc(collection(db,'users',window.currentUser.uid,'sessions'),Object.assign({},record,{createdAt:serverTimestamp()}));
       const entry=userDataCache.sessions&&userDataCache.sessions.find(function(s){return s.id===record.id;});
       if(entry)entry._firestoreId=docRef.id;
+      // Mark assigned session complete if one was active
+      if(window.activeAssignedSessionId){
+        var assignedId=window.activeAssignedSessionId;
+        window.activeAssignedSessionId=null;
+        try{
+          await updateDoc(doc(db,'users',window.currentUser.uid,'assignedSessions',assignedId),{status:'completed',completedAt:serverTimestamp()});
+          var aEntry=userDataCache.assignedSessions&&userDataCache.assignedSessions.find(function(a){return a._firestoreId===assignedId;});
+          if(aEntry){aEntry.status='completed';}
+        }catch(e){console.warn('Failed to mark assigned session complete:',e);}
+      }
     }catch(err){console.error('Firestore session save failed:',err);}
   }
 }
@@ -776,3 +890,7 @@ window.autosaveLog = autosaveLog;
 window.buildLogForm = buildLogForm;
 window.openExRef = openExRef;
 window.closeExRef = closeExRef;
+window.showSgptCat = showSgptCat;
+window.startAssignedSession = startAssignedSession;
+window.renderAssignedSessions = renderAssignedSessions;
+window.renderSgptSection = renderSgptSection;

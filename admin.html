@@ -24,8 +24,8 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;
 .admin-ttl{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:3px;color:#fff;}
 .admin-user{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);}
 .admin-signout{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;}
-.admin-section{margin-bottom:32px;}
-.admin-section-ttl{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:var(--accent);margin-bottom:12px;}
+.admin-section{margin-bottom:40px;}
+.admin-section-ttl{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:#fff;margin-bottom:4px;}
 .admin-section-hr{border:none;border-top:1px solid var(--border);margin:0 0 16px;}
 .admin-textarea{width:100%;min-height:200px;background:#1e1e1e;border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;padding:14px;box-sizing:border-box;resize:vertical;outline:none;}
 .admin-textarea:focus{border-color:var(--accent);}
@@ -36,6 +36,36 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;
 .admin-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px;opacity:0;transition:opacity 0.2s;pointer-events:none;white-space:nowrap;}
 .admin-toast.show{opacity:1;}
 .admin-toast.err{background:var(--red);color:#fff;}
+/* Member cards */
+.member-card{background:#141414;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+.member-info{flex:1;min-width:0;}
+.member-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:var(--text);}
+.member-email{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.member-joined{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--dim);}
+.role-badge{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border-radius:20px;white-space:nowrap;}
+.role-member{background:var(--border);color:var(--muted);}
+.role-sgpt{background:rgba(230,168,23,0.2);color:var(--gold);}
+.role-coach{background:var(--accent);color:#fff;}
+.role-btn{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;min-height:36px;}
+.role-btn-assign{background:none;border:1px solid var(--gold);color:var(--gold);}
+.role-btn-remove{background:none;border:1px solid var(--border);color:var(--dim);}
+/* Form elements */
+.admin-form-lbl{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px;}
+.admin-select{width:100%;background:#1e1e1e;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:12px 14px;outline:none;margin-bottom:14px;-webkit-appearance:none;}
+.admin-date-inp{width:100%;background:#1e1e1e;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:12px 14px;outline:none;margin-bottom:14px;box-sizing:border-box;color-scheme:dark;}
+.send-toggle{display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.send-opt{flex:1;padding:11px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;text-align:center;background:none;border:none;color:var(--dim);cursor:pointer;}
+.send-opt.on{background:var(--accent);color:#fff;}
+.member-check{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2);}
+.member-check:last-child{border-bottom:none;}
+.member-check input{width:20px;height:20px;accent-color:var(--accent);cursor:pointer;}
+/* History table */
+.hist-table{width:100%;border-collapse:collapse;margin-top:12px;}
+.hist-table th{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);}
+.hist-table td{font-size:13px;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border2);vertical-align:top;}
+.hist-status-done{color:var(--green);font-weight:600;}
+.hist-status-pending{color:var(--dim);}
+.hist-status-expired{color:var(--red);}
 </style>
 </head>
 <body>
@@ -50,6 +80,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;
     <button class="admin-signout" onclick="adminSignOut()">SIGN OUT</button>
   </div>
 
+  <!-- COACH'S NOTES (existing) -->
   <div class="admin-section">
     <div class="admin-section-ttl">COACH'S NOTES</div>
     <hr class="admin-section-hr">
@@ -58,6 +89,39 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;
     <div class="admin-meta" id="coach-notes-meta">Last updated: —</div>
     <button class="admin-save" id="coach-notes-save" onclick="saveCoachNotes()">SAVE CHANGES</button>
   </div>
+
+  <!-- MEMBERS -->
+  <div class="admin-section">
+    <div class="admin-section-ttl">MEMBERS</div>
+    <hr class="admin-section-hr">
+    <div id="members-list"><div style="color:var(--dim);font-size:13px">Loading members…</div></div>
+  </div>
+
+  <!-- ASSIGN SESSION -->
+  <div class="admin-section">
+    <div class="admin-section-ttl">ASSIGN SESSION</div>
+    <hr class="admin-section-hr">
+    <div class="admin-form-lbl">Session</div>
+    <select class="admin-select" id="assign-session-select">
+      <option value="">Select a session</option>
+    </select>
+    <div class="admin-form-lbl">For date</div>
+    <input class="admin-date-inp" type="date" id="assign-date">
+    <div class="admin-form-lbl">Send to</div>
+    <div class="send-toggle">
+      <button class="send-opt on" id="send-all-btn" onclick="setSendMode('all')">ALL SGPT MEMBERS</button>
+      <button class="send-opt" id="send-specific-btn" onclick="setSendMode('specific')">SPECIFIC MEMBERS</button>
+    </div>
+    <div id="member-checklist" style="display:none;background:#141414;border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:14px"></div>
+    <button class="admin-save" id="assign-btn" onclick="assignSession()" disabled>ASSIGN</button>
+    <div style="margin-top:32px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="admin-form-lbl" style="margin:0">RECENT ASSIGNMENTS</div>
+        <button onclick="loadAssignmentHistory()" style="background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer">↻ Refresh</button>
+      </div>
+      <div id="assignment-history"><div style="color:var(--dim);font-size:13px">Loading…</div></div>
+    </div>
+  </div>
 </div>
 
 <div class="admin-toast" id="admin-toast"></div>
@@ -65,10 +129,14 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;
 <script type="module">
 import { auth, db } from './firebase.js';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { SESSIONS } from './data.js';
 
 var currentCoach = null;
+var allMembers = [];
+var sendMode = 'all';
 
+// ─── UTILS ────────────────────────────────────────────────────────────────────
 function showToast(msg, isErr) {
   var t = document.getElementById('admin-toast');
   t.textContent = msg;
@@ -79,9 +147,21 @@ function showToast(msg, isErr) {
 function fmtDate(ts) {
   if (!ts) return '—';
   var d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
 }
 
+function fmtDateStr(str) {
+  if (!str) return '—';
+  var d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+}
+
+function sanitise(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── COACH'S NOTES ────────────────────────────────────────────────────────────
 async function loadCoachNotes() {
   try {
     var snap = await getDoc(doc(db, 'gym', '8RB', 'config', 'main'));
@@ -94,9 +174,7 @@ async function loadCoachNotes() {
         meta.textContent = 'Last updated: ' + fmtDate(data.coachNotesUpdatedAt) + (data.coachNotesUpdatedBy ? ' by ' + data.coachNotesUpdatedBy : '');
       }
     }
-  } catch(err) {
-    console.warn('Failed to load coach notes:', err);
-  }
+  } catch(err) { console.warn('Failed to load coach notes:', err); }
 }
 
 window.updateCharCount = function() {
@@ -114,8 +192,7 @@ window.saveCoachNotes = async function() {
       coachNotesUpdatedAt: serverTimestamp(),
       coachNotesUpdatedBy: currentCoach ? (currentCoach.displayName || currentCoach.email) : 'coach'
     }, { merge: true });
-    var meta = document.getElementById('coach-notes-meta');
-    meta.textContent = 'Last updated: just now by ' + (currentCoach ? (currentCoach.displayName || currentCoach.email) : 'coach');
+    document.getElementById('coach-notes-meta').textContent = 'Last updated: just now by ' + (currentCoach ? (currentCoach.displayName || currentCoach.email) : 'coach');
     showToast('COACH\'S NOTES UPDATED');
   } catch(err) {
     console.error('Save failed:', err);
@@ -125,18 +202,209 @@ window.saveCoachNotes = async function() {
   }
 };
 
+// ─── MEMBERS ──────────────────────────────────────────────────────────────────
+async function loadMembers() {
+  try {
+    var snap = await getDocs(collection(db, 'gym', '8RB', 'members'));
+    allMembers = snap.docs.map(function(d) { return Object.assign({ uid: d.id }, d.data()); });
+    renderMembers();
+    populateMemberChecklist();
+  } catch(err) {
+    document.getElementById('members-list').innerHTML = '<div style="color:var(--red);font-size:13px">Failed to load members.</div>';
+  }
+}
+
+function renderMembers() {
+  var list = document.getElementById('members-list');
+  if (!allMembers.length) {
+    list.innerHTML = '<div style="color:var(--dim);font-size:13px">No members yet.</div>';
+    return;
+  }
+  list.innerHTML = allMembers.map(function(m) {
+    var badgeCls = m.role === 'coach' ? 'role-coach' : m.role === 'sgpt' ? 'role-sgpt' : 'role-member';
+    var badgeTxt = (m.role || 'member').toUpperCase();
+    var actionBtn = '';
+    if (currentCoach && m.uid !== currentCoach.uid && m.role !== 'coach') {
+      if (m.role === 'sgpt') {
+        actionBtn = '<button class="role-btn role-btn-remove" onclick="changeRole(\'' + m.uid + '\',\'member\')">REMOVE SGPT</button>';
+      } else {
+        actionBtn = '<button class="role-btn role-btn-assign" onclick="changeRole(\'' + m.uid + '\',\'sgpt\')">ASSIGN SGPT</button>';
+      }
+    }
+    return '<div class="member-card" id="mcard-' + m.uid + '">'
+      + '<div class="member-info">'
+        + '<div class="member-name">' + sanitise(m.displayName || 'Unknown') + '</div>'
+        + '<div class="member-email">' + sanitise(m.email || '') + '</div>'
+        + '<div class="member-joined">Joined ' + fmtDate(m.joinDate) + '</div>'
+      + '</div>'
+      + '<span class="role-badge ' + badgeCls + '" id="badge-' + m.uid + '">' + badgeTxt + '</span>'
+      + actionBtn
+    + '</div>';
+  }).join('');
+}
+
+window.changeRole = async function(uid, newRole) {
+  try {
+    await updateDoc(doc(db, 'users', uid, 'profile', 'data'), { role: newRole });
+    await updateDoc(doc(db, 'gym', '8RB', 'members', uid), { role: newRole });
+    var m = allMembers.find(function(x) { return x.uid === uid; });
+    if (m) m.role = newRole;
+    renderMembers();
+    populateMemberChecklist();
+    showToast(newRole === 'sgpt' ? 'SGPT ACCESS GRANTED' : 'SGPT ACCESS REMOVED');
+  } catch(err) {
+    showToast('UPDATE FAILED — TRY AGAIN', true);
+  }
+};
+
+// ─── ASSIGN SESSION ───────────────────────────────────────────────────────────
+function populateSessionDropdown() {
+  var sel = document.getElementById('assign-session-select');
+  var sgptSessions = SESSIONS.filter(function(s) { return s.cat === 'SGPT' && s.active; });
+  sgptSessions.forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name + ' — ' + (s.category || '').toUpperCase();
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', checkAssignReady);
+}
+
+function setDefaultDate() {
+  var today = new Date().toISOString().split('T')[0];
+  var inp = document.getElementById('assign-date');
+  inp.value = today;
+  inp.min = today;
+  inp.addEventListener('change', checkAssignReady);
+}
+
+window.setSendMode = function(mode) {
+  sendMode = mode;
+  document.getElementById('send-all-btn').classList.toggle('on', mode === 'all');
+  document.getElementById('send-specific-btn').classList.toggle('on', mode === 'specific');
+  document.getElementById('member-checklist').style.display = mode === 'specific' ? 'block' : 'none';
+  checkAssignReady();
+};
+
+function populateMemberChecklist() {
+  var sgpt = allMembers.filter(function(m) { return m.role === 'sgpt'; });
+  var cl = document.getElementById('member-checklist');
+  if (!sgpt.length) {
+    cl.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:8px 0">No SGPT members yet.</div>';
+    return;
+  }
+  cl.innerHTML = sgpt.map(function(m) {
+    return '<div class="member-check">'
+      + '<input type="checkbox" id="chk-' + m.uid + '" value="' + m.uid + '" onchange="checkAssignReady()">'
+      + '<label for="chk-' + m.uid + '" style="font-family:\'DM Sans\',sans-serif;font-size:14px;cursor:pointer">'
+        + sanitise(m.displayName || 'Unknown') + '<span style="color:var(--dim);font-size:12px;margin-left:6px">' + sanitise(m.email || '') + '</span>'
+      + '</label>'
+    + '</div>';
+  }).join('');
+}
+
+window.checkAssignReady = function() {
+  var sessOk = !!document.getElementById('assign-session-select').value;
+  var dateOk = !!document.getElementById('assign-date').value;
+  var recipientOk = sendMode === 'all'
+    ? allMembers.some(function(m) { return m.role === 'sgpt'; })
+    : document.querySelectorAll('#member-checklist input:checked').length > 0;
+  document.getElementById('assign-btn').disabled = !(sessOk && dateOk && recipientOk);
+};
+
+window.assignSession = async function() {
+  var sessId = document.getElementById('assign-session-select').value;
+  var forDate = document.getElementById('assign-date').value;
+  var sess = SESSIONS.find(function(s) { return s.id === sessId; });
+  if (!sess || !forDate) return;
+  var recipients;
+  if (sendMode === 'all') {
+    recipients = allMembers.filter(function(m) { return m.role === 'sgpt'; }).map(function(m) { return m.uid; });
+  } else {
+    recipients = Array.from(document.querySelectorAll('#member-checklist input:checked')).map(function(el) { return el.value; });
+  }
+  if (!recipients.length) { showToast('No recipients selected', true); return; }
+  var btn = document.getElementById('assign-btn');
+  btn.disabled = true; btn.textContent = 'ASSIGNING…';
+  try {
+    for (var i = 0; i < recipients.length; i++) {
+      await addDoc(collection(db, 'users', recipients[i], 'assignedSessions'), {
+        sessionData: sess,
+        sessionName: sess.name,
+        assignedBy: currentCoach.uid,
+        assignedAt: serverTimestamp(),
+        assignedFor: forDate,
+        status: 'pending'
+      });
+    }
+    showToast('SESSION ASSIGNED TO ' + recipients.length + ' MEMBER' + (recipients.length !== 1 ? 'S' : ''));
+    document.getElementById('assign-session-select').value = '';
+    document.getElementById('assign-date').value = new Date().toISOString().split('T')[0];
+    setSendMode('all');
+    checkAssignReady();
+    loadAssignmentHistory();
+  } catch(err) {
+    showToast('ASSIGNMENT FAILED — TRY AGAIN', true);
+  } finally {
+    btn.textContent = 'ASSIGN';
+    checkAssignReady();
+  }
+};
+
+window.loadAssignmentHistory = async function() {
+  var container = document.getElementById('assignment-history');
+  container.innerHTML = '<div style="color:var(--dim);font-size:13px">Loading…</div>';
+  try {
+    var rows = [];
+    for (var i = 0; i < allMembers.length; i++) {
+      var m = allMembers[i];
+      var snap = await getDocs(collection(db, 'users', m.uid, 'assignedSessions'));
+      snap.docs.forEach(function(d) {
+        rows.push(Object.assign({ uid: m.uid, memberName: m.displayName || m.email }, d.data()));
+      });
+    }
+    rows.sort(function(a, b) {
+      var at = a.assignedAt && a.assignedAt.toDate ? a.assignedAt.toDate().getTime() : 0;
+      var bt = b.assignedAt && b.assignedAt.toDate ? b.assignedAt.toDate().getTime() : 0;
+      return bt - at;
+    });
+    rows = rows.slice(0, 20);
+    if (!rows.length) { container.innerHTML = '<div style="color:var(--dim);font-size:13px">No assignments yet.</div>'; return; }
+    var html = '<table class="hist-table"><thead><tr><th>MEMBER</th><th>SESSION</th><th>DATE</th><th>STATUS</th></tr></thead><tbody>';
+    rows.forEach(function(r) {
+      var statusHtml;
+      if (r.status === 'completed') {
+        statusHtml = '<span class="hist-status-done">✓ Done</span>';
+        if (r.completedAt) statusHtml += '<div style="font-size:11px;color:var(--dim)">' + fmtDate(r.completedAt) + '</div>';
+      } else if (r.status === 'expired') {
+        statusHtml = '<span class="hist-status-expired">✕ Expired</span>';
+      } else {
+        statusHtml = '<span class="hist-status-pending">⏱ Pending</span>';
+      }
+      html += '<tr>'
+        + '<td>' + sanitise(r.memberName || '') + '</td>'
+        + '<td>' + sanitise(r.sessionName || '') + '</td>'
+        + '<td>' + fmtDateStr(r.assignedFor) + '</td>'
+        + '<td>' + statusHtml + '</td>'
+      + '</tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  } catch(err) {
+    container.innerHTML = '<div style="color:var(--red);font-size:13px">Failed to load history.</div>';
+  }
+};
+
+// ─── SIGN OUT ─────────────────────────────────────────────────────────────────
 window.adminSignOut = async function() {
   try { await signOut(auth); window.location.href = 'index.html'; } catch(e) {}
 };
 
+// ─── AUTH GATE ────────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, async function(user) {
   var loading = document.getElementById('admin-loading');
   var ui = document.getElementById('admin-ui');
-  if (!user) {
-    window.location.href = 'index.html';
-    return;
-  }
-  // Check role in Firestore
+  if (!user) { window.location.href = 'index.html'; return; }
   try {
     var profileSnap = await getDoc(doc(db, 'users', user.uid, 'profile', 'data'));
     if (!profileSnap.exists() || profileSnap.data().role !== 'coach') {
@@ -148,7 +416,11 @@ onAuthStateChanged(auth, async function(user) {
     loading.style.display = 'none';
     ui.style.display = 'block';
     document.getElementById('admin-user-name').textContent = 'Signed in as ' + (user.displayName || user.email);
+    populateSessionDropdown();
+    setDefaultDate();
     await loadCoachNotes();
+    await loadMembers();
+    await loadAssignmentHistory();
   } catch(err) {
     loading.textContent = 'Error checking access. Please try again.';
     console.error(err);

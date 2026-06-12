@@ -92,6 +92,7 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;
 .sb-sess-btns{display:flex;gap:8px;flex-shrink:0;}
 .sb-assign-btn{background:none;border:1px solid var(--accent);color:var(--accent);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;}
 .sb-archive-btn{background:none;border:1px solid var(--border);color:var(--dim);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;}
+.sb-archive-toggle{background:none;border:none;font-family:'DM Sans',sans-serif;font-size:13px;color:rgba(255,255,255,0.3);cursor:pointer;padding:6px 0;text-decoration:underline;display:block;margin:0 auto;}
 </style>
 </head>
 <body>
@@ -184,6 +185,8 @@ var allMembers = [];
 var sendMode = 'all';
 var sbExercises = [];
 var adminSgptSessions = [];
+var adminArchivedSessions = [];
+var showArchived = false;
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 function showToast(msg, isErr) {
@@ -562,8 +565,10 @@ window.saveAdminSession = async function() {
 
 async function loadSgptSessions() {
   try {
-    var snap = await getDocs(query(collection(db, 'gym', '8RB', 'sgptSessions'), where('active', '==', true)));
-    adminSgptSessions = snap.docs.map(function(d) { return Object.assign({ _id: d.id }, d.data()); });
+    var snap = await getDocs(collection(db, 'gym', '8RB', 'sgptSessions'));
+    var all = snap.docs.map(function(d) { return Object.assign({ _id: d.id }, d.data()); });
+    adminSgptSessions = all.filter(function(s) { return s.active !== false; });
+    adminArchivedSessions = all.filter(function(s) { return s.active === false; });
     renderSgptSessionsList();
     populateSessionDropdown();
   } catch(err) {
@@ -573,34 +578,83 @@ async function loadSgptSessions() {
 
 function renderSgptSessionsList() {
   var el = document.getElementById('sb-sessions-list');
-  if (!adminSgptSessions.length) {
-    el.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:8px 0">No sessions yet. Build your first one above.</div>';
-    return;
+  var activeHtml = adminSgptSessions.length
+    ? adminSgptSessions.map(function(sess) {
+        var n = (sess.exercises || []).length;
+        var esc = sess._id.replace(/'/g, "\\'");
+        return '<div class="sb-sess-card">' +
+          '<div class="sb-sess-info">' +
+            '<div class="sb-sess-name">' + sanitise(sess.name) + '</div>' +
+            '<div class="sb-sess-count">' + n + (n === 1 ? ' exercise' : ' exercises') + '</div>' +
+          '</div>' +
+          '<div class="sb-sess-btns">' +
+            '<button class="sb-assign-btn" onclick="preSelectSession(\'' + esc + '\')">ASSIGN</button>' +
+            '<button class="sb-archive-btn" onclick="archiveSgptSession(\'' + esc + '\')">ARCHIVE</button>' +
+          '</div>' +
+        '</div>';
+      }).join('')
+    : '<div style="color:var(--dim);font-size:13px;padding:8px 0">No sessions yet. Build your first one above.</div>';
+
+  var archivedHtml = '';
+  if (adminArchivedSessions.length) {
+    archivedHtml += '<div style="text-align:center;padding:12px 0 4px">' +
+      '<button class="sb-archive-toggle" onclick="toggleArchivedSessions()">' +
+        (showArchived ? 'Hide archived' : 'Show archived (' + adminArchivedSessions.length + ')') +
+      '</button></div>';
+    if (showArchived) {
+      archivedHtml += adminArchivedSessions.map(function(sess) {
+        var n = (sess.exercises || []).length;
+        var esc = sess._id.replace(/'/g, "\\'");
+        return '<div class="sb-sess-card" style="opacity:0.45">' +
+          '<div class="sb-sess-info">' +
+            '<div class="sb-sess-name">' + sanitise(sess.name) + '</div>' +
+            '<div class="sb-sess-count">' + n + (n === 1 ? ' exercise' : ' exercises') + '</div>' +
+          '</div>' +
+          '<div class="sb-sess-btns">' +
+            '<button class="sb-archive-btn" style="border-color:var(--green);color:var(--green)" ' +
+              'onclick="unarchiveSgptSession(\'' + esc + '\')">UNARCHIVE</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
   }
-  el.innerHTML = adminSgptSessions.map(function(sess) {
-    var n = (sess.exercises || []).length;
-    var escaped = sess._id.replace(/'/g, "\\'");
-    return '<div class="sb-sess-card">' +
-      '<div class="sb-sess-info">' +
-        '<div class="sb-sess-name">' + sanitise(sess.name) + '</div>' +
-        '<div class="sb-sess-count">' + n + (n === 1 ? ' exercise' : ' exercises') + '</div>' +
-      '</div>' +
-      '<div class="sb-sess-btns">' +
-        '<button class="sb-assign-btn" onclick="preSelectSession(\'' + escaped + '\')">ASSIGN</button>' +
-        '<button class="sb-archive-btn" onclick="archiveSgptSession(\'' + escaped + '\')">ARCHIVE</button>' +
-      '</div>' +
-    '</div>';
-  }).join('');
+
+  el.innerHTML = activeHtml + archivedHtml;
 }
 
 window.archiveSgptSession = async function(id) {
   try {
     await updateDoc(doc(db, 'gym', '8RB', 'sgptSessions', id), { active: false });
-    adminSgptSessions = adminSgptSessions.filter(function(s) { return s._id !== id; });
+    var sess = adminSgptSessions.find(function(s) { return s._id === id; });
+    if (sess) {
+      sess.active = false;
+      adminSgptSessions = adminSgptSessions.filter(function(s) { return s._id !== id; });
+      adminArchivedSessions.push(sess);
+    }
     renderSgptSessionsList();
     populateSessionDropdown();
     showToast('SESSION ARCHIVED');
   } catch(err) { showToast('ARCHIVE FAILED — TRY AGAIN', true); }
+};
+
+window.unarchiveSgptSession = async function(id) {
+  try {
+    await updateDoc(doc(db, 'gym', '8RB', 'sgptSessions', id), { active: true });
+    var sess = adminArchivedSessions.find(function(s) { return s._id === id; });
+    if (sess) {
+      sess.active = true;
+      adminArchivedSessions = adminArchivedSessions.filter(function(s) { return s._id !== id; });
+      adminSgptSessions.push(sess);
+    }
+    renderSgptSessionsList();
+    populateSessionDropdown();
+    showToast('SESSION RESTORED');
+  } catch(err) { showToast('RESTORE FAILED — TRY AGAIN', true); }
+};
+
+window.toggleArchivedSessions = function() {
+  showArchived = !showArchived;
+  renderSgptSessionsList();
 };
 
 window.preSelectSession = function(id) {

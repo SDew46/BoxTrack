@@ -66,6 +66,32 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;
 .hist-status-done{color:var(--green);font-weight:600;}
 .hist-status-pending{color:var(--dim);}
 .hist-status-expired{color:var(--red);}
+/* Session builder */
+.sb-name-inp{width:100%;height:56px;background:#1e1e1e;border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:0 16px;box-sizing:border-box;outline:none;margin-bottom:16px;}
+.sb-name-inp:focus{border-color:var(--accent);}
+.sb-exercise-row{background:#141414;border:1px solid var(--border);border-radius:var(--rs);padding:14px;margin-bottom:8px;}
+.sb-ex-name{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.sb-ex-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+.sb-field{display:flex;flex-direction:column;}
+.sb-ex-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:4px;}
+.sb-num-inp{width:64px;height:40px;background:#252525;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;text-align:center;padding:0 8px;outline:none;box-sizing:border-box;}
+.sb-sel{height:40px;background:#252525;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 8px;outline:none;-webkit-appearance:none;cursor:pointer;}
+.sb-remove-btn{height:40px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:18px;cursor:pointer;padding:0 12px;margin-left:auto;}
+.sb-add-btn{width:100%;height:48px;background:none;border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:16px;}
+.sb-search-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9000;display:none;flex-direction:column;padding:24px 16px;box-sizing:border-box;}
+.sb-search-overlay.show{display:flex;}
+.sb-search-inp{width:100%;height:52px;background:#1e1e1e;border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:0 16px;box-sizing:border-box;outline:none;margin-bottom:12px;flex-shrink:0;}
+.sb-search-inp:focus{border-color:var(--accent);}
+.sb-search-results{flex:1;overflow-y:auto;}
+.sb-search-item{padding:14px 4px;border-bottom:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);cursor:pointer;}
+.sb-search-cancel{width:100%;height:52px;background:none;border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-top:12px;flex-shrink:0;}
+.sb-sess-card{background:#141414;border:1px solid var(--border);border-radius:var(--rs);padding:16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+.sb-sess-info{flex:1;min-width:0;}
+.sb-sess-name{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--text);}
+.sb-sess-count{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);}
+.sb-sess-btns{display:flex;gap:8px;flex-shrink:0;}
+.sb-assign-btn{background:none;border:1px solid var(--accent);color:var(--accent);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;}
+.sb-archive-btn{background:none;border:1px solid var(--border);color:var(--dim);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -97,6 +123,20 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;
     <div id="members-list"><div style="color:var(--dim);font-size:13px">Loading members…</div></div>
   </div>
 
+  <!-- SESSION BUILDER -->
+  <div class="admin-section">
+    <div class="admin-section-ttl">SESSION BUILDER</div>
+    <hr class="admin-section-hr">
+    <input class="sb-name-inp" id="sb-session-name" type="text" placeholder="Name this session" oninput="checkSbReady()">
+    <div id="sb-exercise-list"></div>
+    <button class="sb-add-btn" onclick="openExerciseSearch()">+ ADD EXERCISE</button>
+    <button class="admin-save" id="sb-save-btn" onclick="saveAdminSession()" disabled>SAVE SESSION</button>
+    <div style="margin-top:32px">
+      <div class="admin-form-lbl" style="font-size:13px;margin-bottom:12px">SAVED SESSIONS</div>
+      <div id="sb-sessions-list"><div style="color:var(--dim);font-size:13px">Loading…</div></div>
+    </div>
+  </div>
+
   <!-- ASSIGN SESSION -->
   <div class="admin-section">
     <div class="admin-section-ttl">ASSIGN SESSION</div>
@@ -124,17 +164,26 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;
   </div>
 </div>
 
+<!-- Exercise search overlay -->
+<div class="sb-search-overlay" id="sb-search-overlay">
+  <input class="sb-search-inp" id="sb-search-inp" type="text" placeholder="Search exercises…" oninput="filterExerciseSearch()">
+  <div class="sb-search-results" id="sb-search-results"></div>
+  <button class="sb-search-cancel" onclick="closeExerciseSearch()">CANCEL</button>
+</div>
+
 <div class="admin-toast" id="admin-toast"></div>
 
 <script type="module">
 import { auth, db } from './firebase.js';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, getDocs, setDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { SESSIONS } from './data.js';
+import { doc, getDoc, getDocs, setDoc, addDoc, collection, serverTimestamp, updateDoc, query, where } from 'firebase/firestore';
+import { EXERCISE_LIBRARY } from './data.js';
 
 var currentCoach = null;
 var allMembers = [];
 var sendMode = 'all';
+var sbExercises = [];
+var adminSgptSessions = [];
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 function showToast(msg, isErr) {
@@ -260,14 +309,17 @@ window.toggleSgpt = async function(uid, grantSgpt) {
 // ─── ASSIGN SESSION ───────────────────────────────────────────────────────────
 function populateSessionDropdown() {
   var sel = document.getElementById('assign-session-select');
-  var sgptSessions = SESSIONS.filter(function(s) { return s.cat === 'SGPT' && s.active; });
-  sgptSessions.forEach(function(s) {
+  while (sel.options.length > 1) sel.remove(1);
+  adminSgptSessions.forEach(function(s) {
     var opt = document.createElement('option');
-    opt.value = s.id;
-    opt.textContent = s.name + ' — ' + (s.category || '').toUpperCase();
+    opt.value = s._id;
+    opt.textContent = s.name;
     sel.appendChild(opt);
   });
-  sel.addEventListener('change', checkAssignReady);
+  if (!sel._changeListenerAdded) {
+    sel.addEventListener('change', window.checkAssignReady);
+    sel._changeListenerAdded = true;
+  }
 }
 
 function setDefaultDate() {
@@ -315,7 +367,7 @@ window.checkAssignReady = function() {
 window.assignSession = async function() {
   var sessId = document.getElementById('assign-session-select').value;
   var forDate = document.getElementById('assign-date').value;
-  var sess = SESSIONS.find(function(s) { return s.id === sessId; });
+  var sess = adminSgptSessions.find(function(s) { return s._id === sessId; });
   if (!sess || !forDate) return;
   var recipients;
   if (sendMode === 'all') {
@@ -395,6 +447,170 @@ window.loadAssignmentHistory = async function() {
   }
 };
 
+// ─── SESSION BUILDER ──────────────────────────────────────────────────────────
+window.checkSbReady = function() {
+  var name = (document.getElementById('sb-session-name').value || '').trim();
+  document.getElementById('sb-save-btn').disabled = !(name && sbExercises.length > 0);
+};
+
+function renderSbExerciseList() {
+  var el = document.getElementById('sb-exercise-list');
+  if (!sbExercises.length) { el.innerHTML = ''; return; }
+  var restOpts = [30,45,60,90,120].map(function(s) {
+    return '<option value="' + s + '">'+s+'s</option>';
+  }).join('');
+  var typeOpts = ['Standard','Superset','AMRAP','Ladder','Pyramid'].map(function(t) {
+    return '<option value="' + t + '">' + t + '</option>';
+  }).join('');
+  el.innerHTML = sbExercises.map(function(ex, i) {
+    var restSelected = [30,45,60,90,120].map(function(s) {
+      return '<option value="' + s + '"' + (ex.rest === s ? ' selected' : '') + '>' + s + 's</option>';
+    }).join('');
+    var typeSelected = ['Standard','Superset','AMRAP','Ladder','Pyramid'].map(function(t) {
+      return '<option value="' + t + '"' + (ex.type === t ? ' selected' : '') + '>' + t + '</option>';
+    }).join('');
+    return '<div class="sb-exercise-row">' +
+      '<div class="sb-ex-name"><span>' + sanitise(ex.name) + '</span>' +
+        '<button class="sb-remove-btn" onclick="removeSbEx(' + i + ')">×</button></div>' +
+      '<div class="sb-ex-controls">' +
+        '<div class="sb-field"><label class="sb-ex-label">Sets</label>' +
+          '<input class="sb-num-inp" type="number" min="1" max="20" value="' + ex.sets + '" oninput="updateSbEx(' + i + ',\'sets\',this.value)"></div>' +
+        '<div class="sb-field"><label class="sb-ex-label">Reps</label>' +
+          '<input class="sb-num-inp" type="number" min="1" max="100" value="' + ex.reps + '" oninput="updateSbEx(' + i + ',\'reps\',this.value)"></div>' +
+        '<div class="sb-field"><label class="sb-ex-label">Rest</label>' +
+          '<select class="sb-sel" onchange="updateSbEx(' + i + ',\'rest\',+this.value)">' + restSelected + '</select></div>' +
+        '<div class="sb-field"><label class="sb-ex-label">Type</label>' +
+          '<select class="sb-sel" onchange="updateSbEx(' + i + ',\'type\',this.value)">' + typeSelected + '</select></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+window.updateSbEx = function(i, field, val) {
+  if (field === 'sets' || field === 'reps' || field === 'rest') {
+    sbExercises[i][field] = +val || sbExercises[i][field];
+  } else {
+    sbExercises[i][field] = val;
+  }
+  window.checkSbReady();
+};
+
+window.removeSbEx = function(i) {
+  sbExercises.splice(i, 1);
+  renderSbExerciseList();
+  window.checkSbReady();
+};
+
+window.openExerciseSearch = function() {
+  document.getElementById('sb-search-inp').value = '';
+  filterExerciseSearch();
+  document.getElementById('sb-search-overlay').classList.add('show');
+  document.getElementById('sb-search-inp').focus();
+};
+
+window.closeExerciseSearch = function() {
+  document.getElementById('sb-search-overlay').classList.remove('show');
+};
+
+window.filterExerciseSearch = function() {
+  var q = (document.getElementById('sb-search-inp').value || '').toLowerCase();
+  var results = q
+    ? EXERCISE_LIBRARY.filter(function(ex) { return ex.name.toLowerCase().includes(q); })
+    : EXERCISE_LIBRARY;
+  document.getElementById('sb-search-results').innerHTML = results.map(function(ex) {
+    var escaped = ex.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return '<div class="sb-search-item" onclick="addSbExercise(\'' + escaped + '\')">' + sanitise(ex.name) + '</div>';
+  }).join('');
+};
+
+window.addSbExercise = function(name) {
+  sbExercises.push({ name: name, sets: 3, reps: 8, rest: 60, type: 'Standard' });
+  renderSbExerciseList();
+  window.closeExerciseSearch();
+  window.checkSbReady();
+};
+
+window.saveAdminSession = async function() {
+  var name = (document.getElementById('sb-session-name').value || '').trim();
+  if (!name || !sbExercises.length) return;
+  var btn = document.getElementById('sb-save-btn');
+  btn.disabled = true; btn.textContent = 'SAVING…';
+  try {
+    var exercises = sbExercises.map(function(ex) {
+      return { name: ex.name, displayName: ex.name, sets: ex.sets, reps: ex.reps,
+               scheme: ex.sets + '×' + ex.reps, rest: ex.rest, type: ex.type, note: '', alts: [] };
+    });
+    await addDoc(collection(db, 'gym', '8RB', 'sgptSessions'), {
+      name: name, exercises: exercises,
+      createdAt: serverTimestamp(),
+      createdBy: currentCoach ? currentCoach.uid : '',
+      active: true, audience: ['sgpt'], source: 'coach'
+    });
+    showToast('SESSION SAVED');
+    document.getElementById('sb-session-name').value = '';
+    sbExercises = [];
+    renderSbExerciseList();
+    window.checkSbReady();
+    await loadSgptSessions();
+  } catch(err) {
+    showToast('SAVE FAILED — TRY AGAIN', true);
+  } finally {
+    btn.textContent = 'SAVE SESSION';
+    window.checkSbReady();
+  }
+};
+
+async function loadSgptSessions() {
+  try {
+    var snap = await getDocs(query(collection(db, 'gym', '8RB', 'sgptSessions'), where('active', '==', true)));
+    adminSgptSessions = snap.docs.map(function(d) { return Object.assign({ _id: d.id }, d.data()); });
+    renderSgptSessionsList();
+    populateSessionDropdown();
+  } catch(err) {
+    document.getElementById('sb-sessions-list').innerHTML = '<div style="color:var(--dim);font-size:13px">Failed to load sessions.</div>';
+  }
+}
+
+function renderSgptSessionsList() {
+  var el = document.getElementById('sb-sessions-list');
+  if (!adminSgptSessions.length) {
+    el.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:8px 0">No sessions yet. Build your first one above.</div>';
+    return;
+  }
+  el.innerHTML = adminSgptSessions.map(function(sess) {
+    var n = (sess.exercises || []).length;
+    var escaped = sess._id.replace(/'/g, "\\'");
+    return '<div class="sb-sess-card">' +
+      '<div class="sb-sess-info">' +
+        '<div class="sb-sess-name">' + sanitise(sess.name) + '</div>' +
+        '<div class="sb-sess-count">' + n + (n === 1 ? ' exercise' : ' exercises') + '</div>' +
+      '</div>' +
+      '<div class="sb-sess-btns">' +
+        '<button class="sb-assign-btn" onclick="preSelectSession(\'' + escaped + '\')">ASSIGN</button>' +
+        '<button class="sb-archive-btn" onclick="archiveSgptSession(\'' + escaped + '\')">ARCHIVE</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+window.archiveSgptSession = async function(id) {
+  try {
+    await updateDoc(doc(db, 'gym', '8RB', 'sgptSessions', id), { active: false });
+    adminSgptSessions = adminSgptSessions.filter(function(s) { return s._id !== id; });
+    renderSgptSessionsList();
+    populateSessionDropdown();
+    showToast('SESSION ARCHIVED');
+  } catch(err) { showToast('ARCHIVE FAILED — TRY AGAIN', true); }
+};
+
+window.preSelectSession = function(id) {
+  var sel = document.getElementById('assign-session-select');
+  sel.value = id;
+  sel.dispatchEvent(new Event('change'));
+  document.querySelector('.admin-section:last-of-type').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  window.checkAssignReady();
+};
+
 // ─── SIGN OUT ─────────────────────────────────────────────────────────────────
 window.adminSignOut = async function() {
   try { await signOut(auth); window.location.href = 'index.html'; } catch(e) {}
@@ -416,10 +632,10 @@ onAuthStateChanged(auth, async function(user) {
     loading.style.display = 'none';
     ui.style.display = 'block';
     document.getElementById('admin-user-name').textContent = 'Signed in as ' + (user.displayName || user.email);
-    populateSessionDropdown();
     setDefaultDate();
     await loadCoachNotes();
     await loadMembers();
+    await loadSgptSessions();
     await loadAssignmentHistory();
   } catch(err) {
     loading.textContent = 'Error checking access. Please try again.';

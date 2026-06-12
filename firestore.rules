@@ -17,14 +17,6 @@ service cloud.firestore {
           .data.role == 'coach';
     }
 
-    function isSgptOrCoach() {
-      return isAuthenticated() && isVerified() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data)
-          .data.sgpt == true ||
-         get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data)
-          .data.role == 'coach');
-    }
-
     function isVerified() {
       return request.auth.token.email_verified == true ||
         request.auth.token.firebase.sign_in_provider == 'google.com';
@@ -109,9 +101,12 @@ service cloud.firestore {
         && gymId == get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data).data.gym;
     }
 
-    // SGPT sessions — sgpt and coach can read, coach only can write (own gym)
+    // SGPT sessions — coach reads all; SGPT members read only active; coach writes own gym
     match /gym/{gymId}/sgptSessions/{sessionId} {
-      allow read: if isSgptOrCoach();
+      allow read: if isCoach() && isVerified();
+      allow read: if isAuthenticated() && isVerified()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data).data.sgpt == true
+        && resource.data.active == true;
       allow write: if isCoach() && isVerified()
         && gymId == get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data).data.gym;
     }

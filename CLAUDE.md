@@ -6,7 +6,7 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 11.2.0. SGPT access redesigned as boolean permission flag separate from role.
+Version 11.3.0. SGPT session builder added to admin; sessions load from Firestore; auth cache clears on sign out.
 
 **File structure — all ES modules, all acorn clean:**
 - `styles.css` — all CSS, includes Step 2 auth + offline indicator styles
@@ -335,10 +335,26 @@ Migration: existing profiles without the `sgpt` field are silently upgraded to `
 
 ## SGPT System
 
-Sessions have `audience: ['all']` (standard) or `audience: ['sgpt']` (SGPT-only).  
-SGPT sessions also have: `source: 'coach'`, `active: true/false`, `category: upper/lower/full/conditioning/recovery`.  
-Filtering in `renderLibrary()` via `sessionVisibleToUser()` in train.js.  
-SGPT section in Train tab: visible only to users with `sgpt: true` or `role: 'coach'` — hidden from the DOM for standard members.
+SGPT sessions live in Firestore at `gym/8RB/sgptSessions/{docId}` — there are no hardcoded SGPT sessions in data.js.
+
+**Firestore session document fields:**
+- `name` — session name (string, coach-defined)
+- `exercises` — array of `{ name, displayName, sets, reps, scheme, rest, type, note, alts }`
+- `createdAt` — serverTimestamp
+- `createdBy` — coach uid
+- `active` — true/false (false = archived, hidden from members)
+- `audience: ['sgpt']`
+- `source: 'coach'`
+
+**Who sees what:**
+- `sgpt: true` or `role: 'coach'` — "YOUR PROGRAMME" section in Train tab, reads from `userDataCache.sgptSessions`
+- `sgpt: false` members — SGPT section completely absent from DOM
+
+**Coach workflow:** `/admin` → SESSION BUILDER → create session → ASSIGN SESSION to members.
+
+**Load path:** `loadUserData()` in app.js queries `gym/8RB/sgptSessions` where `active == true` for eligible users, populates `userDataCache.sgptSessions`.
+
+**Train tab section:** "YOUR PROGRAMME" — simple cards (name, exercise count, START button). No category tabs. `useSgptSession(firestoreId)` loads session into the log view.
 
 ## Assigned Sessions
 
@@ -356,11 +372,17 @@ Used by coach admin to list members, assign roles, and track assignments.
 Coach reads all; members can write their own entry (role field protected by rules).
 
 ## Backlog (post-v11)
-- Dynamic SGPT sessions from Firestore (currently hardcoded in data.js)
 - Individual session notes from coach per assignment
 - Member completion analytics for coach
 - Firebase App Check (bot/spam protection)
 - Shared Firebase admin email setup
+
+**ADMIN MEMBER LIST — pagination and search**  
+As member count grows, a flat continuous list becomes unusable. Add in a future update:
+- Search input filtering by display name or email
+- Filter by role (All / Member / SGPT / Coach)
+- Pagination — 20 members per page with prev/next
+- Member count summary at top of section
 
 ## What Makes This Different — Do Not Lose These
 - Only app combining gym S&C programming with boxing-specific training

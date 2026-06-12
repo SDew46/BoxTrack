@@ -12,7 +12,7 @@ window.addEventListener('beforeinstallprompt', function(e) {
   savedInstallPrompt = e;
 });
 import {
-  doc, getDoc, setDoc, getDocs, collection, addDoc, deleteDoc, serverTimestamp, writeBatch, onSnapshot, updateDoc
+  doc, getDoc, setDoc, getDocs, collection, addDoc, deleteDoc, serverTimestamp, writeBatch, onSnapshot, updateDoc, query, where
 } from 'firebase/firestore';
 import { EQUIP_OPTIONS, ACCENT_COLORS } from './data.js';
 
@@ -85,7 +85,8 @@ export const userDataCache = {
   boxingSessions: null,   // covers freestyle timer sessions + boxing class logs
   customCombos: null,
   customSessions: null,
-  assignedSessions: null
+  assignedSessions: null,
+  sgptSessions: []
 };
 
 // ─── STORAGE ───────────────────────────────────────────────────────────────────
@@ -211,7 +212,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v11.2.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v11.3.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -276,7 +277,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v11.2.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v11.3.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -492,6 +493,22 @@ export async function loadUserData(uid) {
   } catch(err) {
     console.warn('Failed to load from Firestore, using localStorage:', err);
     // userDataCache remains null — ld() will fall back to localStorage
+  }
+  // Load SGPT sessions for eligible users
+  if (userProfile && (userProfile.sgpt === true || userProfile.role === 'coach')) {
+    try {
+      var sgptSnap = await getDocs(
+        query(collection(db, 'gym', '8RB', 'sgptSessions'), where('active', '==', true))
+      );
+      userDataCache.sgptSessions = sgptSnap.docs.map(function(d) {
+        return Object.assign({ _firestoreId: d.id }, d.data());
+      });
+    } catch(e) {
+      userDataCache.sgptSessions = [];
+      console.warn('Failed to load SGPT sessions:', e.message);
+    }
+  } else {
+    userDataCache.sgptSessions = [];
   }
 }
 
@@ -889,12 +906,20 @@ async function handleResendVerification() {
 async function handleSignOut() {
   try {
     stopVerificationPolling();
-    await fbSignOut(auth);
+    userProfile = null;
+    window.userProfile = null;
     window.currentUser = null;
-    userDataCache.sessions = null; userDataCache.boxingSessions = null;
-    userDataCache.customCombos = null; userDataCache.customSessions = null;
+    window.activeAssignedSessionId = null;
+    userDataCache.sessions = null;
+    userDataCache.boxingSessions = null;
+    userDataCache.customCombos = null;
+    userDataCache.customSessions = null;
     userDataCache.assignedSessions = null;
-    window.userProfile = null; userProfile = null;
+    userDataCache.sgptSessions = [];
+    lastProgressRead = 0;
+    if (typeof window.resetTrainState === 'function') window.resetTrainState();
+    if (typeof window.resetBoxState === 'function') window.resetBoxState();
+    await fbSignOut(auth);
     closeSettingsBtn();
     showSignInScreen();
   } catch(err) { toast('Sign out failed. Try again.', true); }

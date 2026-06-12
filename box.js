@@ -621,3 +621,13 @@ window.calcPlates = calcPlates;
 window.setVoiceMode = setVoiceMode;
 window.updateTempo = updateTempo;
 window.toggleLegend = toggleLegend;
+
+export function resetBoxState() {
+  if (fsState.interval) clearInterval(fsState.interval);
+  fsState = {running:false,phase:'idle',totalRounds:6,currentRound:0,roundDurationMins:3,restDurationIdx:2,doubleRound:false,secondsLeft:0,interval:null,sessionStart:null};
+  if (drillInterval) clearInterval(drillInterval);
+  if (drillElapsedInterval) clearInterval(drillElapsedInterval);
+  drillRunning = false; drillInterval = null; drillElapsedInterval = null;
+  drillRound = 0; drillElapsed = 0;
+}
+window.resetBoxState = resetBoxState;

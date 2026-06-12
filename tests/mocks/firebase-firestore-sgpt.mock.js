@@ -13,6 +13,16 @@ const SGPT_PROFILE = {
   accentColor: '#D63040'
 };
 
+const MOCK_SGPT_SESSIONS = [
+  { id: 'mock-sgpt-1', data: () => ({
+    name: 'SGPT Upper A',
+    exercises: [
+      { name: 'Barbell Bench Press', displayName: 'Barbell Bench Press', sets: 3, reps: 5, scheme: '3x5', rest: 90, type: 'Standard', note: '', alts: [] }
+    ],
+    active: true, audience: ['sgpt'], source: 'coach'
+  })}
+];
+
 const MOCK_DATA = {
   'users/test-uid-playwright/profile/data': SGPT_PROFILE,
   'gym/8RB/config/main': { coachNotes: '— Playwright test notes' }
@@ -36,7 +46,11 @@ export function getDoc(ref) {
   return Promise.resolve({ exists: () => false, data: () => null, id: ref._path.split('/').pop() });
 }
 
-export function getDocs() {
+export function getDocs(ref) {
+  var path = ref && ref._path;
+  if (path && path.includes('sgptSessions')) {
+    return Promise.resolve({ docs: MOCK_SGPT_SESSIONS, forEach: (fn) => MOCK_SGPT_SESSIONS.forEach(fn), empty: false, size: MOCK_SGPT_SESSIONS.length });
+  }
   return Promise.resolve({ docs: [], forEach: () => {}, empty: true, size: 0 });
 }
 

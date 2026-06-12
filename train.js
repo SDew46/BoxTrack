@@ -45,15 +45,12 @@ function sessAvail(sess){return(sess.equip||[]).every(e=>activeEquipment.has(e))
 
 // LIBRARY
 let currentCat='gu';
-var currentSgptCat='all';
 
 function sessionVisibleToUser(sess){
-  var role=(window.userProfile&&window.userProfile.role)||'member';
-  var isSgpt=!!(window.userProfile&&window.userProfile.sgpt===true);
-  if(role==='coach')return true;
-  if(!sess.active)return false;
-  if(sess.audience.includes('sgpt'))return isSgpt;
-  return sess.audience.includes('all');
+  // Standard sessions in data.js are always visible; only explicitly inactive sessions
+  // (active === false) are hidden from non-coaches.
+  if(sess.active===false){var role=(window.userProfile&&window.userProfile.role)||'member';return role==='coach';}
+  return true;
 }
 
 function showCat(cat){
@@ -63,11 +60,6 @@ function showCat(cat){
   if(cat==='custom')renderCustomLib();
 }
 
-function showSgptCat(cat){
-  currentSgptCat=cat;
-  document.querySelectorAll('.sgpt-cat-btn').forEach(function(b){b.classList.toggle('on-m',b.dataset.cat===cat);});
-  renderSgptSection();
-}
 
 function renderLibrary(){
   var role=(window.userProfile&&window.userProfile.role)||'member';
@@ -84,8 +76,8 @@ function renderLibrary(){
         return '<div class="ex-row"><div style="flex:1"><div class="ex-nm" id="pn-'+sess.id+'-'+ei+'">'+ex.name+'</div>'+(ex.note?'<div class="ex-nt">'+ex.note+'</div>':'')+'</div><div class="ex-rt"><span class="ex-sc">'+scheme+'</span>'+swapBtn+'</div></div>';
       }).join('');
       var dname=getSessName(sess.id)||sess.name;
-      var inactiveBadge=!sess.active&&role==='coach'?'<span style="font-size:9px;font-weight:700;letter-spacing:1px;background:var(--border);color:var(--dim);padding:2px 6px;border-radius:10px;margin-left:6px">INACTIVE</span>':'';
-      var opacity=!sess.active&&role==='coach'?'opacity:0.5;':'';
+      var inactiveBadge=sess.active===false&&role==='coach'?'<span style="font-size:9px;font-weight:700;letter-spacing:1px;background:var(--border);color:var(--dim);padding:2px 6px;border-radius:10px;margin-left:6px">INACTIVE</span>':'';
+      var opacity=sess.active===false&&role==='coach'?'opacity:0.5;':'';
       var finisherHtml=sess.finisher?'<div class="fin-strip"><div class="fin-lbl">Finisher</div><div class="fin-txt">'+sess.finisher+'</div></div>':'';
       return '<div class="sc '+(avail?'':'na')+'" id="sc-'+sess.id+'" style="'+opacity+'"><div class="sc-hd" onclick="toggleSC(\''+sess.id+'\')"><div><div class="sc-nm" style="color:'+meta.color+'">'+dname+inactiveBadge+'</div><div class="sc-sb">'+(sess.sub||sess.description||'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><div class="dot '+(avail?'dot-on':'dot-off')+'"></div><span id="chev-'+sess.id+'" style="color:var(--dim);font-size:12px;transition:transform 0.25s">▾</span></div></div><div class="sc-bd" id="scb-'+sess.id+'"><div class="sc-in">'+exRows+finisherHtml+'<button class="abtn '+meta.abtn+' abtn-xl" onclick="useSession(\''+sess.id+'\')" style="margin-top:16px">LET\'S WORK</button></div></div></div>';
     }).join('');
@@ -99,32 +91,56 @@ function renderSgptSection(){
   var isSgpt=!!(window.userProfile&&window.userProfile.sgpt===true);
   var area=document.getElementById('sgpt-section');
   if(!area)return;
-  if(role!=='coach'&&!isSgpt){area.style.display='none';return;}
+  if(role!=='coach'&&!isSgpt){area.style.display='none';area.innerHTML='';return;}
   area.style.display='block';
-  var sgptSessions=SESSIONS.filter(function(s){
-    if(s.cat!=='SGPT')return false;
-    if(role!=='coach'&&!s.active)return false;
-    if(currentSgptCat==='all')return true;
-    return s.category===currentSgptCat;
-  });
-  var cats=['all','upper','lower','full','conditioning','recovery'];
-  var tabsHtml=cats.map(function(c){return '<button class="cat-btn sgpt-cat-btn'+(currentSgptCat===c?' on-m':'')+'" data-cat="'+c+'" onclick="showSgptCat(\''+c+'\')">'+c.toUpperCase()+'</button>';}).join('');
-  var cardsHtml='';
-  if(!sgptSessions.length){
-    cardsHtml='<div class="sc"><div class="sc-hd" style="cursor:default"><div><div class="sc-nm" style="color:var(--muted)">Sessions coming soon</div><div class="sc-sb">Your coach is setting up your programming.</div></div></div></div>';
+  var sessions=(userDataCache.sgptSessions||[]);
+  var cardsHtml;
+  if(!sessions.length){
+    cardsHtml='<div style="font-family:\'DM Sans\',sans-serif;font-size:14px;color:var(--muted);text-align:center;padding:24px 0">Your coach is setting up your programme.</div>';
   } else {
-    cardsHtml=sgptSessions.map(function(sess){
-      var exRows=sess.exercises.map(function(ex,ei){
-        var scheme=ex.scheme||(ex.sets+'×'+ex.reps);
-        return '<div class="ex-row"><div style="flex:1"><div class="ex-nm">'+ex.name+'</div></div><div class="ex-rt"><span class="ex-sc">'+scheme+'</span></div></div>';
-      }).join('');
-      var inactiveBadge=!sess.active&&role==='coach'?'<span style="font-size:9px;font-weight:700;letter-spacing:1px;background:var(--border);color:var(--dim);padding:2px 6px;border-radius:10px;margin-left:6px">INACTIVE</span>':'';
-      var opacity=!sess.active&&role==='coach'?'opacity:0.5;':'';
-      return '<div class="sc" id="sc-'+sess.id+'" style="'+opacity+'"><div class="sc-hd" onclick="toggleSC(\''+sess.id+'\')"><div><div class="sc-nm" style="color:var(--gold)">'+sess.name+inactiveBadge+'</div><div class="sc-sb">'+(sess.description||'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);background:rgba(230,168,23,0.12);padding:2px 7px;border-radius:10px">'+sess.category.toUpperCase()+'</span><span id="chev-'+sess.id+'" style="color:var(--dim);font-size:12px;transition:transform 0.25s">▾</span></div></div><div class="sc-bd" id="scb-'+sess.id+'"><div class="sc-in">'+exRows+'<button class="abtn ab-g abtn-xl" onclick="useSession(\''+sess.id+'\')" style="margin-top:16px">LET\'S WORK</button></div></div></div>';
+    cardsHtml=sessions.map(function(sess){
+      var n=(sess.exercises||[]).length;
+      var fid=sess._firestoreId||'';
+      return '<div class="prog-card" id="prog-'+fid+'">'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--text);line-height:1.1">'+sanitiseTrainStr(sess.name)+'</div>'
+          +'<div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);margin-top:2px">'+n+(n===1?' exercise':' exercises')+'</div>'
+        +'</div>'
+        +'<button class="prog-start-btn" onclick="useSgptSession(\''+fid+'\')">START</button>'
+      +'</div>';
     }).join('');
   }
-  document.getElementById('sgpt-section').innerHTML='<div style="padding:0 16px 4px"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;letter-spacing:2px;color:var(--accent)">SGPT</div><div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);margin-bottom:10px">Your coach\'s programming</div><div class="cat-row" style="margin:0 -16px 0;padding:0 16px">'+tabsHtml+'</div></div><div class="slist" style="display:flex">'+cardsHtml+'</div>';
+  area.innerHTML='<div style="padding:16px 16px 8px"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text)">YOUR PROGRAMME</div></div>'
+    +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>';
 }
+
+function useSgptSession(firestoreId){
+  var sess=(userDataCache.sgptSessions||[]).find(function(s){return s._firestoreId===firestoreId;});
+  if(!sess)return;
+  window.activeLogSession={
+    id:firestoreId,
+    cat:'SGPT',
+    name:sess.name,
+    custom:false,
+    warmup:[],
+    exercises:(sess.exercises||[]).map(function(ex){
+      return Object.assign({},ex,{scheme:ex.scheme||(ex.sets+'×'+ex.reps),displayName:ex.displayName||ex.name,swapped:false});
+    })
+  };
+  sv('activeLogSession',window.activeLogSession);
+  restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);
+  showLogView();
+}
+window.useSgptSession=useSgptSession;
+
+export function resetTrainState() {
+  Object.keys(restTimers).forEach(function(k){clearInterval(restTimers[k].interval);});
+  restTimers={};setTypeState={};
+  window.activeLogSession=null;
+  sv('activeLogSession',null);
+  sv('logAutosave',null);
+}
+window.resetTrainState=resetTrainState;
 
 function renderAssignedSessions(){
   var area=document.getElementById('assigned-sessions-area');

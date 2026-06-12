@@ -211,11 +211,11 @@ test('SGPT member sees SGPT sessions section in TRAIN tab', async ({ page, mockF
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
-  // SGPT section should be visible
+  // YOUR PROGRAMME section should be visible
   await expect(page.locator('#sgpt-section')).toBeVisible({ timeout: 5000 });
 
-  // At least one SGPT session card should be present inside the section
-  await expect(page.locator('#sgpt-section .sc').first()).toBeVisible({ timeout: 5000 });
+  // At least one programme card should be present (loaded from Firestore mock)
+  await expect(page.locator('#sgpt-section .prog-card').first()).toBeVisible({ timeout: 5000 });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -46,8 +46,8 @@ function playBell(){try{if(!bellAudioObj)bellAudioObj=new Audio(FS_BELL_SRC);bel
 function playFsWarning(){playCoachAudio('ten-seconds');}
 
 // ─── ELEVENLABS COACH AUDIO ───────────────────────────────────────────────────
-var PUNCH_NUM_KEYS={1:'one',2:'two',3:'three',4:'four',5:'five',6:'six','b1':'body-jab','b2':null,'b3':null,'slip-l':'slip','slip-r':'slip','roll':'roll-left','roll-r':'roll-right','step':'step-out'};
-var PUNCH_NAME_KEYS={1:'jab',2:'cross',3:'lead-hook',4:'rear-hook',5:'lead-upper',6:'rear-upper','b1':'body-jab','b2':null,'b3':null,'slip-l':'slip','slip-r':'slip','roll':'roll-left','roll-r':'roll-right','step':'step-out'};
+var PUNCH_NUM_KEYS={1:'one',2:'two',3:'three',4:'four',5:'five',6:'six','b1':'body-jab','b2':'body-cross','b3':'body-hook','slip-l':'slip','slip-r':'slip','roll':'roll-left','roll-r':'roll-right','step':'step-out'};
+var PUNCH_NAME_KEYS={1:'jab',2:'cross',3:'lead-hook',4:'rear-hook',5:'lead-upper',6:'rear-upper','b1':'body-jab','b2':'body-cross','b3':'body-hook','slip-l':'slip','slip-r':'slip','roll':'roll-left','roll-r':'roll-right','step':'step-out'};
 var QUIP_KEYS=['good','sharp','nice-combo','stay-on-it','rhythm','hands-up','stay-sharp'];
 
 function playCoachAudio(key){
@@ -205,6 +205,7 @@ function showFsDoneOv(){
   var elapsed=fsState.sessionStart?Math.round((Date.now()-fsState.sessionStart)/60000):0;
   var sub=document.getElementById('fsd-sub');
   if(sub)sub.textContent=fsState.currentRound+' rounds · '+elapsed+' min';
+  playCoachAudio('session-complete');
 }
 async function endFreestyleSession(){
   clearInterval(fsState.interval);

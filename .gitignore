@@ -5,3 +5,5 @@ firestore-debug.log
 test-results/
 playwright-report/
 *.log
+scripts/serviceAccountKey.json
+migration-log.json

@@ -6,7 +6,7 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 11.3.0. SGPT session builder added to admin; sessions load from Firestore; auth cache clears on sign out.
+Version 11.4.0. Diagnostic instrumentation added for iOS dead-button bug on SGPT/assigned sessions: silent returns replaced with explicit toasts, global error listener added in app.js.
 
 **File structure — all ES modules, all acorn clean:**
 - `styles.css` — all CSS, includes Step 2 auth + offline indicator styles

@@ -115,21 +115,38 @@ function renderSgptSection(){
 }
 
 function useSgptSession(firestoreId){
-  var sess=(userDataCache.sgptSessions||[]).find(function(s){return s._firestoreId===firestoreId;});
-  if(!sess)return;
-  window.activeLogSession={
-    id:firestoreId,
-    cat:'SGPT',
-    name:sess.name,
-    custom:false,
-    warmup:[],
-    exercises:(sess.exercises||[]).map(function(ex){
-      return Object.assign({},ex,{scheme:ex.scheme||(ex.sets+'×'+ex.reps),displayName:ex.displayName||ex.name,swapped:false});
-    })
-  };
-  sv('activeLogSession',window.activeLogSession);
-  restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);
-  showLogView();
+  try {
+    if(!firestoreId){
+      console.error('[8RB SGPT] useSgptSession called with empty firestoreId');
+      toast('Session ID missing — please refresh',true);
+      return;
+    }
+    var all=userDataCache.sgptSessions||[];
+    console.log('[8RB SGPT] useSgptSession id='+firestoreId+' cache='+all.length);
+    var sess=all.find(function(s){return s._firestoreId===firestoreId;});
+    if(!sess){
+      var ids=all.map(function(s){return s._firestoreId||'NONE';}).join(',');
+      console.error('[8RB SGPT] Session not found. id='+firestoreId+' available=['+ids+']');
+      toast('Session not found — please refresh',true);
+      return;
+    }
+    window.activeLogSession={
+      id:firestoreId,
+      cat:'SGPT',
+      name:sess.name,
+      custom:false,
+      warmup:[],
+      exercises:(sess.exercises||[]).map(function(ex){
+        return Object.assign({},ex,{scheme:ex.scheme||(ex.sets+'×'+ex.reps),displayName:ex.displayName||ex.name,swapped:false});
+      })
+    };
+    sv('activeLogSession',window.activeLogSession);
+    restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);
+    showLogView();
+  } catch(err) {
+    console.error('[8RB SGPT] useSgptSession failed:',err);
+    toast('Failed to start: '+(err.message||'unknown error'),true);
+  }
 }
 window.useSgptSession=useSgptSession;
 
@@ -179,27 +196,49 @@ function sanitiseTrainStr(str){if(typeof str!=='string')return '';return str.rep
 function useSession(sessId){const sess=SESSIONS.find(s=>s.id===sessId);if(!sess)return;window.activeLogSession={id:sess.id,cat:sess.cat,name:sess.name||getSessName(sess.id),custom:false,warmup:sess.warmup||[],exercises:sess.exercises.map((ex,i)=>({...ex,scheme:ex.scheme||(ex.sets+'×'+ex.reps),displayName:(sess._swaps&&sess._swaps[i])?sess._swaps[i]:(ex.displayName||ex.name),swapped:!!(sess._swaps&&sess._swaps[i])}))};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();}
 
 function startAssignedSession(firestoreId){
-  var s=(userDataCache.assignedSessions||[]).find(function(a){return a._firestoreId===firestoreId;});
-  if(!s||!s.sessionData)return;
-  window.activeAssignedSessionId=firestoreId;
-  var sd=s.sessionData;
-  window.activeLogSession={
-    id:sd.id||'assigned-'+firestoreId,
-    cat:sd.cat||'SGPT',
-    name:s.sessionName||sd.name||'Assigned Session',
-    custom:false,
-    warmup:sd.warmup||[],
-    exercises:(sd.exercises||[]).map(function(ex){
-      return Object.assign({},ex,{
-        scheme:ex.scheme||(ex.sets+'×'+ex.reps),
-        displayName:ex.displayName||ex.name,
-        swapped:false
-      });
-    })
-  };
-  sv('activeLogSession',window.activeLogSession);
-  restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);
-  showLogView();
+  try {
+    if(!firestoreId){
+      console.error('[8RB ASSIGN] startAssignedSession called with empty firestoreId');
+      toast('Assignment ID missing — please refresh',true);
+      return;
+    }
+    var all=userDataCache.assignedSessions||[];
+    console.log('[8RB ASSIGN] startAssignedSession id='+firestoreId+' cache='+all.length);
+    var s=all.find(function(a){return a._firestoreId===firestoreId;});
+    if(!s){
+      var ids=all.map(function(a){return a._firestoreId||'NONE';}).join(',');
+      console.error('[8RB ASSIGN] Assignment not found. id='+firestoreId+' available=['+ids+']');
+      toast('Assigned session not found — please refresh',true);
+      return;
+    }
+    if(!s.sessionData){
+      console.error('[8RB ASSIGN] sessionData missing. id='+firestoreId+' keys=['+Object.keys(s).join(',')+']');
+      toast('Session data missing — contact your coach',true);
+      return;
+    }
+    window.activeAssignedSessionId=firestoreId;
+    var sd=s.sessionData;
+    window.activeLogSession={
+      id:sd.id||'assigned-'+firestoreId,
+      cat:sd.cat||'SGPT',
+      name:s.sessionName||sd.name||'Assigned Session',
+      custom:false,
+      warmup:sd.warmup||[],
+      exercises:(sd.exercises||[]).map(function(ex){
+        return Object.assign({},ex,{
+          scheme:ex.scheme||(ex.sets+'×'+ex.reps),
+          displayName:ex.displayName||ex.name,
+          swapped:false
+        });
+      })
+    };
+    sv('activeLogSession',window.activeLogSession);
+    restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);
+    showLogView();
+  } catch(err) {
+    console.error('[8RB ASSIGN] startAssignedSession failed:',err);
+    toast('Failed to start: '+(err.message||'unknown error'),true);
+  }
 }
 function useCustomSession(idx){const customs=ld('customSessions',[]),sess=customs[idx];if(!sess)return;window.activeLogSession={id:'custom-'+idx,cat:sess.cat,name:sess.name,custom:true,warmup:[],exercises:(sess.exercises||[]).map(ex=>({...ex,displayName:ex.name,swapped:false}))};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();toast('Session loaded');}
 function showLogView(){document.getElementById('train-lib').style.display='none';document.getElementById('train-log').style.display='block';const meta=CAT_META[activeLogSession.cat]||CAT_META.CUSTOM;document.getElementById('log-eye').textContent=meta.label;document.getElementById('log-eye').style.color=meta.color;document.getElementById('log-title').textContent=activeLogSession.name;buildLogForm();renderWarmup();restoreAutosave();renderHistory();}

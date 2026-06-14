@@ -16,6 +16,14 @@ import {
 } from 'firebase/firestore';
 import { EQUIP_OPTIONS, ACCENT_COLORS } from './data.js';
 
+// ─── GLOBAL ERROR DIAGNOSTICS ────────────────────────────────────────────────
+window.addEventListener('error', function(e) {
+  console.error('[8RB GLOBAL ERROR]', e.message, 'at', (e.filename||'?')+':'+(e.lineno||'?')+':'+(e.colno||'?'), e.error);
+});
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('[8RB UNHANDLED REJECTION]', e.reason);
+});
+
 // ─── PWA DETECTION ───────────────────────────────────────────────────────────
 function isInstalledPWA() {
   return window.matchMedia('(display-mode: standalone)').matches ||
@@ -212,7 +220,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v11.3.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v11.4.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -277,7 +285,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v11.3.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v11.4.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────

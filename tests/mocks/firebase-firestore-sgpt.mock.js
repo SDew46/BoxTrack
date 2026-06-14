@@ -6,6 +6,7 @@ const SGPT_PROFILE = {
   displayName: 'SGPT Tester',
   role: 'member',
   sgpt: true,
+  pt121: false,
   gym: '8RB',
   joinDate: '2024-01-01',
   onboarded: true,
@@ -48,7 +49,8 @@ export function getDoc(ref) {
 
 export function getDocs(ref) {
   var path = ref && ref._path;
-  if (path && path.includes('sgptSessions')) {
+  // Unified sessions collection (visibility: 'sgpt' queries come through here)
+  if (path && path === 'gym/8RB/sessions') {
     return Promise.resolve({ docs: MOCK_SGPT_SESSIONS, forEach: (fn) => MOCK_SGPT_SESSIONS.forEach(fn), empty: false, size: MOCK_SGPT_SESSIONS.length });
   }
   return Promise.resolve({ docs: [], forEach: () => {}, empty: true, size: 0 });

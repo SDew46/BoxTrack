@@ -83,34 +83,97 @@ function renderLibrary(){
     }).join('');
   });
   renderSgptSection();
+  renderPt121Section();
   renderAssignedSessions();
 }
 
+var LOCK_SVG='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+var CHEV_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+
+function buildLockedSection(label,tier,heading,body,url){
+  var safeUrl=url?url.replace(/"/g,'&quot;'):'https://8roundsboxing.com';
+  return '<div class="tier-section-head tier-section-locked"><span>'+label+'</span>'+LOCK_SVG+'</div>'
+    +'<div style="padding:0 16px 16px">'
+      +'<div class="tier-locked-card" id="locked-card-'+tier+'" onclick="toggleTierTeaser(\''+tier+'\')"><span>Tap to learn more</span>'+CHEV_SVG+'</div>'
+      +'<div class="tier-teaser-panel" id="teaser-'+tier+'" style="display:none">'
+        +'<div class="tier-teaser-heading">'+heading+'</div>'
+        +'<div class="tier-teaser-body">'+body+'</div>'
+        +'<div class="tier-teaser-link">Speak to Darren at the gym or <a href="'+safeUrl+'" target="_blank" rel="noopener noreferrer">visit our website &#8594;</a></div>'
+      +'</div>'
+    +'</div>';
+}
+
+function toggleTierTeaser(tier){
+  var panel=document.getElementById('teaser-'+tier);
+  var card=document.getElementById('locked-card-'+tier);
+  if(!panel)return;
+  var isOpen=panel.style.display==='block';
+  ['sgpt','pt121'].forEach(function(t){
+    var p=document.getElementById('teaser-'+t);
+    var c=document.getElementById('locked-card-'+t);
+    if(p)p.style.display='none';
+    if(c)c.classList.remove('open');
+  });
+  if(!isOpen){
+    panel.style.display='block';
+    if(card)card.classList.add('open');
+  }
+}
+
+function buildProgCards(sessions,startFn){
+  if(!sessions.length){
+    return '<div class="tier-empty">Your coach is setting up your programme.</div>';
+  }
+  return sessions.map(function(sess){
+    var n=(sess.exercises||[]).length;
+    var fid=sess._firestoreId||'';
+    return '<div class="prog-card" id="prog-'+fid+'">'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--text);line-height:1.1">'+sanitiseTrainStr(sess.name)+'</div>'
+        +'<div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);margin-top:2px">'+n+(n===1?' exercise':' exercises')+'</div>'
+      +'</div>'
+      +'<button class="prog-start-btn" onclick="'+startFn+'(\''+fid+'\')">START</button>'
+    +'</div>';
+  }).join('');
+}
+
 function renderSgptSection(){
-  var role=(window.userProfile&&window.userProfile.role)||'member';
-  var isSgpt=!!(window.userProfile&&window.userProfile.sgpt===true);
   var area=document.getElementById('sgpt-section');
   if(!area)return;
-  if(role!=='coach'&&!isSgpt){area.style.display='none';area.innerHTML='';return;}
-  area.style.display='block';
-  var sessions=(userDataCache.sgptSessions||[]);
-  var cardsHtml;
-  if(!sessions.length){
-    cardsHtml='<div style="font-family:\'DM Sans\',sans-serif;font-size:14px;color:var(--muted);text-align:center;padding:24px 0">Your coach is setting up your programme.</div>';
-  } else {
-    cardsHtml=sessions.map(function(sess){
-      var n=(sess.exercises||[]).length;
-      var fid=sess._firestoreId||'';
-      return '<div class="prog-card" id="prog-'+fid+'">'
-        +'<div style="flex:1;min-width:0">'
-          +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--text);line-height:1.1">'+sanitiseTrainStr(sess.name)+'</div>'
-          +'<div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);margin-top:2px">'+n+(n===1?' exercise':' exercises')+'</div>'
-        +'</div>'
-        +'<button class="prog-start-btn" onclick="useSgptSession(\''+fid+'\')">START</button>'
-      +'</div>';
-    }).join('');
+  var role=(window.userProfile&&window.userProfile.role)||'member';
+  var isSgpt=!!(window.userProfile&&window.userProfile.sgpt===true);
+  var isCoach=role==='coach';
+  if(!isCoach&&!isSgpt){
+    var panels=userDataCache.lockedPanels;
+    var sp=(panels&&panels.sgpt)?panels.sgpt:{};
+    var heading=sanitiseTrainStr(sp.heading||'Small Group Personal Training');
+    var body=sanitiseTrainStr(sp.body||'Small Group PT is coached strength and conditioning in a small group setting — programming written for you, the same group week to week.');
+    var url=sp.url||'https://8roundsboxing.com';
+    area.innerHTML=buildLockedSection('SGPT','sgpt',heading,body,url);
+    return;
   }
-  area.innerHTML='<div style="padding:16px 16px 8px"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text)">YOUR PROGRAMME</div></div>'
+  var cardsHtml=buildProgCards(userDataCache.sgptSessions||[],'useSgptSession');
+  area.innerHTML='<div class="tier-section-head"><span>YOUR PROGRAMME</span></div>'
+    +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>';
+}
+
+function renderPt121Section(){
+  var area=document.getElementById('pt121-section');
+  if(!area)return;
+  var role=(window.userProfile&&window.userProfile.role)||'member';
+  var isPt121=!!(window.userProfile&&window.userProfile.pt121===true);
+  var isCoach=role==='coach';
+  if(!isCoach&&!isPt121){
+    var panels=userDataCache.lockedPanels;
+    var pp=(panels&&panels.pt121)?panels.pt121:{};
+    var heading=sanitiseTrainStr(pp.heading||'1-2-1 Personal Training');
+    var body=sanitiseTrainStr(pp.body||'1-2-1 Personal Training is one-on-one coaching with Darren — your own programme, your own pace, fully tailored.');
+    var url=pp.url||'https://8roundsboxing.com';
+    area.innerHTML=buildLockedSection('1-2-1 PT','pt121',heading,body,url);
+    return;
+  }
+  var cardsHtml=buildProgCards(userDataCache.pt121Sessions||[],'usePt121Session');
+  area.innerHTML='<div class="tier-section-head"><span>YOUR 1-2-1 PROGRAMME</span></div>'
     +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>';
 }
 
@@ -149,6 +212,42 @@ function useSgptSession(firestoreId){
   }
 }
 window.useSgptSession=useSgptSession;
+
+function usePt121Session(firestoreId){
+  try {
+    if(!firestoreId){
+      console.error('[8RB PT121] usePt121Session called with empty firestoreId');
+      toast('Session ID missing — please refresh',true);
+      return;
+    }
+    var all=userDataCache.pt121Sessions||[];
+    console.log('[8RB PT121] usePt121Session id='+firestoreId+' cache='+all.length);
+    var sess=all.find(function(s){return s._firestoreId===firestoreId;});
+    if(!sess){
+      var ids=all.map(function(s){return s._firestoreId||'NONE';}).join(',');
+      console.error('[8RB PT121] Session not found. id='+firestoreId+' available=['+ids+']');
+      toast('Session not found — please refresh',true);
+      return;
+    }
+    window.activeLogSession={
+      id:firestoreId,
+      cat:'SGPT',
+      name:sess.name,
+      custom:false,
+      warmup:[],
+      exercises:(sess.exercises||[]).map(function(ex){
+        return Object.assign({},ex,{scheme:ex.scheme||(ex.sets+'×'+ex.reps),displayName:ex.displayName||ex.name,swapped:false});
+      })
+    };
+    sv('activeLogSession',window.activeLogSession);
+    restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);
+    showLogView();
+  } catch(err){
+    console.error('[8RB PT121] usePt121Session failed:',err);
+    toast('Failed to start: '+(err.message||'unknown error'),true);
+  }
+}
+window.usePt121Session=usePt121Session;
 
 export function resetTrainState() {
   Object.keys(restTimers).forEach(function(k){clearInterval(restTimers[k].interval);});
@@ -951,3 +1050,5 @@ window.showSgptCat = showSgptCat;
 window.startAssignedSession = startAssignedSession;
 window.renderAssignedSessions = renderAssignedSessions;
 window.renderSgptSection = renderSgptSection;
+window.renderPt121Section = renderPt121Section;
+window.toggleTierTeaser = toggleTierTeaser;

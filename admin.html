@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0a0a0a">
 <title>8RB Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -17,151 +17,219 @@
 }
 </script>
 <style>
-body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;padding:0;min-height:100vh;}
-.admin-loading{display:flex;align-items:center;justify-content:center;height:100vh;font-family:'DM Sans',sans-serif;color:var(--dim);}
-#admin-ui{display:none;max-width:600px;margin:0 auto;padding:24px 20px 60px;}
-.admin-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--border);}
-.admin-ttl{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:3px;color:#fff;}
-.admin-user{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);}
-.admin-signout{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;}
-.admin-section{margin-bottom:40px;}
-.admin-section-ttl{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:2px;color:#fff;margin-bottom:4px;}
-.admin-section-hr{border:none;border-top:1px solid var(--border);margin:0 0 16px;}
-.admin-textarea{width:100%;min-height:200px;background:#1e1e1e;border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;padding:14px;box-sizing:border-box;resize:vertical;outline:none;}
-.admin-textarea:focus{border-color:var(--accent);}
-.admin-charcount{font-size:12px;color:var(--dim);text-align:right;margin-top:6px;}
-.admin-meta{font-size:12px;color:var(--dim);margin-top:8px;margin-bottom:16px;}
-.admin-save{display:block;width:100%;height:56px;background:var(--accent);border:none;border-radius:var(--rs);font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:#fff;cursor:pointer;}
-.admin-save:disabled{opacity:0.5;cursor:default;}
-.admin-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px;opacity:0;transition:opacity 0.2s;pointer-events:none;white-space:nowrap;}
-.admin-toast.show{opacity:1;}
-.admin-toast.err{background:var(--red);color:#fff;}
-/* Member cards */
-.member-card{background:#141414;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
-.member-info{flex:1;min-width:0;}
-.member-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:var(--text);}
-.member-email{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.member-joined{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--dim);}
-.role-badge{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border-radius:20px;white-space:nowrap;}
-.role-member{background:var(--border);color:var(--muted);}
-.role-sgpt{background:rgba(230,168,23,0.2);color:var(--gold);}
-.role-coach{background:var(--accent);color:#fff;}
-.role-btn{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:7px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;min-height:36px;}
-.role-btn-assign{background:none;border:1px solid var(--gold);color:var(--gold);}
-.role-btn-remove{background:none;border:1px solid var(--border);color:var(--dim);}
-/* Form elements */
-.admin-form-lbl{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:6px;}
-.admin-select{width:100%;background:#1e1e1e;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:12px 14px;outline:none;margin-bottom:14px;-webkit-appearance:none;}
-.admin-date-inp{width:100%;background:#1e1e1e;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:12px 14px;outline:none;margin-bottom:14px;box-sizing:border-box;color-scheme:dark;}
-.send-toggle{display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
-.send-opt{flex:1;padding:11px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;text-align:center;background:none;border:none;color:var(--dim);cursor:pointer;}
-.send-opt.on{background:var(--accent);color:#fff;}
-.member-check{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2);}
-.member-check:last-child{border-bottom:none;}
-.member-check input{width:20px;height:20px;accent-color:var(--accent);cursor:pointer;}
-/* History table */
-.hist-table{width:100%;border-collapse:collapse;margin-top:12px;}
-.hist-table th{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);}
-.hist-table td{font-size:13px;color:var(--muted);padding:8px 8px;border-bottom:1px solid var(--border2);vertical-align:top;}
-.hist-status-done{color:var(--green);font-weight:600;}
-.hist-status-pending{color:var(--dim);}
-.hist-status-expired{color:var(--red);}
-/* Session builder */
-.sb-name-inp{width:100%;height:56px;background:#1e1e1e;border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:0 16px;box-sizing:border-box;outline:none;margin-bottom:16px;}
-.sb-name-inp:focus{border-color:var(--accent);}
-.sb-exercise-row{background:#141414;border:1px solid var(--border);border-radius:var(--rs);padding:14px;margin-bottom:8px;}
-.sb-ex-name{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
-.sb-ex-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
-.sb-field{display:flex;flex-direction:column;}
-.sb-ex-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:4px;}
-.sb-num-inp{width:64px;height:40px;background:#252525;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;text-align:center;padding:0 8px;outline:none;box-sizing:border-box;}
-.sb-sel{height:40px;background:#252525;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:0 8px;outline:none;-webkit-appearance:none;cursor:pointer;}
-.sb-remove-btn{height:40px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:18px;cursor:pointer;padding:0 12px;margin-left:auto;}
-.sb-add-btn{width:100%;height:48px;background:none;border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:16px;}
-.sb-search-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9000;display:none;flex-direction:column;padding:24px 16px;box-sizing:border-box;}
-.sb-search-overlay.show{display:flex;}
-.sb-search-inp{width:100%;height:52px;background:#1e1e1e;border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:0 16px;box-sizing:border-box;outline:none;margin-bottom:12px;flex-shrink:0;}
-.sb-search-inp:focus{border-color:var(--accent);}
-.sb-search-results{flex:1;overflow-y:auto;}
-.sb-search-item{padding:14px 4px;border-bottom:1px solid var(--border2);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);cursor:pointer;}
-.sb-search-cancel{width:100%;height:52px;background:none;border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-top:12px;flex-shrink:0;}
-.sb-sess-card{background:#141414;border:1px solid var(--border);border-radius:var(--rs);padding:16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
-.sb-sess-info{flex:1;min-width:0;}
-.sb-sess-name{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--text);}
-.sb-sess-count{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);}
-.sb-sess-btns{display:flex;gap:8px;flex-shrink:0;}
-.sb-assign-btn{background:none;border:1px solid var(--accent);color:var(--accent);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;}
-.sb-archive-btn{background:none;border:1px solid var(--border);color:var(--dim);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;}
-.sb-archive-toggle{background:none;border:none;font-family:'DM Sans',sans-serif;font-size:13px;color:rgba(255,255,255,0.3);cursor:pointer;padding:6px 0;text-decoration:underline;display:block;margin:0 auto;}
+/* ── Reset ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: #0a0a0a; color: #f0f0f0; margin: 0; padding: 0; overflow: hidden; height: 100vh; }
+
+/* ── Gate / loading ─────────────────────────────────────────────────────────── */
+#admin-gate { display: flex; align-items: center; justify-content: center; height: 100vh; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--dim, #555); }
+
+/* ── Shell ──────────────────────────────────────────────────────────────────── */
+#admin-shell { flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+#admin-header { height: 64px; background: #111; border-bottom: 1px solid var(--border, #222); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; z-index: 100; }
+.header-logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 3px; color: #fff; }
+.header-right { display: flex; align-items: center; gap: 14px; }
+.header-coach { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted, #888); }
+.header-signout { background: none; border: 1px solid var(--border, #222); border-radius: 4px; color: var(--muted, #888); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 6px 14px; cursor: pointer; }
+.header-signout:hover { border-color: var(--accent, #E63946); color: var(--accent, #E63946); }
+
+/* ── Body layout ────────────────────────────────────────────────────────────── */
+#admin-body { display: flex; height: calc(100vh - 64px); overflow: hidden; }
+
+/* ── Sidebar ────────────────────────────────────────────────────────────────── */
+#admin-sidebar { width: 220px; flex-shrink: 0; background: #0d0d0d; border-right: 1px solid var(--border, #222); padding: 20px 0; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+.nav-item { display: flex; align-items: center; padding: 12px 24px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: var(--muted, #888); background: none; border: none; cursor: pointer; text-align: left; width: 100%; transition: background 0.12s, color 0.12s; letter-spacing: 0.3px; }
+.nav-item:hover { background: rgba(255,255,255,0.04); color: #f0f0f0; }
+.nav-item.active { background: rgba(230,57,70,0.1); color: var(--accent, #E63946); font-weight: 600; border-left: 3px solid var(--accent, #E63946); padding-left: 21px; }
+
+/* ── Main content ───────────────────────────────────────────────────────────── */
+#admin-main { flex: 1; overflow-y: auto; padding: 32px; min-width: 0; }
+.admin-section-panel { max-width: 1200px; }
+.section-hd { margin-bottom: 24px; }
+.section-ttl { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 2px; color: #fff; line-height: 1; }
+.section-sub { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--dim, #555); margin-top: 4px; }
+
+/* ── Dashboard ──────────────────────────────────────────────────────────────── */
+.dash-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+.stat-card { background: #141414; border: 1px solid var(--border, #222); border-radius: 10px; padding: 20px; }
+.stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 52px; color: #fff; line-height: 1; }
+.stat-val.gold { color: var(--gold, #E6A817); }
+.stat-lbl { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim, #555); margin-top: 6px; }
+.dash-section { margin-bottom: 32px; }
+.quick-actions { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.quick-btn { background: none; border: 1px solid var(--border, #222); border-radius: 8px; color: var(--muted, #888); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; padding: 12px 20px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+.quick-btn:hover { border-color: var(--accent, #E63946); color: var(--accent, #E63946); }
+.dash-breakdown { display: flex; gap: 16px; margin-top: 14px; }
+.breakdown-card { flex: 1; background: #141414; border: 1px solid var(--border, #222); border-radius: 10px; padding: 20px; }
+.breakdown-val { font-family: 'Bebas Neue', sans-serif; font-size: 48px; line-height: 1; }
+.breakdown-lbl { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim, #555); margin-top: 4px; }
+
+/* ── Members table ──────────────────────────────────────────────────────────── */
+.members-toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.search-inp { flex: 1; min-width: 200px; height: 40px; background: #1e1e1e; border: 1px solid var(--border, #222); border-radius: 6px; color: #f0f0f0; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 0 12px; outline: none; }
+.search-inp:focus { border-color: var(--accent, #E63946); }
+.filter-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-btn { background: none; border: 1px solid var(--border, #222); border-radius: 20px; color: var(--dim, #555); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; padding: 6px 14px; cursor: pointer; transition: all 0.12s; }
+.filter-btn.active { background: var(--accent, #E63946); border-color: var(--accent, #E63946); color: #fff; }
+.table-wrap { overflow-x: auto; }
+.members-table { width: 100%; border-collapse: collapse; }
+.members-table th { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim, #555); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border, #222); }
+.members-table td { padding: 12px 12px; border-bottom: 1px solid var(--border2, #1a1a1a); vertical-align: middle; }
+.mem-name { font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: #f0f0f0; }
+.mem-email { font-size: 12px; color: var(--dim, #555); margin-top: 2px; }
+.mem-joined { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted, #888); }
+.role-badge { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; white-space: nowrap; display: inline-block; }
+.role-member { background: var(--border, #222); color: var(--muted, #888); }
+.role-sgpt { background: rgba(230,168,23,0.2); color: var(--gold, #E6A817); }
+.role-pt121 { background: rgba(69,123,157,0.2); color: var(--blue, #457B9D); }
+.role-coach { background: var(--accent, #E63946); color: #fff; }
+.tbl-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.tbl-btn { font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.tbl-btn-assign { background: none; border: 1px solid var(--gold, #E6A817); color: var(--gold, #E6A817); }
+.tbl-btn-assign2 { background: none; border: 1px solid var(--blue, #457B9D); color: var(--blue, #457B9D); }
+.tbl-btn-remove { background: none; border: 1px solid var(--border, #222); color: var(--dim, #555); }
+.tbl-empty { text-align: center; color: var(--dim, #555); padding: 24px; font-size: 13px; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 16px; }
+.pagination button { background: none; border: 1px solid var(--border, #222); border-radius: 6px; color: var(--muted, #888); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 16px; cursor: pointer; }
+.pagination button:disabled { opacity: 0.35; cursor: default; }
+.pagination span { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--dim, #555); }
+
+/* ── Sessions split view ────────────────────────────────────────────────────── */
+.sessions-split { display: flex; gap: 0; min-height: calc(100vh - 64px - 120px); }
+.lib-panel { width: 360px; flex-shrink: 0; border-right: 1px solid var(--border, #222); overflow-y: auto; padding-right: 24px; }
+.builder-panel { flex: 1; min-width: 0; padding-left: 24px; overflow-y: auto; }
+.lib-tabs { display: flex; gap: 0; border: 1px solid var(--border, #222); border-radius: 6px; overflow: hidden; margin-bottom: 16px; }
+.lib-tab { flex: 1; padding: 10px 6px; background: none; border: none; color: var(--dim, #555); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.12s; }
+.lib-tab.active { background: var(--accent, #E63946); color: #fff; }
+.lib-card { background: #141414; border: 1px solid var(--border, #222); border-radius: 8px; padding: 14px; margin-bottom: 8px; }
+.lib-card-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.lib-card-name { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: #f0f0f0; }
+.lib-card-meta { font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--dim, #555); margin-bottom: 10px; }
+.lib-card-btns { display: flex; gap: 6px; }
+.lib-btn { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all 0.12s; }
+.lib-btn-edit { background: none; border: 1px solid var(--border, #222); color: var(--muted, #888); }
+.lib-btn-edit:hover { border-color: var(--accent, #E63946); color: var(--accent, #E63946); }
+.lib-btn-dup { background: none; border: 1px solid var(--border, #222); color: var(--muted, #888); }
+.lib-btn-arc { background: none; border: 1px solid var(--border, #222); color: var(--dim, #555); }
+.lib-btn-restore { background: none; border: 1px solid var(--green, #2ECC71); color: var(--green, #2ECC71); }
+.lib-empty { color: var(--dim, #555); font-size: 13px; padding: 16px 0; }
+.vis-pill { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; white-space: nowrap; display: inline-block; }
+.vis-sgpt { background: rgba(230,168,23,0.2); color: var(--gold, #E6A817); }
+.vis-pt121 { background: rgba(69,123,157,0.2); color: var(--blue, #457B9D); }
+
+/* ── Session builder ────────────────────────────────────────────────────────── */
+.builder-hd { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--dim, #555); margin-bottom: 16px; text-transform: uppercase; }
+.builder-body { max-width: 560px; }
+.vis-toggle { display: flex; gap: 0; border: 1px solid var(--border, #222); border-radius: 6px; overflow: hidden; }
+.vis-btn { flex: 1; padding: 10px; background: none; border: none; color: var(--dim, #555); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.12s; }
+.vis-btn.active { background: var(--accent, #E63946); color: #fff; }
+.sb-lbl { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim, #555); }
+.sb-name-inp { width: 100%; height: 52px; background: #1e1e1e; border: 1px solid var(--border, #222); border-radius: 6px; color: #f0f0f0; font-family: 'DM Sans', sans-serif; font-size: 16px; padding: 0 16px; outline: none; margin-top: 6px; margin-bottom: 16px; }
+.sb-name-inp:focus { border-color: var(--accent, #E63946); }
+.sb-sel { background: #1e1e1e; border: 1px solid var(--border, #222); border-radius: 6px; color: #f0f0f0; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 8px 12px; outline: none; cursor: pointer; -webkit-appearance: none; }
+.sb-ex-row { background: #141414; border: 1px solid var(--border, #222); border-radius: 8px; padding: 14px; margin-bottom: 8px; }
+.sb-ex-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.sb-ex-name-lbl { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: #f0f0f0; }
+.sb-remove-btn { background: none; border: 1px solid var(--border, #222); border-radius: 6px; color: var(--muted, #888); font-size: 18px; cursor: pointer; padding: 2px 10px; line-height: 1.4; }
+.ex-type-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.ex-type-pill { background: none; border: 1px solid var(--border, #222); border-radius: 20px; color: var(--dim, #555); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; padding: 4px 12px; cursor: pointer; transition: all 0.12s; }
+.ex-type-pill.active { background: var(--accent, #E63946); border-color: var(--accent, #E63946); color: #fff; }
+.sb-ex-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+.sb-field { display: flex; flex-direction: column; }
+.sb-num-inp { width: 72px; height: 40px; background: #252525; border: 1px solid var(--border, #222); border-radius: 6px; color: #f0f0f0; font-family: 'DM Sans', sans-serif; font-size: 15px; text-align: center; padding: 0 8px; outline: none; }
+.sb-note-inp { width: 100%; height: 36px; background: #252525; border: 1px solid var(--border, #222); border-radius: 6px; color: var(--muted, #888); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 0 10px; outline: none; }
+.sb-no-ex { color: var(--dim, #555); font-size: 13px; padding: 12px 0; }
+.sb-add-btn { width: 100%; height: 48px; background: none; border: 1px solid var(--border, #222); border-radius: 8px; color: var(--muted, #888); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; margin-bottom: 16px; transition: all 0.12s; }
+.sb-add-btn:hover { border-color: var(--accent, #E63946); color: var(--accent, #E63946); }
+.sb-cancel-btn { width: 100%; height: 48px; background: none; border: 1px solid var(--border, #222); border-radius: 8px; color: var(--muted, #888); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+.admin-save-btn { display: block; width: 100%; height: 52px; background: var(--accent, #E63946); border: none; border-radius: 8px; font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 3px; color: #fff; cursor: pointer; transition: opacity 0.15s; }
+.admin-save-btn:disabled { opacity: 0.45; cursor: default; }
+.pt121-checklist { background: #1a1a1a; border: 1px solid var(--border, #222); border-radius: 6px; padding: 8px 12px; max-height: 200px; overflow-y: auto; margin-top: 6px; margin-bottom: 16px; }
+.member-check-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted, #888); cursor: pointer; border-bottom: 1px solid var(--border2, #1a1a1a); }
+.member-check-row:last-child { border-bottom: none; }
+.member-check-row input { width: 16px; height: 16px; accent-color: var(--accent, #E63946); cursor: pointer; flex-shrink: 0; }
+.sgpt-tag { color: var(--gold, #E6A817); font-size: 11px; }
+.pt121-tag { color: var(--blue, #457B9D); font-size: 11px; }
+
+/* ── Assignments ────────────────────────────────────────────────────────────── */
+.assignments-split { display: flex; gap: 0; }
+.assign-form-panel { width: 360px; flex-shrink: 0; padding-right: 24px; border-right: 1px solid var(--border, #222); }
+.assign-hist-panel { flex: 1; min-width: 0; padding-left: 24px; }
+.assign-hist-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.refresh-btn { background: none; border: none; color: var(--muted, #888); font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; }
+.admin-select { width: 100%; background: #1e1e1e; border: 1px solid var(--border, #222); border-radius: 6px; color: #f0f0f0; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 11px 14px; outline: none; margin-top: 6px; margin-bottom: 16px; -webkit-appearance: none; cursor: pointer; }
+.admin-date-inp { width: 100%; background: #1e1e1e; border: 1px solid var(--border, #222); border-radius: 6px; color: #f0f0f0; font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 11px 14px; outline: none; margin-top: 6px; margin-bottom: 16px; color-scheme: dark; }
+.send-toggle { display: flex; gap: 0; border: 1px solid var(--border, #222); border-radius: 6px; overflow: hidden; margin-top: 6px; margin-bottom: 14px; }
+.send-opt { flex: 1; padding: 10px 6px; background: none; border: none; color: var(--dim, #555); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.12s; }
+.send-opt.on { background: var(--accent, #E63946); color: #fff; }
+.hist-table { width: 100%; border-collapse: collapse; }
+.hist-table th { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim, #555); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border, #222); }
+.hist-table td { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted, #888); padding: 10px 10px; border-bottom: 1px solid var(--border2, #1a1a1a); vertical-align: top; }
+.hist-done { color: var(--green, #2ECC71); font-weight: 600; }
+.hist-expired { color: var(--accent, #E63946); }
+.hist-pending { color: var(--dim, #555); }
+
+/* ── Settings ───────────────────────────────────────────────────────────────── */
+.settings-card { background: #111; border: 1px solid var(--border, #222); border-radius: 10px; padding: 24px; margin-bottom: 24px; max-width: 640px; }
+.settings-card-ttl { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: #f0f0f0; margin-bottom: 4px; }
+.settings-card-sub { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--dim, #555); margin-bottom: 16px; }
+.admin-textarea { width: 100%; min-height: 100px; background: #1e1e1e; border: 1px solid var(--border, #222); border-radius: 6px; color: #f0f0f0; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; padding: 12px; resize: vertical; outline: none; margin-top: 6px; margin-bottom: 6px; }
+.admin-textarea:focus { border-color: var(--accent, #E63946); }
+.admin-charcount { font-size: 12px; color: var(--dim, #555); text-align: right; margin-bottom: 14px; }
+.preview-label { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim, #555); margin-bottom: 8px; margin-top: 4px; }
+.teaser-preview { background: #1a1a1a; border: 1px solid var(--border, #222); border-radius: 8px; padding: 16px; min-height: 56px; }
+.tp-heading { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1.5px; color: #f0f0f0; margin-bottom: 6px; }
+.tp-body { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted, #888); line-height: 1.6; margin-bottom: 10px; }
+.tp-link { font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--dim, #555); }
+.tp-link a { color: var(--accent, #E63946); text-decoration: none; }
+
+/* ── Exercise search overlay ────────────────────────────────────────────────── */
+.sb-search-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.93); z-index: 9000; display: none; flex-direction: column; padding: 32px 24px 24px; max-width: 560px; margin: 0 auto; left: 0; right: 0; }
+.sb-search-overlay.show { display: flex; }
+.sb-search-inp { width: 100%; height: 52px; background: #1e1e1e; border: 1px solid var(--border, #222); border-radius: 8px; color: #f0f0f0; font-family: 'DM Sans', sans-serif; font-size: 16px; padding: 0 16px; outline: none; margin-bottom: 12px; flex-shrink: 0; }
+.sb-search-inp:focus { border-color: var(--accent, #E63946); }
+.sb-search-results { flex: 1; overflow-y: auto; }
+.sb-search-item { padding: 14px 4px; border-bottom: 1px solid var(--border2, #1a1a1a); font-family: 'DM Sans', sans-serif; font-size: 15px; color: #f0f0f0; cursor: pointer; }
+.sb-search-item:hover { color: var(--accent, #E63946); }
+.sb-search-cancel { width: 100%; height: 52px; background: none; border: 1px solid var(--border, #222); border-radius: 8px; color: var(--muted, #888); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; flex-shrink: 0; }
+
+/* ── Toast ──────────────────────────────────────────────────────────────────── */
+.admin-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--green, #2ECC71); color: #000; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700; padding: 12px 28px; border-radius: 8px; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; z-index: 9999; }
+.admin-toast.show { opacity: 1; }
+.admin-toast.err { background: var(--accent, #E63946); color: #fff; }
 </style>
 </head>
 <body>
-<div class="admin-loading" id="admin-loading">Checking access…</div>
 
-<div id="admin-ui">
-  <div class="admin-hd">
-    <div>
-      <div class="admin-ttl">8RB ADMIN</div>
-      <div class="admin-user" id="admin-user-name">Signed in as —</div>
+<div id="admin-gate">Checking access…</div>
+
+<div id="admin-shell" style="display:none">
+  <header id="admin-header">
+    <div class="header-logo">8RB ADMIN</div>
+    <div class="header-right">
+      <span class="header-coach" id="admin-coach-name"></span>
+      <button class="header-signout" onclick="adminSignOut()">SIGN OUT</button>
     </div>
-    <button class="admin-signout" onclick="adminSignOut()">SIGN OUT</button>
-  </div>
+  </header>
 
-  <!-- COACH'S NOTES (existing) -->
-  <div class="admin-section">
-    <div class="admin-section-ttl">COACH'S NOTES</div>
-    <hr class="admin-section-hr">
-    <textarea class="admin-textarea" id="coach-notes-ta" maxlength="1000" oninput="updateCharCount()" placeholder="Write your notes for members here…"></textarea>
-    <div class="admin-charcount"><span id="char-count">0</span> / 1000</div>
-    <div class="admin-meta" id="coach-notes-meta">Last updated: —</div>
-    <button class="admin-save" id="coach-notes-save" onclick="saveCoachNotes()">SAVE CHANGES</button>
-  </div>
+  <div id="admin-body">
+    <nav id="admin-sidebar">
+      <button class="nav-item active" id="nav-dashboard" onclick="showSection('dashboard')">Dashboard</button>
+      <button class="nav-item" id="nav-members" onclick="showSection('members')">Members</button>
+      <button class="nav-item" id="nav-sessions" onclick="showSection('sessions')">Sessions</button>
+      <button class="nav-item" id="nav-assignments" onclick="showSection('assignments')">Assignments</button>
+      <button class="nav-item" id="nav-settings" onclick="showSection('settings')">Settings</button>
+    </nav>
 
-  <!-- MEMBERS -->
-  <div class="admin-section">
-    <div class="admin-section-ttl">MEMBERS</div>
-    <hr class="admin-section-hr">
-    <div id="members-list"><div style="color:var(--dim);font-size:13px">Loading members…</div></div>
-  </div>
-
-  <!-- SESSION BUILDER -->
-  <div class="admin-section">
-    <div class="admin-section-ttl">SESSION BUILDER</div>
-    <hr class="admin-section-hr">
-    <input class="sb-name-inp" id="sb-session-name" type="text" placeholder="Name this session" oninput="checkSbReady()">
-    <div id="sb-exercise-list"></div>
-    <button class="sb-add-btn" onclick="openExerciseSearch()">+ ADD EXERCISE</button>
-    <button class="admin-save" id="sb-save-btn" onclick="saveAdminSession()" disabled>SAVE SESSION</button>
-    <div style="margin-top:32px">
-      <div class="admin-form-lbl" style="font-size:13px;margin-bottom:12px">SAVED SESSIONS</div>
-      <div id="sb-sessions-list"><div style="color:var(--dim);font-size:13px">Loading…</div></div>
-    </div>
-  </div>
-
-  <!-- ASSIGN SESSION -->
-  <div class="admin-section">
-    <div class="admin-section-ttl">ASSIGN SESSION</div>
-    <hr class="admin-section-hr">
-    <div class="admin-form-lbl">Session</div>
-    <select class="admin-select" id="assign-session-select">
-      <option value="">Select a session</option>
-    </select>
-    <div class="admin-form-lbl">For date</div>
-    <input class="admin-date-inp" type="date" id="assign-date">
-    <div class="admin-form-lbl">Send to</div>
-    <div class="send-toggle">
-      <button class="send-opt on" id="send-all-btn" onclick="setSendMode('all')">ALL SGPT MEMBERS</button>
-      <button class="send-opt" id="send-specific-btn" onclick="setSendMode('specific')">SPECIFIC MEMBERS</button>
-    </div>
-    <div id="member-checklist" style="display:none;background:#141414;border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:14px"></div>
-    <button class="admin-save" id="assign-btn" onclick="assignSession()" disabled>ASSIGN</button>
-    <div style="margin-top:32px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div class="admin-form-lbl" style="margin:0">RECENT ASSIGNMENTS</div>
-        <button onclick="loadAssignmentHistory()" style="background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer">↻ Refresh</button>
-      </div>
-      <div id="assignment-history"><div style="color:var(--dim);font-size:13px">Loading…</div></div>
-    </div>
+    <main id="admin-main">
+      <div id="section-dashboard" class="admin-section-panel"></div>
+      <div id="section-members" class="admin-section-panel" style="display:none"></div>
+      <div id="section-sessions" class="admin-section-panel" style="display:none"></div>
+      <div id="section-assignments" class="admin-section-panel" style="display:none"></div>
+      <div id="section-settings" class="admin-section-panel" style="display:none"></div>
+    </main>
   </div>
 </div>
 
@@ -174,528 +242,6 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#f0f0f0;margin:0;
 
 <div class="admin-toast" id="admin-toast"></div>
 
-<script type="module">
-import { auth, db } from './firebase.js';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, getDocs, setDoc, addDoc, collection, serverTimestamp, updateDoc, query, where } from 'firebase/firestore';
-import { EXERCISE_LIBRARY } from './data.js';
-
-var currentCoach = null;
-var allMembers = [];
-var sendMode = 'all';
-var sbExercises = [];
-var adminSgptSessions = [];
-var adminArchivedSessions = [];
-var showArchived = false;
-
-// ─── UTILS ────────────────────────────────────────────────────────────────────
-function showToast(msg, isErr) {
-  var t = document.getElementById('admin-toast');
-  t.textContent = msg;
-  t.className = 'admin-toast' + (isErr ? ' err' : '') + ' show';
-  setTimeout(function(){ t.className = 'admin-toast' + (isErr ? ' err' : ''); }, 2400);
-}
-
-function fmtDate(ts) {
-  if (!ts) return '—';
-  var d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
-}
-
-function fmtDateStr(str) {
-  if (!str) return '—';
-  var d = new Date(str + 'T00:00:00');
-  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
-}
-
-function sanitise(str) {
-  if (typeof str !== 'string') return '';
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ─── COACH'S NOTES ────────────────────────────────────────────────────────────
-async function loadCoachNotes() {
-  try {
-    var snap = await getDoc(doc(db, 'gym', '8RB', 'config', 'main'));
-    if (snap.exists()) {
-      var data = snap.data();
-      document.getElementById('coach-notes-ta').value = data.coachNotes || '';
-      updateCharCount();
-      var meta = document.getElementById('coach-notes-meta');
-      if (data.coachNotesUpdatedAt) {
-        meta.textContent = 'Last updated: ' + fmtDate(data.coachNotesUpdatedAt) + (data.coachNotesUpdatedBy ? ' by ' + data.coachNotesUpdatedBy : '');
-      }
-    }
-  } catch(err) { console.warn('Failed to load coach notes:', err); }
-}
-
-window.updateCharCount = function() {
-  var val = document.getElementById('coach-notes-ta').value;
-  document.getElementById('char-count').textContent = val.length;
-};
-
-window.saveCoachNotes = async function() {
-  var notes = document.getElementById('coach-notes-ta').value;
-  var btn = document.getElementById('coach-notes-save');
-  btn.disabled = true; btn.textContent = 'SAVING…';
-  try {
-    await setDoc(doc(db, 'gym', '8RB', 'config', 'main'), {
-      coachNotes: notes,
-      coachNotesUpdatedAt: serverTimestamp(),
-      coachNotesUpdatedBy: currentCoach ? (currentCoach.displayName || currentCoach.email) : 'coach'
-    }, { merge: true });
-    document.getElementById('coach-notes-meta').textContent = 'Last updated: just now by ' + (currentCoach ? (currentCoach.displayName || currentCoach.email) : 'coach');
-    showToast('COACH\'S NOTES UPDATED');
-  } catch(err) {
-    console.error('Save failed:', err);
-    showToast('SAVE FAILED — TRY AGAIN', true);
-  } finally {
-    btn.disabled = false; btn.textContent = 'SAVE CHANGES';
-  }
-};
-
-// ─── MEMBERS ──────────────────────────────────────────────────────────────────
-async function loadMembers() {
-  try {
-    var snap = await getDocs(collection(db, 'gym', '8RB', 'members'));
-    allMembers = snap.docs.map(function(d) { return Object.assign({ uid: d.id }, d.data()); });
-    renderMembers();
-    populateMemberChecklist();
-  } catch(err) {
-    document.getElementById('members-list').innerHTML = '<div style="color:var(--red);font-size:13px">Failed to load members.</div>';
-  }
-}
-
-function renderMembers() {
-  var list = document.getElementById('members-list');
-  if (!allMembers.length) {
-    list.innerHTML = '<div style="color:var(--dim);font-size:13px">No members yet.</div>';
-    return;
-  }
-  list.innerHTML = allMembers.map(function(m) {
-    var badgeCls = m.role === 'coach' ? 'role-coach' : m.sgpt === true ? 'role-sgpt' : 'role-member';
-    var badgeTxt = m.role === 'coach' ? 'COACH' : m.sgpt === true ? 'SGPT' : 'MEMBER';
-    var actionBtn = '';
-    if (currentCoach && m.uid !== currentCoach.uid && m.role !== 'coach') {
-      if (m.sgpt === true) {
-        actionBtn = '<button class="role-btn role-btn-remove" onclick="toggleSgpt(\'' + m.uid + '\',false)">REMOVE SGPT</button>';
-      } else {
-        actionBtn = '<button class="role-btn role-btn-assign" onclick="toggleSgpt(\'' + m.uid + '\',true)">ASSIGN SGPT</button>';
-      }
-    }
-    return '<div class="member-card" id="mcard-' + m.uid + '">'
-      + '<div class="member-info">'
-        + '<div class="member-name">' + sanitise(m.displayName || 'Unknown') + '</div>'
-        + '<div class="member-email">' + sanitise(m.email || '') + '</div>'
-        + '<div class="member-joined">Joined ' + fmtDate(m.joinDate) + '</div>'
-      + '</div>'
-      + '<span class="role-badge ' + badgeCls + '" id="badge-' + m.uid + '">' + badgeTxt + '</span>'
-      + actionBtn
-    + '</div>';
-  }).join('');
-}
-
-window.toggleSgpt = async function(uid, grantSgpt) {
-  try {
-    await updateDoc(doc(db, 'users', uid, 'profile', 'data'), { sgpt: grantSgpt });
-    await updateDoc(doc(db, 'gym', '8RB', 'members', uid), { sgpt: grantSgpt });
-    var m = allMembers.find(function(x) { return x.uid === uid; });
-    if (m) m.sgpt = grantSgpt;
-    renderMembers();
-    populateMemberChecklist();
-    showToast(grantSgpt ? 'SGPT ACCESS GRANTED' : 'SGPT ACCESS REMOVED');
-  } catch(err) {
-    showToast('UPDATE FAILED — TRY AGAIN', true);
-  }
-};
-
-// ─── ASSIGN SESSION ───────────────────────────────────────────────────────────
-function populateSessionDropdown() {
-  var sel = document.getElementById('assign-session-select');
-  while (sel.options.length > 1) sel.remove(1);
-  adminSgptSessions.forEach(function(s) {
-    var opt = document.createElement('option');
-    opt.value = s._id;
-    opt.textContent = s.name;
-    sel.appendChild(opt);
-  });
-  if (!sel._changeListenerAdded) {
-    sel.addEventListener('change', window.checkAssignReady);
-    sel._changeListenerAdded = true;
-  }
-}
-
-function setDefaultDate() {
-  var today = new Date().toISOString().split('T')[0];
-  var inp = document.getElementById('assign-date');
-  inp.value = today;
-  inp.min = today;
-  inp.addEventListener('change', checkAssignReady);
-}
-
-window.setSendMode = function(mode) {
-  sendMode = mode;
-  document.getElementById('send-all-btn').classList.toggle('on', mode === 'all');
-  document.getElementById('send-specific-btn').classList.toggle('on', mode === 'specific');
-  document.getElementById('member-checklist').style.display = mode === 'specific' ? 'block' : 'none';
-  checkAssignReady();
-};
-
-function populateMemberChecklist() {
-  var sgpt = allMembers.filter(function(m) { return m.sgpt === true; });
-  var cl = document.getElementById('member-checklist');
-  if (!sgpt.length) {
-    cl.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:8px 0">No SGPT members yet.</div>';
-    return;
-  }
-  cl.innerHTML = sgpt.map(function(m) {
-    return '<div class="member-check">'
-      + '<input type="checkbox" id="chk-' + m.uid + '" value="' + m.uid + '" onchange="checkAssignReady()">'
-      + '<label for="chk-' + m.uid + '" style="font-family:\'DM Sans\',sans-serif;font-size:14px;cursor:pointer">'
-        + sanitise(m.displayName || 'Unknown') + '<span style="color:var(--dim);font-size:12px;margin-left:6px">' + sanitise(m.email || '') + '</span>'
-      + '</label>'
-    + '</div>';
-  }).join('');
-}
-
-window.checkAssignReady = function() {
-  var sessOk = !!document.getElementById('assign-session-select').value;
-  var dateOk = !!document.getElementById('assign-date').value;
-  var recipientOk = sendMode === 'all'
-    ? allMembers.some(function(m) { return m.sgpt === true; })
-    : document.querySelectorAll('#member-checklist input:checked').length > 0;
-  document.getElementById('assign-btn').disabled = !(sessOk && dateOk && recipientOk);
-};
-
-window.assignSession = async function() {
-  var sessId = document.getElementById('assign-session-select').value;
-  var forDate = document.getElementById('assign-date').value;
-  var sess = adminSgptSessions.find(function(s) { return s._id === sessId; });
-  if (!sess || !forDate) return;
-  var recipients;
-  if (sendMode === 'all') {
-    recipients = allMembers.filter(function(m) { return m.sgpt === true; }).map(function(m) { return m.uid; });
-  } else {
-    recipients = Array.from(document.querySelectorAll('#member-checklist input:checked')).map(function(el) { return el.value; });
-  }
-  if (!recipients.length) { showToast('No recipients selected', true); return; }
-  var btn = document.getElementById('assign-btn');
-  btn.disabled = true; btn.textContent = 'ASSIGNING…';
-  try {
-    for (var i = 0; i < recipients.length; i++) {
-      await addDoc(collection(db, 'users', recipients[i], 'assignedSessions'), {
-        sessionData: sess,
-        sessionName: sess.name,
-        assignedBy: currentCoach.uid,
-        assignedAt: serverTimestamp(),
-        assignedFor: forDate,
-        status: 'pending'
-      });
-    }
-    showToast('SESSION ASSIGNED TO ' + recipients.length + ' MEMBER' + (recipients.length !== 1 ? 'S' : ''));
-    document.getElementById('assign-session-select').value = '';
-    document.getElementById('assign-date').value = new Date().toISOString().split('T')[0];
-    setSendMode('all');
-    checkAssignReady();
-    loadAssignmentHistory();
-  } catch(err) {
-    showToast('ASSIGNMENT FAILED — TRY AGAIN', true);
-  } finally {
-    btn.textContent = 'ASSIGN';
-    checkAssignReady();
-  }
-};
-
-window.loadAssignmentHistory = async function() {
-  var container = document.getElementById('assignment-history');
-  container.innerHTML = '<div style="color:var(--dim);font-size:13px">Loading…</div>';
-  try {
-    var rows = [];
-    for (var i = 0; i < allMembers.length; i++) {
-      var m = allMembers[i];
-      var snap = await getDocs(collection(db, 'users', m.uid, 'assignedSessions'));
-      snap.docs.forEach(function(d) {
-        rows.push(Object.assign({ uid: m.uid, memberName: m.displayName || m.email }, d.data()));
-      });
-    }
-    rows.sort(function(a, b) {
-      var at = a.assignedAt && a.assignedAt.toDate ? a.assignedAt.toDate().getTime() : 0;
-      var bt = b.assignedAt && b.assignedAt.toDate ? b.assignedAt.toDate().getTime() : 0;
-      return bt - at;
-    });
-    rows = rows.slice(0, 20);
-    if (!rows.length) { container.innerHTML = '<div style="color:var(--dim);font-size:13px">No assignments yet.</div>'; return; }
-    var html = '<table class="hist-table"><thead><tr><th>MEMBER</th><th>SESSION</th><th>DATE</th><th>STATUS</th></tr></thead><tbody>';
-    rows.forEach(function(r) {
-      var statusHtml;
-      if (r.status === 'completed') {
-        statusHtml = '<span class="hist-status-done">✓ Done</span>';
-        if (r.completedAt) statusHtml += '<div style="font-size:11px;color:var(--dim)">' + fmtDate(r.completedAt) + '</div>';
-      } else if (r.status === 'expired') {
-        statusHtml = '<span class="hist-status-expired">✕ Expired</span>';
-      } else {
-        statusHtml = '<span class="hist-status-pending">⏱ Pending</span>';
-      }
-      html += '<tr>'
-        + '<td>' + sanitise(r.memberName || '') + '</td>'
-        + '<td>' + sanitise(r.sessionName || '') + '</td>'
-        + '<td>' + fmtDateStr(r.assignedFor) + '</td>'
-        + '<td>' + statusHtml + '</td>'
-      + '</tr>';
-    });
-    html += '</tbody></table>';
-    container.innerHTML = html;
-  } catch(err) {
-    container.innerHTML = '<div style="color:var(--red);font-size:13px">Failed to load history.</div>';
-  }
-};
-
-// ─── SESSION BUILDER ──────────────────────────────────────────────────────────
-window.checkSbReady = function() {
-  var name = (document.getElementById('sb-session-name').value || '').trim();
-  document.getElementById('sb-save-btn').disabled = !(name && sbExercises.length > 0);
-};
-
-function renderSbExerciseList() {
-  var el = document.getElementById('sb-exercise-list');
-  if (!sbExercises.length) { el.innerHTML = ''; return; }
-  var restOpts = [30,45,60,90,120].map(function(s) {
-    return '<option value="' + s + '">'+s+'s</option>';
-  }).join('');
-  var typeOpts = ['Standard','Superset','AMRAP','Ladder','Pyramid'].map(function(t) {
-    return '<option value="' + t + '">' + t + '</option>';
-  }).join('');
-  el.innerHTML = sbExercises.map(function(ex, i) {
-    var restSelected = [30,45,60,90,120].map(function(s) {
-      return '<option value="' + s + '"' + (ex.rest === s ? ' selected' : '') + '>' + s + 's</option>';
-    }).join('');
-    var typeSelected = ['Standard','Superset','AMRAP','Ladder','Pyramid'].map(function(t) {
-      return '<option value="' + t + '"' + (ex.type === t ? ' selected' : '') + '>' + t + '</option>';
-    }).join('');
-    return '<div class="sb-exercise-row">' +
-      '<div class="sb-ex-name"><span>' + sanitise(ex.name) + '</span>' +
-        '<button class="sb-remove-btn" onclick="removeSbEx(' + i + ')">×</button></div>' +
-      '<div class="sb-ex-controls">' +
-        '<div class="sb-field"><label class="sb-ex-label">Sets</label>' +
-          '<input class="sb-num-inp" type="number" min="1" max="20" value="' + ex.sets + '" oninput="updateSbEx(' + i + ',\'sets\',this.value)"></div>' +
-        '<div class="sb-field"><label class="sb-ex-label">Reps</label>' +
-          '<input class="sb-num-inp" type="number" min="1" max="100" value="' + ex.reps + '" oninput="updateSbEx(' + i + ',\'reps\',this.value)"></div>' +
-        '<div class="sb-field"><label class="sb-ex-label">Rest</label>' +
-          '<select class="sb-sel" onchange="updateSbEx(' + i + ',\'rest\',+this.value)">' + restSelected + '</select></div>' +
-        '<div class="sb-field"><label class="sb-ex-label">Type</label>' +
-          '<select class="sb-sel" onchange="updateSbEx(' + i + ',\'type\',this.value)">' + typeSelected + '</select></div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
-
-window.updateSbEx = function(i, field, val) {
-  if (field === 'sets' || field === 'reps' || field === 'rest') {
-    sbExercises[i][field] = +val || sbExercises[i][field];
-  } else {
-    sbExercises[i][field] = val;
-  }
-  window.checkSbReady();
-};
-
-window.removeSbEx = function(i) {
-  sbExercises.splice(i, 1);
-  renderSbExerciseList();
-  window.checkSbReady();
-};
-
-window.openExerciseSearch = function() {
-  document.getElementById('sb-search-inp').value = '';
-  filterExerciseSearch();
-  document.getElementById('sb-search-overlay').classList.add('show');
-  document.getElementById('sb-search-inp').focus();
-};
-
-window.closeExerciseSearch = function() {
-  document.getElementById('sb-search-overlay').classList.remove('show');
-};
-
-window.filterExerciseSearch = function() {
-  var q = (document.getElementById('sb-search-inp').value || '').toLowerCase();
-  var results = q
-    ? EXERCISE_LIBRARY.filter(function(ex) { return ex.name.toLowerCase().includes(q); })
-    : EXERCISE_LIBRARY;
-  document.getElementById('sb-search-results').innerHTML = results.map(function(ex) {
-    var escaped = ex.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    return '<div class="sb-search-item" onclick="addSbExercise(\'' + escaped + '\')">' + sanitise(ex.name) + '</div>';
-  }).join('');
-};
-
-window.addSbExercise = function(name) {
-  sbExercises.push({ name: name, sets: 3, reps: 8, rest: 60, type: 'Standard' });
-  renderSbExerciseList();
-  window.closeExerciseSearch();
-  window.checkSbReady();
-};
-
-window.saveAdminSession = async function() {
-  var name = (document.getElementById('sb-session-name').value || '').trim();
-  if (!name || !sbExercises.length) return;
-  var btn = document.getElementById('sb-save-btn');
-  btn.disabled = true; btn.textContent = 'SAVING…';
-  try {
-    var exercises = sbExercises.map(function(ex) {
-      return { name: ex.name, displayName: ex.name, sets: ex.sets, reps: ex.reps,
-               scheme: ex.sets + '×' + ex.reps, rest: ex.rest, type: ex.type, note: '', alts: [] };
-    });
-    await addDoc(collection(db, 'gym', '8RB', 'sgptSessions'), {
-      name: name, exercises: exercises,
-      createdAt: serverTimestamp(),
-      createdBy: currentCoach ? currentCoach.uid : '',
-      active: true, audience: ['sgpt'], source: 'coach'
-    });
-    showToast('SESSION SAVED');
-    document.getElementById('sb-session-name').value = '';
-    sbExercises = [];
-    renderSbExerciseList();
-    window.checkSbReady();
-    await loadSgptSessions();
-  } catch(err) {
-    showToast('SAVE FAILED — TRY AGAIN', true);
-  } finally {
-    btn.textContent = 'SAVE SESSION';
-    window.checkSbReady();
-  }
-};
-
-async function loadSgptSessions() {
-  try {
-    var snap = await getDocs(collection(db, 'gym', '8RB', 'sgptSessions'));
-    var all = snap.docs.map(function(d) { return Object.assign({ _id: d.id }, d.data()); });
-    adminSgptSessions = all.filter(function(s) { return s.active !== false; });
-    adminArchivedSessions = all.filter(function(s) { return s.active === false; });
-    renderSgptSessionsList();
-    populateSessionDropdown();
-  } catch(err) {
-    document.getElementById('sb-sessions-list').innerHTML = '<div style="color:var(--dim);font-size:13px">Failed to load sessions.</div>';
-  }
-}
-
-function renderSgptSessionsList() {
-  var el = document.getElementById('sb-sessions-list');
-  var activeHtml = adminSgptSessions.length
-    ? adminSgptSessions.map(function(sess) {
-        var n = (sess.exercises || []).length;
-        var esc = sess._id.replace(/'/g, "\\'");
-        return '<div class="sb-sess-card">' +
-          '<div class="sb-sess-info">' +
-            '<div class="sb-sess-name">' + sanitise(sess.name) + '</div>' +
-            '<div class="sb-sess-count">' + n + (n === 1 ? ' exercise' : ' exercises') + '</div>' +
-          '</div>' +
-          '<div class="sb-sess-btns">' +
-            '<button class="sb-assign-btn" onclick="preSelectSession(\'' + esc + '\')">ASSIGN</button>' +
-            '<button class="sb-archive-btn" onclick="archiveSgptSession(\'' + esc + '\')">ARCHIVE</button>' +
-          '</div>' +
-        '</div>';
-      }).join('')
-    : '<div style="color:var(--dim);font-size:13px;padding:8px 0">No sessions yet. Build your first one above.</div>';
-
-  var archivedHtml = '';
-  if (adminArchivedSessions.length) {
-    archivedHtml += '<div style="text-align:center;padding:12px 0 4px">' +
-      '<button class="sb-archive-toggle" onclick="toggleArchivedSessions()">' +
-        (showArchived ? 'Hide archived' : 'Show archived (' + adminArchivedSessions.length + ')') +
-      '</button></div>';
-    if (showArchived) {
-      archivedHtml += adminArchivedSessions.map(function(sess) {
-        var n = (sess.exercises || []).length;
-        var esc = sess._id.replace(/'/g, "\\'");
-        return '<div class="sb-sess-card" style="opacity:0.45">' +
-          '<div class="sb-sess-info">' +
-            '<div class="sb-sess-name">' + sanitise(sess.name) + '</div>' +
-            '<div class="sb-sess-count">' + n + (n === 1 ? ' exercise' : ' exercises') + '</div>' +
-          '</div>' +
-          '<div class="sb-sess-btns">' +
-            '<button class="sb-archive-btn" style="border-color:var(--green);color:var(--green)" ' +
-              'onclick="unarchiveSgptSession(\'' + esc + '\')">UNARCHIVE</button>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-  }
-
-  el.innerHTML = activeHtml + archivedHtml;
-}
-
-window.archiveSgptSession = async function(id) {
-  try {
-    await updateDoc(doc(db, 'gym', '8RB', 'sgptSessions', id), { active: false });
-    var sess = adminSgptSessions.find(function(s) { return s._id === id; });
-    if (sess) {
-      sess.active = false;
-      adminSgptSessions = adminSgptSessions.filter(function(s) { return s._id !== id; });
-      adminArchivedSessions.push(sess);
-    }
-    renderSgptSessionsList();
-    populateSessionDropdown();
-    showToast('SESSION ARCHIVED');
-  } catch(err) { showToast('ARCHIVE FAILED — TRY AGAIN', true); }
-};
-
-window.unarchiveSgptSession = async function(id) {
-  try {
-    await updateDoc(doc(db, 'gym', '8RB', 'sgptSessions', id), { active: true });
-    var sess = adminArchivedSessions.find(function(s) { return s._id === id; });
-    if (sess) {
-      sess.active = true;
-      adminArchivedSessions = adminArchivedSessions.filter(function(s) { return s._id !== id; });
-      adminSgptSessions.push(sess);
-    }
-    renderSgptSessionsList();
-    populateSessionDropdown();
-    showToast('SESSION RESTORED');
-  } catch(err) { showToast('RESTORE FAILED — TRY AGAIN', true); }
-};
-
-window.toggleArchivedSessions = function() {
-  showArchived = !showArchived;
-  renderSgptSessionsList();
-};
-
-window.preSelectSession = function(id) {
-  var sel = document.getElementById('assign-session-select');
-  sel.value = id;
-  sel.dispatchEvent(new Event('change'));
-  document.querySelector('.admin-section:last-of-type').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  window.checkAssignReady();
-};
-
-// ─── SIGN OUT ─────────────────────────────────────────────────────────────────
-window.adminSignOut = async function() {
-  try { await signOut(auth); window.location.href = 'index.html'; } catch(e) {}
-};
-
-// ─── AUTH GATE ────────────────────────────────────────────────────────────────
-onAuthStateChanged(auth, async function(user) {
-  var loading = document.getElementById('admin-loading');
-  var ui = document.getElementById('admin-ui');
-  if (!user) { window.location.href = 'index.html'; return; }
-  try {
-    var profileSnap = await getDoc(doc(db, 'users', user.uid, 'profile', 'data'));
-    if (!profileSnap.exists() || profileSnap.data().role !== 'coach') {
-      loading.textContent = 'Access denied.';
-      setTimeout(function(){ window.location.href = 'index.html'; }, 1500);
-      return;
-    }
-    currentCoach = user;
-    loading.style.display = 'none';
-    ui.style.display = 'block';
-    document.getElementById('admin-user-name').textContent = 'Signed in as ' + (user.displayName || user.email);
-    setDefaultDate();
-    await loadCoachNotes();
-    await loadMembers();
-    await loadSgptSessions();
-    await loadAssignmentHistory();
-  } catch(err) {
-    loading.textContent = 'Error checking access. Please try again.';
-    console.error(err);
-  }
-});
-</script>
+<script type="module" src="admin.js"></script>
 </body>
 </html>

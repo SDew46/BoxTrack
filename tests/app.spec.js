@@ -219,18 +219,21 @@ test('SGPT member sees SGPT sessions section in TRAIN tab', async ({ page, mockF
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 12: Standard member does NOT see SGPT section
+// Test 12: Standard member sees SGPT section in locked state (no session cards)
 // ─────────────────────────────────────────────────────────────────────────────
-test('Standard member does not see SGPT sessions section', async ({ page, mockFirebase }) => {
+test('Standard member sees SGPT section in locked state', async ({ page, mockFirebase }) => {
   await loadApp(page, mockFirebase);
 
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
-  // SGPT section should NOT be visible for standard member
+  // SGPT section is always rendered — locked state for non-SGPT members
   const sgptSection = page.locator('#sgpt-section');
-  // Either hidden or display:none — not visible
-  await expect(sgptSection).toBeHidden({ timeout: 3000 });
+  await expect(sgptSection).toBeVisible({ timeout: 5000 });
+
+  // Locked card (teaser trigger) is shown instead of programme cards
+  await expect(sgptSection.locator('.tier-locked-card')).toBeVisible({ timeout: 3000 });
+  await expect(sgptSection.locator('.prog-card')).toHaveCount(0);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

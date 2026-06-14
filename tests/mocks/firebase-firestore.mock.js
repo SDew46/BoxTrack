@@ -4,6 +4,7 @@ const PROFILE_DATA = {
   displayName: 'Playwright Tester',
   role: 'member',
   sgpt: false,
+  pt121: false,
   gym: '8RB',
   joinDate: '2024-01-01',
   onboarded: true,

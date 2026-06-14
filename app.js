@@ -94,7 +94,9 @@ export const userDataCache = {
   customCombos: null,
   customSessions: null,
   assignedSessions: null,
-  sgptSessions: []
+  sgptSessions: [],
+  pt121Sessions: [],
+  lockedPanels: null
 };
 
 // ─── STORAGE ───────────────────────────────────────────────────────────────────
@@ -220,7 +222,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v11.4.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v12.0.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -285,7 +287,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v11.4.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v12.0.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -502,11 +504,11 @@ export async function loadUserData(uid) {
     console.warn('Failed to load from Firestore, using localStorage:', err);
     // userDataCache remains null — ld() will fall back to localStorage
   }
-  // Load SGPT sessions for eligible users
+  // Load SGPT sessions from unified sessions collection
   if (userProfile && (userProfile.sgpt === true || userProfile.role === 'coach')) {
     try {
       var sgptSnap = await getDocs(
-        query(collection(db, 'gym', '8RB', 'sgptSessions'), where('active', '==', true))
+        query(collection(db, 'gym', '8RB', 'sessions'), where('visibility', '==', 'sgpt'), where('active', '==', true))
       );
       userDataCache.sgptSessions = sgptSnap.docs.map(function(d) {
         return Object.assign({ _firestoreId: d.id }, d.data());
@@ -517,6 +519,33 @@ export async function loadUserData(uid) {
     }
   } else {
     userDataCache.sgptSessions = [];
+  }
+  // Load 1-2-1 PT sessions from unified sessions collection
+  if (userProfile && (userProfile.pt121 === true || userProfile.role === 'coach')) {
+    try {
+      var pt121Q;
+      if (userProfile.role === 'coach') {
+        pt121Q = query(collection(db, 'gym', '8RB', 'sessions'), where('visibility', '==', 'pt121'), where('active', '==', true));
+      } else {
+        pt121Q = query(collection(db, 'gym', '8RB', 'sessions'), where('visibility', '==', 'pt121'), where('active', '==', true), where('assignedTo', 'array-contains', uid));
+      }
+      var pt121Snap = await getDocs(pt121Q);
+      userDataCache.pt121Sessions = pt121Snap.docs.map(function(d) {
+        return Object.assign({ _firestoreId: d.id }, d.data());
+      });
+    } catch(e) {
+      userDataCache.pt121Sessions = [];
+      console.warn('Failed to load 1-2-1 sessions:', e.message);
+    }
+  } else {
+    userDataCache.pt121Sessions = [];
+  }
+  // Load locked-panel teaser config (all users need this to render locked states)
+  try {
+    var panelsSnap = await getDoc(doc(db, 'gym', '8RB', 'config', 'locked-panels'));
+    userDataCache.lockedPanels = panelsSnap.exists() ? panelsSnap.data() : null;
+  } catch(e) {
+    userDataCache.lockedPanels = null;
   }
 }
 
@@ -532,6 +561,7 @@ async function createUserProfile(user, displayName) {
         gym: '8RB',
         role: 'member',
         sgpt: false,
+        pt121: false,
         joinDate: serverTimestamp(),
         unit: 'kg',
         accentColour: '#D63040',
@@ -626,13 +656,14 @@ async function ensureUserProfile(user) {
         gym: '8RB',
         role: 'member',
         sgpt: false,
+        pt121: false,
         joinDate: serverTimestamp(),
         unit: 'kg',
         accentColour: '#D63040',
         onboarded: false
       };
       await setDoc(profileRef, newProfile);
-      userProfile = { onboarded: false, role: 'member', sgpt: false };
+      userProfile = { onboarded: false, role: 'member', sgpt: false, pt121: false };
       window.userProfile = userProfile;
       // Write to members registry for coach admin
       setDoc(doc(db, 'gym', '8RB', 'members', user.uid), {
@@ -640,15 +671,18 @@ async function ensureUserProfile(user) {
         email: user.email || '',
         joinDate: serverTimestamp(),
         role: 'member',
-        sgpt: false
+        sgpt: false,
+        pt121: false
       }, { merge: true }).catch(function(){});
       if (DEBUG) console.log('[8RB] ensureUserProfile: profile created successfully');
     } else {
       userProfile = existing.data();
-      // Migration: add sgpt field silently if missing (pre-v11.1 profiles)
-      if (userProfile.sgpt === undefined) {
-        updateDoc(profileRef, { sgpt: false }).catch(function(){});
-        userProfile.sgpt = false;
+      // Migration: add sgpt/pt121 fields silently if missing (older profiles)
+      var profilePatch = {};
+      if (userProfile.sgpt === undefined) { profilePatch.sgpt = false; userProfile.sgpt = false; }
+      if (userProfile.pt121 === undefined) { profilePatch.pt121 = false; userProfile.pt121 = false; }
+      if (Object.keys(profilePatch).length > 0) {
+        updateDoc(profileRef, profilePatch).catch(function(){});
       }
       window.userProfile = userProfile;
       // Keep members registry in sync with current profile
@@ -657,7 +691,8 @@ async function ensureUserProfile(user) {
         email: user.email || userProfile.email || '',
         joinDate: userProfile.joinDate || null,
         role: userProfile.role || 'member',
-        sgpt: userProfile.sgpt || false
+        sgpt: userProfile.sgpt || false,
+        pt121: userProfile.pt121 || false
       }, { merge: true }).catch(function(){});
     }
   } catch(err) {
@@ -924,6 +959,8 @@ async function handleSignOut() {
     userDataCache.customSessions = null;
     userDataCache.assignedSessions = null;
     userDataCache.sgptSessions = [];
+    userDataCache.pt121Sessions = [];
+    userDataCache.lockedPanels = null;
     lastProgressRead = 0;
     if (typeof window.resetTrainState === 'function') window.resetTrainState();
     if (typeof window.resetBoxState === 'function') window.resetBoxState();

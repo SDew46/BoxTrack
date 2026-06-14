@@ -6,7 +6,7 @@ A PWA (Progressive Web App) built specifically for 8 Rounds Boxing Gym in Streat
 The app is currently called **8RB by 8 Rounds Boxing**. The underlying product is BoxTrack. If white-labelled to other gyms in future, the pattern is "[Gym Name] by [product name]".
 
 ## Current Status
-Version 11.4.0. Diagnostic instrumentation added for iOS dead-button bug on SGPT/assigned sessions: silent returns replaced with explicit toasts, global error listener added in app.js.
+Version 12.0.0. Unified sessions collection (`gym/8RB/sessions`), 1-2-1 PT tier added (pt121 flag), Train tab restructured into FREE TRAIN / SGPT / 1-2-1 PT sections with locked teaser panels, full admin rewrite (sidebar nav, dashboard, members table with SGPT/1-2-1 toggles, session builder with visibility selector and exercise type pills, assignment workflow for any-session/any-member, settings with coach notes + locked panel editor).
 
 **File structure — all ES modules, all acorn clean:**
 - `styles.css` — all CSS, includes Step 2 auth + offline indicator styles
@@ -17,7 +17,8 @@ Version 11.4.0. Diagnostic instrumentation added for iOS dead-button bug on SGPT
 - `box.js` — box tab logic, Firestore boxing session + combo writes
 - `progress.js` — progress tab logic, reads from Firestore via userDataCache
 - `index.html` — HTML skeleton with importmap, all scripts `type="module"`, auth screens
-- `admin.html` — coach admin interface (Coach's Notes), separate file at `/BoxTrack/admin.html`
+- `admin.html` — coach admin shell (sidebar nav, desktop-first), separate file at `/BoxTrack/admin.html`
+- `admin.js` — all admin portal logic: dashboard, members, sessions builder, assignments, settings
 - `firestore.rules` — Firestore security rules (deploy via Firebase console or CLI)
 - `sw.js` — v13, firebase.js + admin.html added to STATIC_ASSETS pre-cache
 
@@ -215,7 +216,7 @@ Steve has a cyber security background and this is a hard requirement, not an aft
 
 Run from the project directory (`C:\Users\Steve D\botrack app\BoxTrack`):
 ```
-node -e "const acorn=require('acorn'),fs=require('fs');['firebase.js','data.js','app.js','train.js','box.js','progress.js'].forEach(f=>{const code=fs.readFileSync(f,'utf8');try{acorn.parse(code,{ecmaVersion:2020,sourceType:'module'});console.log(f+' CLEAN');}catch(e){console.log(f+' ERROR line '+(e.loc&&e.loc.line)+': '+e.message);}});"
+node -e "const acorn=require('acorn'),fs=require('fs');['firebase.js','data.js','app.js','train.js','box.js','progress.js','admin.js'].forEach(f=>{const code=fs.readFileSync(f,'utf8');try{acorn.parse(code,{ecmaVersion:2020,sourceType:'module'});console.log(f+' CLEAN');}catch(e){console.log(f+' ERROR line '+(e.loc&&e.loc.line)+': '+e.message);}});"
 ```
 
 Or save a temp file `acorn_check.js` in the project dir and run `node acorn_check.js` (avoids path-with-spaces issues in PowerShell).

@@ -237,24 +237,8 @@ test('Standard member sees SGPT section in locked state', async ({ page, mockFir
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 13: Assigned session appears at top of TRAIN tab
+// Test 13: (removed — assigned sessions UI removed in v12.2.0)
 // ─────────────────────────────────────────────────────────────────────────────
-test('Assigned session appears at top of TRAIN tab', async ({ page, mockFirebase }) => {
-  // Use the assigned-session mock which seeds a pending session for today
-  await mockFirebase('firebase-firestore-assigned.mock.js');
-  await page.addInitScript(() => { localStorage.setItem('installGateDismissed', '1'); });
-  await page.goto(APP_URL);
-  await page.waitForSelector('#app-content', { state: 'visible', timeout: APP_CONTENT_TIMEOUT });
-
-  await page.locator('.nb-train').click();
-  await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
-
-  // Assigned sessions area should contain the "ASSIGNED BY YOUR COACH" label
-  await expect(page.locator('#assigned-sessions-area')).toContainText('ASSIGNED BY YOUR COACH', { timeout: 5000 });
-
-  // START SESSION button should be present
-  await expect(page.locator('#assigned-sessions-area button:has-text("START SESSION")')).toBeVisible({ timeout: 5000 });
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test 14: Install gate shown when not running as PWA

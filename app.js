@@ -222,7 +222,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v12.1.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v12.2.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -287,7 +287,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v12.1.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v12.2.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -507,12 +507,17 @@ export async function loadUserData(uid) {
   // Load SGPT sessions from unified sessions collection
   if (userProfile && (userProfile.sgpt === true || userProfile.role === 'coach')) {
     try {
-      var sgptSnap = await getDocs(
-        query(collection(db, 'gym', '8RB', 'sessions'), where('visibility', '==', 'sgpt'), where('active', '==', true))
-      );
+      var sgptSnap;
+      if (userProfile.role === 'coach') {
+        // Coaches can read all — single-field query avoids composite index requirement
+        sgptSnap = await getDocs(query(collection(db, 'gym', '8RB', 'sessions'), where('visibility', '==', 'sgpt')));
+      } else {
+        // SGPT members — composite query (requires firestore.indexes.json deployed)
+        sgptSnap = await getDocs(query(collection(db, 'gym', '8RB', 'sessions'), where('visibility', '==', 'sgpt'), where('active', '==', true)));
+      }
       userDataCache.sgptSessions = sgptSnap.docs.map(function(d) {
         return Object.assign({ _firestoreId: d.id }, d.data());
-      });
+      }).filter(function(s) { return s.active !== false; });
     } catch(e) {
       userDataCache.sgptSessions = [];
       console.warn('Failed to load SGPT sessions:', e.message);
@@ -523,16 +528,17 @@ export async function loadUserData(uid) {
   // Load 1-2-1 PT sessions from unified sessions collection
   if (userProfile && (userProfile.pt121 === true || userProfile.role === 'coach')) {
     try {
-      var pt121Q;
+      var pt121Snap;
       if (userProfile.role === 'coach') {
-        pt121Q = query(collection(db, 'gym', '8RB', 'sessions'), where('visibility', '==', 'pt121'), where('active', '==', true));
+        // Coaches can read all — single-field query avoids composite index requirement
+        pt121Snap = await getDocs(query(collection(db, 'gym', '8RB', 'sessions'), where('visibility', '==', 'pt121')));
       } else {
-        pt121Q = query(collection(db, 'gym', '8RB', 'sessions'), where('visibility', '==', 'pt121'), where('active', '==', true), where('assignedTo', 'array-contains', uid));
+        // PT121 members — composite query (requires firestore.indexes.json deployed)
+        pt121Snap = await getDocs(query(collection(db, 'gym', '8RB', 'sessions'), where('visibility', '==', 'pt121'), where('active', '==', true), where('assignedTo', 'array-contains', uid)));
       }
-      var pt121Snap = await getDocs(pt121Q);
       userDataCache.pt121Sessions = pt121Snap.docs.map(function(d) {
         return Object.assign({ _firestoreId: d.id }, d.data());
-      });
+      }).filter(function(s) { return s.active !== false; });
     } catch(e) {
       userDataCache.pt121Sessions = [];
       console.warn('Failed to load 1-2-1 sessions:', e.message);

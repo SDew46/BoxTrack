@@ -39,6 +39,10 @@ test('TRAIN tab — session library renders with at least one session card', asy
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
+  // FREE TRAIN starts collapsed — expand it first
+  await page.locator('#free-train-head').click();
+  await page.waitForSelector('#free-train-body', { state: 'visible', timeout: 3000 });
+
   // At least one session card should be present
   const cards = page.locator('#train-lib .sc');
   await expect(cards.first()).toBeVisible();
@@ -52,6 +56,10 @@ test('TRAIN tab — tapping a session opens log view', async ({ page, mockFireba
 
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
+
+  // FREE TRAIN starts collapsed — expand it first
+  await page.locator('#free-train-head').click();
+  await page.waitForSelector('#free-train-body', { state: 'visible', timeout: 3000 });
 
   // Expand the first session card
   await page.locator('#train-lib .sc .sc-hd').first().click();

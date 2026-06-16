@@ -137,6 +137,44 @@ function buildProgCards(sessions,startFn){
   }).join('');
 }
 
+function buildAssignedSectionHtml(filterVis){
+  var today=new Date().toISOString().split('T')[0];
+  var assigned=(userDataCache.assignedSessions||[]).filter(function(s){
+    return s.status==='pending'&&s.assignedFor<=today
+      &&s.sessionData&&s.sessionData.visibility===filterVis;
+  }).sort(function(a,b){return a.assignedFor.localeCompare(b.assignedFor);});
+  if(!assigned.length)return '';
+  return assigned.map(function(s){
+    var dateLabel=s.assignedFor===today?'For today':(s.assignedFor<today?'For '+fmtDate(s.assignedFor)+' — complete when ready':'For '+fmtDate(s.assignedFor));
+    return '<div style="background:rgba(230,168,23,0.07);border:1px solid rgba(230,168,23,0.3);border-radius:8px;padding:16px;margin:0 16px 12px">'
+      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:6px">ASSIGNED BY YOUR COACH</div>'
+      +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--text);margin-bottom:4px">'+sanitiseTrainStr(s.sessionName||'Session')+'</div>'
+      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);margin-bottom:12px">'+dateLabel+'</div>'
+      +'<button class="abtn ab-r" style="width:100%;height:56px;font-size:20px" onclick="startAssignedSession(\''+s._firestoreId+'\')">START SESSION</button>'
+    +'</div>';
+  }).join('');
+}
+
+function toggleSectionCollapse(section){
+  var body=document.getElementById(section+'-section-body');
+  var chev=document.getElementById(section+'-collapse-chev');
+  if(!body)return;
+  var isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'';
+  if(chev)chev.style.transform=isOpen?'rotate(-90deg)':'';
+}
+window.toggleSectionCollapse=toggleSectionCollapse;
+
+function toggleFreeTrainSection(){
+  var body=document.getElementById('free-train-body');
+  var chev=document.getElementById('free-train-chev');
+  if(!body)return;
+  var isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'';
+  if(chev)chev.style.transform=isOpen?'rotate(-90deg)':'';
+}
+window.toggleFreeTrainSection=toggleFreeTrainSection;
+
 function renderSgptSection(){
   var area=document.getElementById('sgpt-section');
   if(!area)return;
@@ -152,9 +190,16 @@ function renderSgptSection(){
     area.innerHTML=buildLockedSection('SGPT','sgpt',heading,body,url);
     return;
   }
+  var assignedHtml=buildAssignedSectionHtml('sgpt');
   var cardsHtml=buildProgCards(userDataCache.sgptSessions||[],'useSgptSession');
-  area.innerHTML='<div class="tier-section-head"><span>YOUR PROGRAMME</span></div>'
-    +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>';
+  area.innerHTML='<div class="tier-section-head" onclick="toggleSectionCollapse(\'sgpt\')" role="button" style="cursor:pointer;justify-content:space-between">'
+    +'<span>YOUR SGPT PROGRAMME</span>'
+    +'<span id="sgpt-collapse-chev" style="font-size:12px;color:var(--dim);transition:transform 0.25s">&#9662;</span>'
+    +'</div>'
+    +'<div id="sgpt-section-body">'
+    +assignedHtml
+    +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>'
+    +'</div>';
 }
 
 function renderPt121Section(){
@@ -172,9 +217,16 @@ function renderPt121Section(){
     area.innerHTML=buildLockedSection('1-2-1 PT','pt121',heading,body,url);
     return;
   }
+  var assignedHtml=buildAssignedSectionHtml('pt121');
   var cardsHtml=buildProgCards(userDataCache.pt121Sessions||[],'usePt121Session');
-  area.innerHTML='<div class="tier-section-head"><span>YOUR 1-2-1 PROGRAMME</span></div>'
-    +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>';
+  area.innerHTML='<div class="tier-section-head" onclick="toggleSectionCollapse(\'pt121\')" role="button" style="cursor:pointer;justify-content:space-between">'
+    +'<span>YOUR 1-2-1 PROGRAMME</span>'
+    +'<span id="pt121-collapse-chev" style="font-size:12px;color:var(--dim);transition:transform 0.25s">&#9662;</span>'
+    +'</div>'
+    +'<div id="pt121-section-body">'
+    +assignedHtml
+    +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>'
+    +'</div>';
 }
 
 function useSgptSession(firestoreId){
@@ -261,9 +313,16 @@ window.resetTrainState=resetTrainState;
 function renderAssignedSessions(){
   var area=document.getElementById('assigned-sessions-area');
   if(!area)return;
+  var isSgpt=!!(window.userProfile&&window.userProfile.sgpt===true);
+  var isPt121=!!(window.userProfile&&window.userProfile.pt121===true);
+  var isCoach=(window.userProfile&&window.userProfile.role)==='coach';
   var today=new Date().toISOString().split('T')[0];
   var assigned=(userDataCache.assignedSessions||[]).filter(function(s){
-    return s.status==='pending'&&s.assignedFor<=today;
+    if(s.status!=='pending'||s.assignedFor>today)return false;
+    var vis=s.sessionData&&s.sessionData.visibility;
+    if((isSgpt||isCoach)&&vis==='sgpt')return false;
+    if((isPt121||isCoach)&&vis==='pt121')return false;
+    return true;
   }).sort(function(a,b){return a.assignedFor.localeCompare(b.assignedFor);});
   if(!assigned.length){area.innerHTML='';return;}
   area.innerHTML=assigned.map(function(s){

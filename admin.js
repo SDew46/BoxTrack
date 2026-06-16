@@ -147,22 +147,7 @@ function getFilteredMembers() {
   });
 }
 
-function renderMembersTable() {
-  var filtered = getFilteredMembers();
-  var totalPages = Math.max(1, Math.ceil(filtered.length / MEMBERS_PER_PAGE));
-  if (membersPage >= totalPages) membersPage = Math.max(0, totalPages - 1);
-  var pageMembers = filtered.slice(membersPage * MEMBERS_PER_PAGE, (membersPage + 1) * MEMBERS_PER_PAGE);
-
-  var filterBtns = [
-    { v: 'all', l: 'All' },
-    { v: 'member', l: 'Standard' },
-    { v: 'sgpt', l: 'SGPT' },
-    { v: 'pt121', l: '1-2-1' },
-    { v: 'coach', l: 'Coach' }
-  ].map(function(f) {
-    return '<button class="filter-btn' + (memberRoleFilter === f.v ? ' active' : '') + '" onclick="setMemberRoleFilter(\'' + f.v + '\')">' + f.l + '</button>';
-  }).join('');
-
+function buildMemberRows(pageMembers) {
   var rows = pageMembers.map(function(m) {
     var badges = '';
     if (m.role === 'coach') {
@@ -189,10 +174,18 @@ function renderMembersTable() {
       '<td>' + actions + '</td>' +
     '</tr>';
   }).join('');
+  if (!pageMembers.length) rows = '<tr><td colspan="4" class="tbl-empty">No members match this filter.</td></tr>';
+  return rows;
+}
 
-  var emptyRow = !pageMembers.length
-    ? '<tr><td colspan="4" class="tbl-empty">No members match this filter.</td></tr>'
-    : '';
+function renderMembersTableBody() {
+  var filtered = getFilteredMembers();
+  var totalPages = Math.max(1, Math.ceil(filtered.length / MEMBERS_PER_PAGE));
+  if (membersPage >= totalPages) membersPage = Math.max(0, totalPages - 1);
+  var pageMembers = filtered.slice(membersPage * MEMBERS_PER_PAGE, (membersPage + 1) * MEMBERS_PER_PAGE);
+
+  var tbody = document.getElementById('members-tbody');
+  if (tbody) tbody.innerHTML = buildMemberRows(pageMembers);
 
   var pagination = totalPages > 1
     ? '<div class="pagination">' +
@@ -201,41 +194,57 @@ function renderMembersTable() {
         '<button onclick="membersPageNext()" ' + (membersPage >= totalPages - 1 ? 'disabled' : '') + '>Next →</button>' +
       '</div>'
     : '';
+  var pagEl = document.getElementById('members-pagination');
+  if (pagEl) pagEl.innerHTML = pagination;
 
+  var filterBtnsEl = document.getElementById('member-filter-btns');
+  if (filterBtnsEl) filterBtnsEl.innerHTML = [
+    { v: 'all', l: 'All' },
+    { v: 'member', l: 'Standard' },
+    { v: 'sgpt', l: 'SGPT' },
+    { v: 'pt121', l: '1-2-1' },
+    { v: 'coach', l: 'Coach' }
+  ].map(function(f) {
+    return '<button class="filter-btn' + (memberRoleFilter === f.v ? ' active' : '') + '" onclick="setMemberRoleFilter(\'' + f.v + '\')">' + f.l + '</button>';
+  }).join('');
+}
+
+function renderMembersTable() {
   document.getElementById('section-members').innerHTML =
     '<div class="section-hd"><div class="section-ttl">MEMBERS</div><div class="section-sub">' + allMembers.length + ' registered</div></div>' +
     '<div class="members-toolbar">' +
-      '<input class="search-inp" type="text" placeholder="Search by name or email…" value="' + sanitise(memberSearch) + '" oninput="setMemberSearch(this.value)">' +
-      '<div class="filter-btns">' + filterBtns + '</div>' +
+      '<input class="search-inp" id="member-search-inp" type="text" placeholder="Search by name or email…" value="' + sanitise(memberSearch) + '" oninput="setMemberSearch(this.value)">' +
+      '<div class="filter-btns" id="member-filter-btns"></div>' +
     '</div>' +
     '<div class="table-wrap">' +
       '<table class="members-table">' +
         '<thead><tr><th>MEMBER</th><th>ROLE</th><th>JOINED</th><th>ACTIONS</th></tr></thead>' +
-        '<tbody>' + rows + emptyRow + '</tbody>' +
+        '<tbody id="members-tbody"></tbody>' +
       '</table>' +
     '</div>' +
-    pagination;
+    '<div id="members-pagination"></div>';
+  renderMembersTableBody();
 }
 
 window.setMemberSearch = function(val) {
   memberSearch = val;
   membersPage = 0;
-  renderMembersTable();
+  renderMembersTableBody();
 };
 
 window.setMemberRoleFilter = function(f) {
   memberRoleFilter = f;
   membersPage = 0;
-  renderMembersTable();
+  renderMembersTableBody();
 };
 
 window.membersPagePrev = function() {
-  if (membersPage > 0) { membersPage--; renderMembersTable(); }
+  if (membersPage > 0) { membersPage--; renderMembersTableBody(); }
 };
 
 window.membersPageNext = function() {
   var total = Math.ceil(getFilteredMembers().length / MEMBERS_PER_PAGE);
-  if (membersPage < total - 1) { membersPage++; renderMembersTable(); }
+  if (membersPage < total - 1) { membersPage++; renderMembersTableBody(); }
 };
 
 window.toggleSgpt = async function(uid, grant) {
@@ -244,7 +253,7 @@ window.toggleSgpt = async function(uid, grant) {
     await updateDoc(doc(db, 'gym', '8RB', 'members', uid), { sgpt: grant });
     var m = allMembers.find(function(x) { return x.uid === uid; });
     if (m) m.sgpt = grant;
-    renderMembersTable();
+    renderMembersTableBody();
     showToast(grant ? 'SGPT ACCESS GRANTED' : 'SGPT ACCESS REMOVED');
   } catch(err) { showToast('UPDATE FAILED — TRY AGAIN', true); }
 };
@@ -255,7 +264,7 @@ window.togglePt121 = async function(uid, grant) {
     await updateDoc(doc(db, 'gym', '8RB', 'members', uid), { pt121: grant });
     var m = allMembers.find(function(x) { return x.uid === uid; });
     if (m) m.pt121 = grant;
-    renderMembersTable();
+    renderMembersTableBody();
     showToast(grant ? '1-2-1 ACCESS GRANTED' : '1-2-1 ACCESS REMOVED');
   } catch(err) { showToast('UPDATE FAILED — TRY AGAIN', true); }
 };
@@ -411,11 +420,16 @@ window.updateSbTimeCap = function(val) { sbTimeCap = +val || 20; };
 window.updateSbEmomInterval = function(val) { sbEmomInterval = +val || 60; };
 window.updateSbEmomRounds = function(val) { sbEmomRounds = +val || 10; };
 
+function renderBuilderPanel() {
+  var bp = document.querySelector('.builder-panel');
+  if (bp) { bp.innerHTML = buildBuilderHtml(); checkSbReady(); }
+}
+
 window.setSessionLibTab = function(tab) { sessionLibTab = tab; renderSessionsSection(); };
 
-window.setSbVisibility = function(vis) { sbVisibility = vis; renderSessionsSection(); };
+window.setSbVisibility = function(vis) { sbVisibility = vis; renderBuilderPanel(); };
 
-window.setSbSessionType = function(type) { sbSessionType = type; renderSessionsSection(); };
+window.setSbSessionType = function(type) { sbSessionType = type; renderBuilderPanel(); };
 
 window.toggleSbPt121Member = function(uid, checked) {
   if (checked) {
@@ -427,7 +441,7 @@ window.toggleSbPt121Member = function(uid, checked) {
 
 window.setSbExType = function(i, type) {
   sbExercises[i].exType = type;
-  renderSessionsSection();
+  renderBuilderPanel();
 };
 
 window.updateSbEx = function(i, field, val) {
@@ -441,7 +455,7 @@ window.updateSbEx = function(i, field, val) {
 
 window.removeSbEx = function(i) {
   sbExercises.splice(i, 1);
-  renderSessionsSection();
+  renderBuilderPanel();
 };
 
 window.saveAdminSession = async function() {
@@ -593,7 +607,7 @@ window.filterExerciseSearch = filterExerciseSearch;
 window.addSbExercise = function(name) {
   sbExercises.push({ name: name, sets: 3, reps: 8, rest: 60, exType: 'standard', note: '' });
   window.closeExerciseSearch();
-  renderSessionsSection();
+  renderBuilderPanel();
 };
 
 // ─── ASSIGNMENTS ──────────────────────────────────────────────────────────────
@@ -860,7 +874,7 @@ window.saveLockedPanel = async function(tier) {
   var headingEl = document.getElementById(tier + '-teaser-heading');
   var bodyEl = document.getElementById(tier + '-teaser-body');
   var urlEl = document.getElementById(tier + '-teaser-url');
-  if (!headingEl) return;
+  if (!headingEl) { showToast('Panel not found — navigate to Settings and try again', true); return; }
   var panelData = {
     heading: headingEl.value,
     body: bodyEl ? bodyEl.value : '',

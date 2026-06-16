@@ -94,7 +94,7 @@ function buildLockedSection(label,tier,heading,body,url){
   var safeUrl=url?url.replace(/"/g,'&quot;'):'https://8roundsboxing.com';
   return '<div class="tier-section-head tier-section-locked"><span>'+label+'</span>'+LOCK_SVG+'</div>'
     +'<div style="padding:0 16px 16px">'
-      +'<button class="tier-locked-card" id="locked-card-'+tier+'" onclick="toggleTierTeaser(\''+tier+'\')"><span>Tap to learn more</span>'+CHEV_SVG+'</button>'
+      +'<button type="button" class="tier-locked-card" id="locked-card-'+tier+'" onclick="toggleTierTeaser(\''+tier+'\')"><span>Tap to learn more</span>'+CHEV_SVG+'</button>'
       +'<div class="tier-teaser-panel" id="teaser-'+tier+'" style="display:none">'
         +'<div class="tier-teaser-heading">'+heading+'</div>'
         +'<div class="tier-teaser-body">'+body+'</div>'
@@ -117,6 +117,7 @@ function toggleTierTeaser(tier){
   if(!isOpen){
     panel.style.display='block';
     if(card)card.classList.add('open');
+    setTimeout(function(){panel.scrollIntoView({behavior:'smooth',block:'nearest'});},50);
   }
 }
 

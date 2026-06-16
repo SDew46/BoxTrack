@@ -907,6 +907,7 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
 .tier-section-locked{color:var(--dim);}
 .tier-locked-card{display:flex;align-items:center;justify-content:space-between;width:100%;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;color:var(--dim);font-family:'DM Sans',sans-serif;font-size:14px;transition:border-color 0.15s,color 0.15s;user-select:none;-webkit-user-select:none;text-align:left;-webkit-appearance:none;appearance:none;touch-action:manipulation;}
 button svg,.tier-locked-card svg,.free-train-head svg,.tier-section-head svg{pointer-events:none;}
+.tier-locked-card:active,.tier-locked-card:focus-visible{background:rgba(230,57,70,0.08);border-color:var(--accent);color:var(--text);}
 .tier-locked-card.open{border-color:var(--accent);border-bottom-color:transparent;border-bottom-left-radius:0;border-bottom-right-radius:0;color:var(--text);}
 .tier-teaser-panel{background:var(--bg2);border:1px solid var(--accent);border-top:none;border-radius:0 0 var(--r) var(--r);padding:16px;}
 .tier-teaser-heading{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;color:var(--text);margin-bottom:8px;}

@@ -94,7 +94,7 @@ function buildLockedSection(label,tier,heading,body,url){
   var safeUrl=url?url.replace(/"/g,'&quot;'):'https://8roundsboxing.com';
   return '<div class="tier-section-head tier-section-locked"><span>'+label+'</span>'+LOCK_SVG+'</div>'
     +'<div style="padding:0 16px 16px">'
-      +'<button type="button" class="tier-locked-card" id="locked-card-'+tier+'" onclick="toggleTierTeaser(\''+tier+'\')"><span>Tap to learn more</span>'+CHEV_SVG+'</button>'
+      +'<button type="button" class="tier-locked-card" id="locked-card-'+tier+'"><span>Tap to learn more</span>'+CHEV_SVG+'</button>'
       +'<div class="tier-teaser-panel" id="teaser-'+tier+'" style="display:none">'
         +'<div class="tier-teaser-heading">'+heading+'</div>'
         +'<div class="tier-teaser-body">'+body+'</div>'
@@ -103,7 +103,21 @@ function buildLockedSection(label,tier,heading,body,url){
     +'</div>';
 }
 
+function wireLockedCard(tier){
+  var btn=document.getElementById('locked-card-'+tier);
+  if(!btn)return;
+  btn.addEventListener('touchstart',function(e){
+    e.preventDefault();
+    toggleTierTeaser(tier);
+  },{passive:false});
+  btn.addEventListener('click',function(){
+    toggleTierTeaser(tier);
+  });
+}
+
+var _lastTierToggle=0;
 function toggleTierTeaser(tier){
+  var now=Date.now();if(now-_lastTierToggle<300)return;_lastTierToggle=now;
   var panel=document.getElementById('teaser-'+tier);
   var card=document.getElementById('locked-card-'+tier);
   if(!panel)return;
@@ -117,7 +131,7 @@ function toggleTierTeaser(tier){
   if(!isOpen){
     panel.style.display='block';
     if(card)card.classList.add('open');
-    setTimeout(function(){panel.scrollIntoView({behavior:'smooth',block:'nearest'});},50);
+    setTimeout(function(){panel.scrollIntoView({behavior:'smooth',block:'start'});},50);
   }
 }
 
@@ -171,6 +185,7 @@ function renderSgptSection(){
     var body=sanitiseTrainStr(sp.body||'Small Group PT is coached strength and conditioning in a small group setting — programming written for you, the same group week to week.');
     var url=sp.url||'https://8roundsboxing.com';
     area.innerHTML=buildLockedSection('SGPT','sgpt',heading,body,url);
+    wireLockedCard('sgpt');
     return;
   }
   var cardsHtml=buildProgCards(userDataCache.sgptSessions||[],'useSgptSession');
@@ -196,6 +211,7 @@ function renderPt121Section(){
     var body=sanitiseTrainStr(pp.body||'1-2-1 Personal Training is one-on-one coaching with Darren — your own programme, your own pace, fully tailored.');
     var url=pp.url||'https://8roundsboxing.com';
     area.innerHTML=buildLockedSection('1-2-1 PT','pt121',heading,body,url);
+    wireLockedCard('pt121');
     return;
   }
   var cardsHtml=buildProgCards(userDataCache.pt121Sessions||[],'usePt121Session');

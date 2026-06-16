@@ -94,7 +94,7 @@ function buildLockedSection(label,tier,heading,body,url){
   var safeUrl=url?url.replace(/"/g,'&quot;'):'https://8roundsboxing.com';
   return '<div class="tier-section-head tier-section-locked"><span>'+label+'</span>'+LOCK_SVG+'</div>'
     +'<div style="padding:0 16px 16px">'
-      +'<div class="tier-locked-card" id="locked-card-'+tier+'" onclick="toggleTierTeaser(\''+tier+'\')"><span>Tap to learn more</span>'+CHEV_SVG+'</div>'
+      +'<button class="tier-locked-card" id="locked-card-'+tier+'" onclick="toggleTierTeaser(\''+tier+'\')"><span>Tap to learn more</span>'+CHEV_SVG+'</button>'
       +'<div class="tier-teaser-panel" id="teaser-'+tier+'" style="display:none">'
         +'<div class="tier-teaser-heading">'+heading+'</div>'
         +'<div class="tier-teaser-body">'+body+'</div>'
@@ -173,10 +173,10 @@ function renderSgptSection(){
     return;
   }
   var cardsHtml=buildProgCards(userDataCache.sgptSessions||[],'useSgptSession');
-  area.innerHTML='<div class="tier-section-head" onclick="toggleSectionCollapse(\'sgpt\')" role="button" style="cursor:pointer;justify-content:space-between">'
+  area.innerHTML='<button class="tier-section-head" onclick="toggleSectionCollapse(\'sgpt\')" style="cursor:pointer;justify-content:space-between">'
     +'<span>YOUR SGPT PROGRAMME</span>'
     +'<span id="sgpt-collapse-chev" style="font-size:12px;color:var(--dim);transition:transform 0.25s">&#9662;</span>'
-    +'</div>'
+    +'</button>'
     +'<div id="sgpt-section-body">'
     +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>'
     +'</div>';
@@ -198,10 +198,10 @@ function renderPt121Section(){
     return;
   }
   var cardsHtml=buildProgCards(userDataCache.pt121Sessions||[],'usePt121Session');
-  area.innerHTML='<div class="tier-section-head" onclick="toggleSectionCollapse(\'pt121\')" role="button" style="cursor:pointer;justify-content:space-between">'
+  area.innerHTML='<button class="tier-section-head" onclick="toggleSectionCollapse(\'pt121\')" style="cursor:pointer;justify-content:space-between">'
     +'<span>YOUR 1-2-1 PROGRAMME</span>'
     +'<span id="pt121-collapse-chev" style="font-size:12px;color:var(--dim);transition:transform 0.25s">&#9662;</span>'
-    +'</div>'
+    +'</button>'
     +'<div id="pt121-section-body">'
     +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>'
     +'</div>';

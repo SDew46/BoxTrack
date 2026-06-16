@@ -30,8 +30,14 @@ function checkDeload(){
   const area=document.getElementById('deload-area');if(!area)return;
   if(ld('deloadDismissed',false)){area.innerHTML='';return;}
   const s=ld('sessions',[]),last=ld('lastDeloadSession',0),since=s.filter(x=>x.id>last).length;
-  if(since>=4)area.innerHTML=`<div class="deload"><div class="deload-txt">💪 ${since} sessions done — consider a deload this week.</div><button class="pill gd on" onclick="dismissDeload()">Got it</button></div>`;
-  else area.innerHTML='';
+  if(since>=4){
+    area.innerHTML='<div class="deload"><div class="deload-txt">\u{1F4AA} '+since+' sessions done — consider a deload this week.</div><button type="button" class="pill gd on" id="deload-dismiss-btn">Got it</button></div>';
+    var btn=document.getElementById('deload-dismiss-btn');
+    if(btn){
+      btn.addEventListener('touchstart',function(e){e.preventDefault();dismissDeload();},{passive:false});
+      btn.addEventListener('click',function(){dismissDeload();});
+    }
+  } else area.innerHTML='';
 }
 function dismissDeload(){const s=ld('sessions',[]);sv('lastDeloadSession',s.length?s[s.length-1].id:0);sv('deloadDismissed',true);setTimeout(()=>sv('deloadDismissed',false),7*24*60*60*1000);document.getElementById('deload-area').innerHTML='';toast('Deload week noted');}
 

@@ -897,24 +897,26 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
   flex-shrink:0;
 }
 
-/* ── YOUR PROGRAMME cards ──────────────────────────────────────────────────── */
-.prog-card{display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:8px;}
-.prog-start-btn{flex-shrink:0;height:44px;padding:0 20px;background:none;border:1px solid var(--accent);border-radius:var(--rs);color:var(--accent);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
-
-/* ── Train tab tier sections (FREE TRAIN / SGPT / 1-2-1 PT) ───────────────── */
-.free-train-head{display:block;width:100%;background:none;border:none;text-align:left;padding:16px 16px 6px;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);cursor:pointer;user-select:none;-webkit-user-select:none;}
-.tier-section-head{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;text-align:left;padding:20px 16px 10px;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text);user-select:none;-webkit-user-select:none;}
-.tier-section-locked{color:var(--dim);}
-.tier-locked-card{display:flex;align-items:center;justify-content:space-between;width:100%;background:var(--bg2);border:1px dashed var(--border);border-radius:var(--r);padding:14px 16px;cursor:pointer;color:var(--dim);font-family:'DM Sans',sans-serif;font-size:14px;transition:border-color 0.15s,color 0.15s;user-select:none;-webkit-user-select:none;text-align:left;-webkit-appearance:none;appearance:none;touch-action:manipulation;}
-button svg,.tier-locked-card svg,.free-train-head svg,.tier-section-head svg{pointer-events:none;}
-.tier-locked-card:active,.tier-locked-card:focus-visible{background:rgba(230,57,70,0.08);border-color:var(--accent);color:var(--text);}
-.tier-locked-card.open{border-color:var(--accent);border-bottom-color:transparent;border-bottom-left-radius:0;border-bottom-right-radius:0;color:var(--text);}
-.tier-teaser-panel{background:var(--bg2);border:1px solid var(--accent);border-top:none;border-radius:0 0 var(--r) var(--r);padding:16px;}
-.tier-teaser-heading{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;color:var(--text);margin-bottom:8px;}
-.tier-teaser-body{font-family:'DM Sans',sans-serif;font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:14px;}
-.tier-teaser-link{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);}
-.tier-teaser-link a{color:var(--accent);text-decoration:none;}
-.tier-empty{font-family:'DM Sans',sans-serif;font-size:14px;color:var(--muted);text-align:center;padding:24px 0;}
+/* ── Flat session list ────────────────────────────────────────────────────── */
+.train-divider{border:none;border-top:1px solid var(--border);margin:0 16px;}
+.session-card{background:#141414;border:1px solid var(--border);border-radius:12px;padding:16px;margin:0 16px 8px;}
+.session-card-assigned{border:2px solid var(--gold);}
+.sc-badge-assigned{display:inline-block;font-family:'DM Sans',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);background:rgba(230,168,23,0.1);padding:2px 6px;border-radius:4px;margin-bottom:4px;}
+.sc-date-assigned{font-family:'DM Sans',sans-serif;font-size:11px;color:var(--gold);margin-bottom:6px;}
+.sc-row{display:flex;align-items:center;gap:12px;}
+.sc-info{flex:1;min-width:0;}
+.sc-name{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--text);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-meta{font-family:'DM Sans',sans-serif;font-size:12px;color:var(--muted);margin-top:2px;}
+.sc-start-btn{flex-shrink:0;height:40px;padding:0 16px;background:none;border:1px solid var(--accent);border-radius:var(--rs);color:var(--accent);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;touch-action:manipulation;}
+.sc-start-btn:active{background:var(--accent);color:#fff;}
+.sl-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:48px 24px 24px;gap:12px;color:var(--dim);}
+.sl-empty-head{font-family:'DM Sans',sans-serif;font-size:16px;color:var(--muted);}
+.sl-empty-sub{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--dim);}
+.create-session-area{display:flex;align-items:center;margin:8px 16px 0;border:1px dashed var(--border);border-radius:12px;overflow:hidden;height:64px;}
+.create-session-btn{flex:1;height:100%;background:transparent;border:none;color:var(--dim);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;text-align:left;padding:0 20px;touch-action:manipulation;}
+.create-session-btn:active{color:var(--text);}
+.equip-icon-btn{flex-shrink:0;height:100%;width:52px;background:transparent;border:none;border-left:1px dashed var(--border);color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
+.equip-icon-btn:active{color:var(--text);}
 
 /* ── Install Gate ──────────────────────────────────────────────────────────── */
 #install-gate{

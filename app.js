@@ -96,7 +96,9 @@ export const userDataCache = {
   assignedSessions: null,
   sgptSessions: [],
   pt121Sessions: [],
-  lockedPanels: null
+  lockedPanels: null,
+  learnCards: null,
+  lastLearnCardsRead: 0
 };
 
 // ─── STORAGE ───────────────────────────────────────────────────────────────────
@@ -222,7 +224,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v12.2.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v12.4.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -287,7 +289,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v12.2.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v12.4.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -967,6 +969,8 @@ async function handleSignOut() {
     userDataCache.sgptSessions = [];
     userDataCache.pt121Sessions = [];
     userDataCache.lockedPanels = null;
+    userDataCache.learnCards = null;
+    userDataCache.lastLearnCardsRead = 0;
     lastProgressRead = 0;
     if (typeof window.resetTrainState === 'function') window.resetTrainState();
     if (typeof window.resetBoxState === 'function') window.resetBoxState();

@@ -39,12 +39,11 @@ test('TRAIN tab — session library renders with at least one session card', asy
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
-  // FREE TRAIN starts collapsed — expand it first
-  await page.locator('#free-train-head').click();
-  await page.waitForSelector('#free-train-body', { state: 'visible', timeout: 3000 });
+  // Flat session list renders immediately — no expand step needed
+  await page.waitForSelector('#session-list', { state: 'visible', timeout: 5000 });
 
   // At least one session card should be present
-  const cards = page.locator('#train-lib .sc');
+  const cards = page.locator('#session-list .session-card');
   await expect(cards.first()).toBeVisible();
 });
 
@@ -57,15 +56,11 @@ test('TRAIN tab — tapping a session opens log view', async ({ page, mockFireba
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
-  // FREE TRAIN starts collapsed — expand it first
-  await page.locator('#free-train-head').click();
-  await page.waitForSelector('#free-train-body', { state: 'visible', timeout: 3000 });
+  // Wait for the flat session list to render
+  await page.waitForSelector('#session-list .session-card', { state: 'visible', timeout: 5000 });
 
-  // Expand the first session card
-  await page.locator('#train-lib .sc .sc-hd').first().click();
-
-  // Click the "LET'S WORK" button inside the expanded card
-  await page.locator('#train-lib button:has-text("LET\'S WORK")').first().click();
+  // Click the START button on the first session card directly
+  await page.locator('#session-list .session-card .sc-start-btn').first().click();
 
   // Log view should be visible, library should be hidden
   await expect(page.locator('#train-log')).toBeVisible({ timeout: 5000 });
@@ -208,9 +203,9 @@ test('Onboarding shows for a new user with no profile', async ({ page, mockFireb
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 11: SGPT member sees SGPT section in TRAIN tab
+// Test 11: SGPT member sees SGPT sessions in the flat session list
 // ─────────────────────────────────────────────────────────────────────────────
-test('SGPT member sees SGPT sessions section in TRAIN tab', async ({ page, mockFirebaseAsSgpt }) => {
+test('SGPT member sees SGPT sessions in the flat session list', async ({ page, mockFirebaseAsSgpt }) => {
   await mockFirebaseAsSgpt(null);
   await page.addInitScript(() => { localStorage.setItem('installGateDismissed', '1'); });
   await page.goto(APP_URL);
@@ -219,29 +214,28 @@ test('SGPT member sees SGPT sessions section in TRAIN tab', async ({ page, mockF
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
-  // YOUR PROGRAMME section should be visible
-  await expect(page.locator('#sgpt-section')).toBeVisible({ timeout: 5000 });
-
-  // At least one programme card should be present (loaded from Firestore mock)
-  await expect(page.locator('#sgpt-section .prog-card').first()).toBeVisible({ timeout: 5000 });
+  // Session list renders with at least one card (SGPT session mixed in)
+  await page.waitForSelector('#session-list .session-card', { state: 'visible', timeout: 5000 });
+  await expect(page.locator('#session-list .session-card').first()).toBeVisible({ timeout: 5000 });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 12: Standard member sees SGPT section in locked state (no session cards)
+// Test 12: Standard member sees session list without SGPT section headers
 // ─────────────────────────────────────────────────────────────────────────────
-test('Standard member sees SGPT section in locked state', async ({ page, mockFirebase }) => {
+test('Standard member sees flat session list — no section headers', async ({ page, mockFirebase }) => {
   await loadApp(page, mockFirebase);
 
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
-  // SGPT section is always rendered — locked state for non-SGPT members
-  const sgptSection = page.locator('#sgpt-section');
-  await expect(sgptSection).toBeVisible({ timeout: 5000 });
+  // Flat list renders with standard sessions
+  await page.waitForSelector('#session-list .session-card', { state: 'visible', timeout: 5000 });
+  await expect(page.locator('#session-list .session-card').first()).toBeVisible();
 
-  // Locked card (teaser trigger) is shown instead of programme cards
-  await expect(sgptSection.locator('.tier-locked-card')).toBeVisible({ timeout: 3000 });
-  await expect(sgptSection.locator('.prog-card')).toHaveCount(0);
+  // No old SGPT section, free-train header, or progression model
+  await expect(page.locator('#sgpt-section')).toHaveCount(0);
+  await expect(page.locator('#free-train-head')).toHaveCount(0);
+  await expect(page.locator('.tier-locked-card')).toHaveCount(0);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

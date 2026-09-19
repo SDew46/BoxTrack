@@ -4,7 +4,7 @@ import {
   doc, getDoc, getDocs, setDoc, addDoc, collection,
   serverTimestamp, updateDoc, query, where
 } from 'firebase/firestore';
-import { EXERCISE_LIBRARY } from './data.js';
+import { EXERCISE_LIBRARY, LEARN_CONTENT } from './data.js';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 var currentCoach = null;
@@ -27,6 +27,10 @@ var membersPage = 0;
 var MEMBERS_PER_PAGE = 20;
 var sessionLibTab = 'sgpt';
 var coachNotesValue = '';
+var adminLearnDraft = null;
+var adminLearnSaved = null;
+var adminLearnLoading = false;
+var LEARN_CARD_LABELS = ['1. PUNCHES', '2. DEFENCE', '3. FOOTWORK', '4. SHADOW BOXING', '5. WRAPPING', '6. COMBINATIONS'];
 var lockedPanelsData = {
   sgpt: { heading: '', body: '', url: '' },
   pt121: { heading: '', body: '', url: '' }
@@ -60,7 +64,7 @@ function sanitise(str) {
 // ─── NAV ──────────────────────────────────────────────────────────────────────
 function showSection(name) {
   activeSection = name;
-  ['dashboard', 'members', 'sessions', 'assignments', 'settings'].forEach(function(s) {
+  ['dashboard', 'members', 'sessions', 'assignments', 'settings', 'learn'].forEach(function(s) {
     var el = document.getElementById('section-' + s);
     if (el) el.style.display = s === name ? '' : 'none';
     var nav = document.getElementById('nav-' + s);
@@ -71,6 +75,10 @@ function showSection(name) {
   else if (name === 'sessions') renderSessionsSection();
   else if (name === 'assignments') renderAssignmentsSection();
   else if (name === 'settings') renderSettingsSection();
+  else if (name === 'learn') {
+    if (!adminLearnDraft && !adminLearnLoading) loadAdminLearnCards();
+    renderLearnSection();
+  }
 }
 window.showSection = showSection;
 
@@ -894,6 +902,222 @@ window.saveLockedPanel = async function(tier) {
 window.updateTeaserPreview = function(tier) {
   var el = document.getElementById('teaser-preview-' + tier);
   if (el) el.innerHTML = makeTeaserPreview(tier);
+};
+
+// ─── LEARN CONTENT ────────────────────────────────────────────────────────────
+function normaliseYouTubeUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  url = url.trim();
+  if (url.startsWith('https://www.youtube.com/embed/')) return url;
+  var watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (watchMatch) return 'https://www.youtube.com/embed/' + watchMatch[1];
+  var shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (shortMatch) return 'https://www.youtube.com/embed/' + shortMatch[1];
+  return '';
+}
+
+function getLearnDefaults() {
+  return LEARN_CONTENT.map(function(c) {
+    return { id: c.id, title: c.title, cue: c.cue, url: c.url, credit: c.credit || '' };
+  });
+}
+
+async function loadAdminLearnCards() {
+  adminLearnLoading = true;
+  if (activeSection === 'learn') renderLearnSection();
+  try {
+    var snap = await getDoc(doc(db, 'gym', '8RB', 'config', 'learnCards'));
+    if (snap.exists()) {
+      var d = snap.data();
+      if (d.cards && Array.isArray(d.cards) && d.cards.length === 6) {
+        adminLearnSaved = d.cards.map(function(c) {
+          return { id: c.id || '', title: c.title || '', cue: c.cue || '', url: c.url || '', credit: c.credit || '' };
+        });
+      } else {
+        adminLearnSaved = getLearnDefaults();
+      }
+    } else {
+      adminLearnSaved = getLearnDefaults();
+    }
+  } catch(err) {
+    console.warn('Failed to load learn cards:', err);
+    adminLearnSaved = getLearnDefaults();
+  }
+  adminLearnDraft = adminLearnSaved.map(function(c) { return Object.assign({}, c); });
+  adminLearnLoading = false;
+  if (activeSection === 'learn') renderLearnSection();
+}
+
+function isLearnCardDirty(i) {
+  if (!adminLearnDraft || !adminLearnSaved) return false;
+  var d = adminLearnDraft[i], s = adminLearnSaved[i];
+  return d.title !== s.title || d.cue !== s.cue || d.url !== s.url || d.credit !== s.credit;
+}
+
+function renderLearnSection() {
+  var el = document.getElementById('section-learn');
+  if (!el) return;
+
+  if (adminLearnLoading || !adminLearnDraft) {
+    el.innerHTML =
+      '<div class="section-hd"><div class="section-ttl">LEARN CONTENT</div>' +
+      '<div class="section-sub">Edit the technique videos and coaching cues members see in the LEARN tab.</div></div>' +
+      '<div style="color:var(--dim);font-size:14px;padding:24px 0">Loading…</div>';
+    return;
+  }
+
+  var cardsHtml = adminLearnDraft.map(function(card, i) {
+    var dirty = isLearnCardDirty(i);
+    var badge = dirty ? '<span class="lc-unsaved">UNSAVED</span>' : '';
+    var def = LEARN_CONTENT[i] || {};
+    var urlNorm = normaliseYouTubeUrl(card.url);
+    var prevDis = urlNorm ? '' : ' disabled';
+    return '<div class="lc-card" id="lc-card-' + i + '">' +
+      '<div class="lc-card-hd"><span class="lc-card-pos">' + LEARN_CARD_LABELS[i] + '</span>' + badge + '</div>' +
+      '<label class="sb-lbl" for="lc-title-' + i + '">TITLE</label>' +
+      '<input class="sb-name-inp" id="lc-title-' + i + '" type="text" maxlength="40"' +
+        ' placeholder="' + sanitise(def.title || '') + '"' +
+        ' value="' + sanitise(card.title) + '"' +
+        ' oninput="onLearnFieldInput(' + i + ',\'title\',this.value)"' +
+        ' aria-label="Title for card ' + (i + 1) + '">' +
+      '<label class="sb-lbl" for="lc-cue-' + i + '">COACHING CUE</label>' +
+      '<textarea class="admin-textarea" id="lc-cue-' + i + '" maxlength="400"' +
+        ' placeholder="' + sanitise(def.cue || '') + '"' +
+        ' oninput="onLearnFieldInput(' + i + ',\'cue\',this.value)"' +
+        ' aria-live="polite" aria-label="Coaching cue for card ' + (i + 1) + '">' + sanitise(card.cue) + '</textarea>' +
+      '<div class="admin-charcount" id="lc-cue-count-' + i + '">' + card.cue.length + '/400</div>' +
+      '<label class="sb-lbl" for="lc-url-' + i + '">YOUTUBE URL</label>' +
+      '<input class="sb-name-inp" id="lc-url-' + i + '" type="url"' +
+        ' placeholder="https://www.youtube.com/watch?v=..."' +
+        ' value="' + sanitise(card.url) + '"' +
+        ' oninput="onLearnFieldInput(' + i + ',\'url\',this.value)"' +
+        ' aria-label="YouTube URL for card ' + (i + 1) + '">' +
+      '<div class="lc-url-hint">Paste any YouTube URL. Watch, embed, or share links all work.</div>' +
+      '<button type="button" class="lc-preview-btn" id="lc-preview-btn-' + i + '"' + prevDis +
+        ' onclick="previewLearnCard(' + i + ')" aria-label="Preview video for card ' + (i + 1) + '"' +
+        (urlNorm ? '' : ' title="Enter a valid YouTube URL first"') + '>PREVIEW VIDEO</button>' +
+      '<label class="sb-lbl" for="lc-credit-' + i + '">CREDIT</label>' +
+      '<input class="sb-name-inp" id="lc-credit-' + i + '" type="text" maxlength="60"' +
+        ' placeholder="e.g. Coach Darren"' +
+        ' value="' + sanitise(card.credit) + '"' +
+        ' oninput="onLearnFieldInput(' + i + ',\'credit\',this.value)"' +
+        ' aria-label="Credit for card ' + (i + 1) + '">' +
+    '</div>';
+  }).join('');
+
+  var anyDirty = adminLearnDraft.some(function(_, i) { return isLearnCardDirty(i); });
+  el.innerHTML =
+    '<div class="section-hd"><div class="section-ttl">LEARN CONTENT</div>' +
+    '<div class="section-sub">Edit the technique videos and coaching cues members see in the LEARN tab.</div></div>' +
+    '<div style="max-width:640px">' +
+      cardsHtml +
+      '<div class="lc-save-row">' +
+        '<button type="button" class="admin-save-btn" id="lc-save-btn"' +
+          ' onclick="saveAllLearnChanges()"' +
+          ' style="flex:1;height:56px;font-size:20px;letter-spacing:2px"' +
+          ' aria-label="Save all changes to LEARN content"' +
+          (anyDirty ? '' : ' disabled') + '>SAVE ALL CHANGES</button>' +
+        '<button type="button" class="lc-discard-btn" id="lc-discard-btn"' +
+          ' onclick="discardLearnChanges()"' +
+          ' aria-label="Discard all unsaved changes"' +
+          (anyDirty ? '' : ' style="display:none"') + '>DISCARD CHANGES</button>' +
+      '</div>' +
+    '</div>';
+}
+
+window.onLearnFieldInput = function(i, field, val) {
+  if (!adminLearnDraft) return;
+  adminLearnDraft[i][field] = val;
+
+  if (field === 'cue') {
+    var ct = document.getElementById('lc-cue-count-' + i);
+    if (ct) ct.textContent = val.length + '/400';
+  }
+
+  if (field === 'url') {
+    var norm = normaliseYouTubeUrl(val);
+    var pb = document.getElementById('lc-preview-btn-' + i);
+    if (pb) {
+      pb.disabled = !norm;
+      pb.title = norm ? '' : 'Enter a valid YouTube URL first';
+    }
+  }
+
+  var dirty = isLearnCardDirty(i);
+  var cardEl = document.getElementById('lc-card-' + i);
+  if (cardEl) {
+    var hd = cardEl.querySelector('.lc-card-hd');
+    var badge = cardEl.querySelector('.lc-unsaved');
+    if (dirty && !badge && hd) {
+      var span = document.createElement('span');
+      span.className = 'lc-unsaved';
+      span.textContent = 'UNSAVED';
+      hd.appendChild(span);
+    } else if (!dirty && badge) {
+      badge.remove();
+    }
+  }
+
+  var anyDirty = adminLearnDraft.some(function(_, j) { return isLearnCardDirty(j); });
+  var saveBtn = document.getElementById('lc-save-btn');
+  var discardBtn = document.getElementById('lc-discard-btn');
+  if (saveBtn) saveBtn.disabled = !anyDirty;
+  if (discardBtn) discardBtn.style.display = anyDirty ? '' : 'none';
+};
+
+window.saveAllLearnChanges = async function() {
+  if (!adminLearnDraft) return;
+  var errors = [];
+  var normalised = adminLearnDraft.map(function(card, i) {
+    var norm = normaliseYouTubeUrl(card.url);
+    if (!norm) errors.push(LEARN_CARD_LABELS[i]);
+    return { id: card.id, title: card.title, cue: card.cue, url: norm || card.url, credit: card.credit };
+  });
+  if (errors.length) {
+    showToast('Invalid URL in: ' + errors.join(', '), true);
+    return;
+  }
+  var btn = document.getElementById('lc-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'SAVING…'; }
+  try {
+    await setDoc(doc(db, 'gym', '8RB', 'config', 'learnCards'), {
+      cards: normalised,
+      updatedAt: serverTimestamp(),
+      updatedBy: currentCoach ? currentCoach.uid : ''
+    });
+    adminLearnSaved = normalised.map(function(c) { return Object.assign({}, c); });
+    adminLearnDraft = normalised.map(function(c) { return Object.assign({}, c); });
+    showToast('LEARN CONTENT UPDATED');
+    renderLearnSection();
+  } catch(err) {
+    showToast('SAVE FAILED — TRY AGAIN', true);
+    if (btn) { btn.disabled = false; btn.textContent = 'SAVE ALL CHANGES'; }
+  }
+};
+
+window.discardLearnChanges = function() {
+  if (!confirm('Discard all changes since last save?')) return;
+  adminLearnDraft = adminLearnSaved.map(function(c) { return Object.assign({}, c); });
+  renderLearnSection();
+};
+
+window.previewLearnCard = function(i) {
+  if (!adminLearnDraft) return;
+  var urlInput = document.getElementById('lc-url-' + i);
+  var raw = urlInput ? urlInput.value : (adminLearnDraft[i] ? adminLearnDraft[i].url : '');
+  var norm = normaliseYouTubeUrl(raw);
+  if (!norm) return;
+  var iframe = document.getElementById('lc-preview-iframe');
+  var modal = document.getElementById('lc-preview-modal');
+  if (iframe) iframe.src = norm;
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeLearnPreview = function() {
+  var iframe = document.getElementById('lc-preview-iframe');
+  var modal = document.getElementById('lc-preview-modal');
+  if (iframe) iframe.src = '';
+  if (modal) modal.style.display = 'none';
 };
 
 // ─── SIGN OUT ─────────────────────────────────────────────────────────────────

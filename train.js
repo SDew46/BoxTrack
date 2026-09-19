@@ -50,184 +50,158 @@ function toggleEquip(id){activeEquipment.has(id)?activeEquipment.delete(id):acti
 function sessAvail(sess){return(sess.equip||[]).every(e=>activeEquipment.has(e));}
 
 // LIBRARY
-let currentCat='gu';
-
 function sessionVisibleToUser(sess){
-  // Standard sessions in data.js are always visible; only explicitly inactive sessions
-  // (active === false) are hidden from non-coaches.
   if(sess.active===false){var role=(window.userProfile&&window.userProfile.role)||'member';return role==='coach';}
   return true;
 }
 
-function showCat(cat){
-  currentCat=cat;
-  const clsMap={gu:'on',td:'on-b',core:'on-g',bw:'on-m',custom:'on-p'};
-  ['gu','td','core','bw','custom'].forEach(c=>{document.getElementById('lib-'+c).style.display=c===cat?'flex':'none';const btn=document.getElementById('ct-'+c);if(btn)btn.className='cat-btn'+(c===cat?' '+clsMap[c]:'');});
-  if(cat==='custom')renderCustomLib();
+function getUsedSessionIds(){
+  var sessions=userDataCache.sessions||ld('sessions',[]);
+  return new Set(sessions.map(function(s){return s.sessId;}).filter(Boolean));
 }
 
+function getLastUsedTimestamp(sessId){
+  var sessions=userDataCache.sessions||ld('sessions',[]);
+  var last=0;
+  sessions.forEach(function(s){if(s.sessId===sessId&&s.id>last)last=s.id;});
+  return last;
+}
+
+function renderSessionCard(item){
+  var PERSON_SVG='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;pointer-events:none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+  var d=item.data;
+  if(item.type==='assigned'){
+    var fid=d._firestoreId||'';
+    var n=(d.sessionData&&d.sessionData.exercises&&d.sessionData.exercises.length)||0;
+    var today=new Date().toISOString().split('T')[0];
+    var dateLabel=d.assignedFor===today?'For today':'For '+fmtDate(d.assignedFor);
+    var sname=sanitiseTrainStr(d.sessionName||'Assigned Session');
+    return '<div class="session-card session-card-assigned">'
+      +'<div class="sc-badge-assigned">ASSIGNED</div>'
+      +'<div class="sc-date-assigned">'+sanitiseTrainStr(dateLabel)+'</div>'
+      +'<div class="sc-row">'
+        +'<div class="sc-info">'
+          +'<div class="sc-name">'+sname+'</div>'
+          +'<div class="sc-meta">'+n+(n===1?' exercise':' exercises')+'</div>'
+        +'</div>'
+        +'<button type="button" class="sc-start-btn" onclick="startAssignedSession(\''+fid+'\')" aria-label="Assigned by coach. Start session: '+sname+'">START</button>'
+      +'</div>'
+    +'</div>';
+  }
+  if(item.type==='sgpt'){
+    var fid=d._firestoreId||'';
+    var n=(d.exercises&&d.exercises.length)||0;
+    var sname=sanitiseTrainStr(d.name||'SGPT Session');
+    return '<div class="session-card">'
+      +'<div class="sc-row">'
+        +'<div class="sc-info">'
+          +'<div class="sc-name">'+sname+'</div>'
+          +'<div class="sc-meta">'+n+(n===1?' exercise':' exercises')+'</div>'
+        +'</div>'
+        +'<button type="button" class="sc-start-btn" onclick="useSgptSession(\''+fid+'\')" aria-label="Start session: '+sname+'">START</button>'
+      +'</div>'
+    +'</div>';
+  }
+  if(item.type==='pt121'){
+    var fid=d._firestoreId||'';
+    var n=(d.exercises&&d.exercises.length)||0;
+    var sname=sanitiseTrainStr(d.name||'1-2-1 Session');
+    return '<div class="session-card">'
+      +'<div class="sc-row">'
+        +'<div class="sc-info">'
+          +'<div class="sc-name">'+sname+'</div>'
+          +'<div class="sc-meta">'+n+(n===1?' exercise':' exercises')+'</div>'
+        +'</div>'
+        +'<button type="button" class="sc-start-btn" onclick="usePt121Session(\''+fid+'\')" aria-label="Start session: '+sname+'">START</button>'
+      +'</div>'
+    +'</div>';
+  }
+  if(item.type==='custom'){
+    var cidx=(userDataCache.customSessions||[]).indexOf(d);
+    var n=(d.exercises&&d.exercises.length)||0;
+    var sname=sanitiseTrainStr(d.name||'Custom Session');
+    return '<div class="session-card">'
+      +'<div class="sc-row">'
+        +'<div class="sc-info">'
+          +'<div class="sc-name">'+PERSON_SVG+sname+'</div>'
+          +'<div class="sc-meta">Your session &middot; '+n+(n===1?' exercise':' exercises')+'</div>'
+        +'</div>'
+        +'<button type="button" class="sc-start-btn" onclick="useCustomSession('+cidx+')" aria-label="Start session: '+sname+'">START</button>'
+      +'</div>'
+    +'</div>';
+  }
+  if(item.type==='used'){
+    var dname=sanitiseTrainStr(getSessName(d.id)||d.name||'Session');
+    var last=getLastUsedTimestamp(d.id);
+    var lastLabel=last?'Last run: '+fmtDate(new Date(last).toISOString().split('T')[0]):'';
+    return '<div class="session-card">'
+      +'<div class="sc-row">'
+        +'<div class="sc-info">'
+          +'<div class="sc-name">'+dname+'</div>'
+          +'<div class="sc-meta">'+sanitiseTrainStr(lastLabel)+'</div>'
+        +'</div>'
+        +'<button type="button" class="sc-start-btn" onclick="useSession(\''+d.id+'\')" aria-label="Start session: '+dname+'">START</button>'
+      +'</div>'
+    +'</div>';
+  }
+  var dname=sanitiseTrainStr(getSessName(d.id)||d.name||'Session');
+  var n=(d.exercises&&d.exercises.length)||0;
+  return '<div class="session-card">'
+    +'<div class="sc-row">'
+      +'<div class="sc-info">'
+        +'<div class="sc-name">'+dname+'</div>'
+        +'<div class="sc-meta">'+n+(n===1?' exercise':' exercises')+'</div>'
+      +'</div>'
+      +'<button type="button" class="sc-start-btn" onclick="useSession(\''+d.id+'\')" aria-label="Start session: '+dname+'">START</button>'
+    +'</div>'
+  +'</div>';
+}
 
 function renderLibrary(){
-  var role=(window.userProfile&&window.userProfile.role)||'member';
-  const catMap={gu:'GU',td:'TD',core:'CORE',bw:'BW'};
-  Object.entries(catMap).forEach(([key,catId])=>{
-    const cont=document.getElementById('lib-'+key);if(!cont)return;
-    const meta=CAT_META[catId];
-    cont.innerHTML=SESSIONS.filter(s=>s.cat===catId&&sessionVisibleToUser(s)).map(sess=>{
-      const avail=sessAvail(sess);
-      const exRows=sess.exercises.map((ex,ei)=>{
-        var scheme=ex.scheme||(ex.sets+'×'+ex.reps);
-        var hasAlts=ex.alts&&ex.alts.length>0;
-        var swapBtn=hasAlts?'<button class="sw-pill '+(sess._swaps&&sess._swaps[ei]?'on':'')+'" id="sb-'+sess.id+'-'+ei+'" onclick="event.stopPropagation();openSwap(\''+sess.id+'\','+ei+')">'+(sess._swaps&&sess._swaps[ei]?'SWAPPED':'SWAP')+'</button>':'';
-        return '<div class="ex-row"><div style="flex:1"><div class="ex-nm" id="pn-'+sess.id+'-'+ei+'">'+ex.name+'</div>'+(ex.note?'<div class="ex-nt">'+ex.note+'</div>':'')+'</div><div class="ex-rt"><span class="ex-sc">'+scheme+'</span>'+swapBtn+'</div></div>';
-      }).join('');
-      var dname=getSessName(sess.id)||sess.name;
-      var inactiveBadge=sess.active===false&&role==='coach'?'<span style="font-size:9px;font-weight:700;letter-spacing:1px;background:var(--border);color:var(--dim);padding:2px 6px;border-radius:10px;margin-left:6px">INACTIVE</span>':'';
-      var opacity=sess.active===false&&role==='coach'?'opacity:0.5;':'';
-      var finisherHtml=sess.finisher?'<div class="fin-strip"><div class="fin-lbl">Finisher</div><div class="fin-txt">'+sess.finisher+'</div></div>':'';
-      return '<div class="sc '+(avail?'':'na')+'" id="sc-'+sess.id+'" style="'+opacity+'"><div class="sc-hd" onclick="toggleSC(\''+sess.id+'\')"><div><div class="sc-nm" style="color:'+meta.color+'">'+dname+inactiveBadge+'</div><div class="sc-sb">'+(sess.sub||sess.description||'')+'</div></div><div style="display:flex;align-items:center;gap:8px"><div class="dot '+(avail?'dot-on':'dot-off')+'"></div><span id="chev-'+sess.id+'" style="color:var(--dim);font-size:12px;transition:transform 0.25s">▾</span></div></div><div class="sc-bd" id="scb-'+sess.id+'"><div class="sc-in">'+exRows+finisherHtml+'<button class="abtn '+meta.abtn+' abtn-xl" onclick="useSession(\''+sess.id+'\')" style="margin-top:16px">LET\'S WORK</button></div></div></div>';
-    }).join('');
-  });
-  renderSgptSection();
-  renderPt121Section();
-  renderAssignedSessions();
-}
-
-var LOCK_SVG='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
-var CHEV_SVG='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-
-function buildLockedSection(label,tier,heading,body,url){
-  var safeUrl=url?url.replace(/"/g,'&quot;'):'https://8roundsboxing.com';
-  return '<div class="tier-section-head tier-section-locked"><span>'+label+'</span>'+LOCK_SVG+'</div>'
-    +'<div style="padding:0 16px 16px">'
-      +'<button type="button" class="tier-locked-card" id="locked-card-'+tier+'"><span>Tap to learn more</span>'+CHEV_SVG+'</button>'
-      +'<div class="tier-teaser-panel" id="teaser-'+tier+'" style="display:none">'
-        +'<div class="tier-teaser-heading">'+heading+'</div>'
-        +'<div class="tier-teaser-body">'+body+'</div>'
-        +'<div class="tier-teaser-link">Speak to Darren at the gym or <a href="'+safeUrl+'" target="_blank" rel="noopener noreferrer">visit our website &#8594;</a></div>'
-      +'</div>'
-    +'</div>';
-}
-
-function wireLockedCard(tier){
-  var btn=document.getElementById('locked-card-'+tier);
-  if(!btn)return;
-  btn.addEventListener('touchstart',function(e){
-    e.preventDefault();
-    toggleTierTeaser(tier);
-  },{passive:false});
-  btn.addEventListener('click',function(){
-    toggleTierTeaser(tier);
-  });
-}
-
-var _lastTierToggle=0;
-function toggleTierTeaser(tier){
-  var now=Date.now();if(now-_lastTierToggle<300)return;_lastTierToggle=now;
-  var panel=document.getElementById('teaser-'+tier);
-  var card=document.getElementById('locked-card-'+tier);
-  if(!panel)return;
-  var isOpen=panel.style.display==='block';
-  ['sgpt','pt121'].forEach(function(t){
-    var p=document.getElementById('teaser-'+t);
-    var c=document.getElementById('locked-card-'+t);
-    if(p)p.style.display='none';
-    if(c)c.classList.remove('open');
-  });
-  if(!isOpen){
-    panel.style.display='block';
-    if(card)card.classList.add('open');
-    setTimeout(function(){panel.scrollIntoView({behavior:'smooth',block:'start'});},50);
-  }
-}
-
-function buildProgCards(sessions,startFn){
-  if(!sessions.length){
-    return '<div class="tier-empty">Your coach is setting up your programme.</div>';
-  }
-  return sessions.map(function(sess){
-    var n=(sess.exercises||[]).length;
-    var fid=sess._firestoreId||'';
-    return '<div class="prog-card" id="prog-'+fid+'">'
-      +'<div style="flex:1;min-width:0">'
-        +'<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;color:var(--text);line-height:1.1">'+sanitiseTrainStr(sess.name)+'</div>'
-        +'<div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:var(--muted);margin-top:2px">'+n+(n===1?' exercise':' exercises')+'</div>'
-      +'</div>'
-      +'<button class="prog-start-btn" onclick="'+startFn+'(\''+fid+'\')">START</button>'
-    +'</div>';
-  }).join('');
-}
-
-function toggleSectionCollapse(section){
-  var body=document.getElementById(section+'-section-body');
-  var chev=document.getElementById(section+'-collapse-chev');
-  if(!body)return;
-  var isOpen=body.style.display!=='none';
-  body.style.display=isOpen?'none':'';
-  if(chev)chev.style.transform=isOpen?'rotate(-90deg)':'';
-}
-window.toggleSectionCollapse=toggleSectionCollapse;
-
-function toggleFreeTrainSection(){
-  var body=document.getElementById('free-train-body');
-  var chev=document.getElementById('free-train-chev');
-  if(!body)return;
-  var isOpen=body.style.display!=='none';
-  body.style.display=isOpen?'none':'';
-  if(chev)chev.style.transform=isOpen?'rotate(-90deg)':'';
-}
-window.toggleFreeTrainSection=toggleFreeTrainSection;
-
-function renderSgptSection(){
-  var area=document.getElementById('sgpt-section');
-  if(!area)return;
+  var container=document.getElementById('session-list');
+  if(!container)return;
   var role=(window.userProfile&&window.userProfile.role)||'member';
   var isSgpt=!!(window.userProfile&&window.userProfile.sgpt===true);
-  var isCoach=role==='coach';
-  if(!isCoach&&!isSgpt){
-    var panels=userDataCache.lockedPanels;
-    var sp=(panels&&panels.sgpt)?panels.sgpt:{};
-    var heading=sanitiseTrainStr(sp.heading||'Small Group Personal Training');
-    var body=sanitiseTrainStr(sp.body||'Small Group PT is coached strength and conditioning in a small group setting — programming written for you, the same group week to week.');
-    var url=sp.url||'https://8roundsboxing.com';
-    area.innerHTML=buildLockedSection('SGPT','sgpt',heading,body,url);
-    wireLockedCard('sgpt');
-    return;
-  }
-  var cardsHtml=buildProgCards(userDataCache.sgptSessions||[],'useSgptSession');
-  area.innerHTML='<button class="tier-section-head" onclick="toggleSectionCollapse(\'sgpt\')" style="cursor:pointer;justify-content:space-between">'
-    +'<span>YOUR SGPT PROGRAMME</span>'
-    +'<span id="sgpt-collapse-chev" style="font-size:12px;color:var(--dim);transition:transform 0.25s">&#9662;</span>'
-    +'</button>'
-    +'<div id="sgpt-section-body">'
-    +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>'
-    +'</div>';
-}
-
-function renderPt121Section(){
-  var area=document.getElementById('pt121-section');
-  if(!area)return;
-  var role=(window.userProfile&&window.userProfile.role)||'member';
   var isPt121=!!(window.userProfile&&window.userProfile.pt121===true);
   var isCoach=role==='coach';
-  if(!isCoach&&!isPt121){
-    var panels=userDataCache.lockedPanels;
-    var pp=(panels&&panels.pt121)?panels.pt121:{};
-    var heading=sanitiseTrainStr(pp.heading||'1-2-1 Personal Training');
-    var body=sanitiseTrainStr(pp.body||'1-2-1 Personal Training is one-on-one coaching with Darren — your own programme, your own pace, fully tailored.');
-    var url=pp.url||'https://8roundsboxing.com';
-    area.innerHTML=buildLockedSection('1-2-1 PT','pt121',heading,body,url);
-    wireLockedCard('pt121');
+  var today=new Date().toISOString().split('T')[0];
+  var items=[];
+
+  var assigned=(userDataCache.assignedSessions||[]).filter(function(s){
+    return s.status==='pending'&&s.assignedFor<=today;
+  });
+  assigned.sort(function(a,b){return a.assignedFor.localeCompare(b.assignedFor);});
+  assigned.forEach(function(a){items.push({type:'assigned',data:a});});
+
+  if(isCoach||isSgpt){
+    (userDataCache.sgptSessions||[]).forEach(function(sess){items.push({type:'sgpt',data:sess});});
+  }
+  if(isCoach||isPt121){
+    (userDataCache.pt121Sessions||[]).forEach(function(sess){items.push({type:'pt121',data:sess});});
+  }
+
+  var customs=userDataCache.customSessions||[];
+  customs.sort(function(a,b){return (b.lastUsed||b.createdAt||0)-(a.lastUsed||a.createdAt||0);});
+  customs.forEach(function(c){items.push({type:'custom',data:c});});
+
+  var usedIds=getUsedSessionIds();
+  var standardUsed=SESSIONS.filter(function(s){return sessionVisibleToUser(s)&&usedIds.has(s.id);});
+  standardUsed.sort(function(a,b){return getLastUsedTimestamp(b.id)-getLastUsedTimestamp(a.id);});
+  standardUsed.forEach(function(s){items.push({type:'used',data:s});});
+
+  var standardUnused=SESSIONS.filter(function(s){return sessionVisibleToUser(s)&&!usedIds.has(s.id);});
+  standardUnused.sort(function(a,b){return (getSessName(a.id)||a.name||'').localeCompare(getSessName(b.id)||b.name||'');});
+  standardUnused.forEach(function(s){items.push({type:'standard',data:s});});
+
+  if(!items.length){
+    container.innerHTML='<div class="sl-empty" aria-live="polite">'
+      +'<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>'
+      +'<div class="sl-empty-head">No sessions yet.</div>'
+      +'<div class="sl-empty-sub">Create your first session below.</div>'
+      +'</div>';
     return;
   }
-  var cardsHtml=buildProgCards(userDataCache.pt121Sessions||[],'usePt121Session');
-  area.innerHTML='<button class="tier-section-head" onclick="toggleSectionCollapse(\'pt121\')" style="cursor:pointer;justify-content:space-between">'
-    +'<span>YOUR 1-2-1 PROGRAMME</span>'
-    +'<span id="pt121-collapse-chev" style="font-size:12px;color:var(--dim);transition:transform 0.25s">&#9662;</span>'
-    +'</button>'
-    +'<div id="pt121-section-body">'
-    +'<div style="padding:0 16px 8px">'+cardsHtml+'</div>'
-    +'</div>';
+  container.innerHTML=items.map(function(item){return renderSessionCard(item);}).join('');
 }
 
 function useSgptSession(firestoreId){
@@ -311,17 +285,9 @@ export function resetTrainState() {
 }
 window.resetTrainState=resetTrainState;
 
-function renderAssignedSessions(){
-  var area=document.getElementById('assigned-sessions-area');
-  if(area)area.innerHTML='';
-}
+function renderAssignedSessions(){}
 function toggleSC(id){const b=document.getElementById('scb-'+id),c=document.getElementById('chev-'+id);const o=b.classList.toggle('open');if(c)c.style.transform=o?'rotate(180deg)':'';}
-function renderCustomLib(){
-  const customs=ld('customSessions',[]),cont=document.getElementById('custom-cards'),empty=document.getElementById('custom-empty');
-  if(!customs.length){empty.style.display='block';cont.innerHTML='';return;}
-  empty.style.display='none';
-  cont.innerHTML=customs.map((sess,idx)=>{const meta=CAT_META[sess.cat]||CAT_META.CUSTOM;const rows=(sess.exercises||[]).map(ex=>`<div class="ex-row"><div class="ex-nm">${ex.name}</div><div class="ex-rt"><span class="ex-sc">${ex.sets||''}${ex.sets&&ex.reps?' × ':''}${ex.reps||''}</span></div></div>`).join('');return `<div class="sc" id="csc-${idx}"><div class="sc-hd" onclick="toggleSC('csc-${idx}')"><div><div class="sc-nm" style="color:${meta.color}">${sess.name}</div><div class="sc-sb">${meta.label}</div></div><span id="chev-csc-${idx}" style="color:var(--dim);font-size:12px;transition:transform 0.25s">▾</span></div><div class="sc-bd" id="scb-csc-${idx}"><div class="sc-in">${rows||'<div class="empty">No exercises.</div>'}${sess.finisher?`<div class="fin-strip"><div class="fin-lbl">Finisher</div><div class="fin-txt">${sess.finisher}</div></div>`:''}<button class="abtn ab-p abtn-xl" onclick="useCustomSession(${idx})" style="margin-top:16px">LET'S WORK</button><div style="display:flex;gap:8px;margin-top:8px"><button class="pill" onclick="editCustom(${idx})">EDIT</button><button class="pill" onclick="delCustom(${idx})" style="color:var(--red)">DELETE</button></div></div></div></div>`;}).join('');
-}
+function renderCustomLib(){renderLibrary();}
 
 // SWAP
 function openSwap(sessId,exIdx){const sess=SESSIONS.find(s=>s.id===sessId);if(!sess)return;const ex=sess.exercises[exIdx];swapState={sessId,exIdx,selected:ex.name};document.getElementById('swap-ttl').textContent=ex.name;const opts=[{name:ex.name,reason:'Keep the original.'},...ex.alts];document.getElementById('swap-opts').innerHTML=opts.map((a,i)=>`<div class="alt-opt ${i===0?'sel':''}" id="ao-${i}" onclick="selAlt(${i},'${a.name.replace(/'/g,"\\'")}')"><div class="alt-nm">${i===0?'✓ '+a.name+' (original)':a.name}</div><div class="alt-rs">${a.reason}</div></div>`).join('');openOverlay('swap-modal');}
@@ -378,9 +344,9 @@ function startAssignedSession(firestoreId){
     toast('Failed to start: '+(err.message||'unknown error'),true);
   }
 }
-function useCustomSession(idx){const customs=ld('customSessions',[]),sess=customs[idx];if(!sess)return;window.activeLogSession={id:'custom-'+idx,cat:sess.cat,name:sess.name,custom:true,warmup:[],exercises:(sess.exercises||[]).map(ex=>({...ex,displayName:ex.name,swapped:false}))};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();toast('Session loaded');}
+function useCustomSession(idx){var customs=userDataCache.customSessions||ld('customSessions',[]);var sess=customs[idx];if(!sess)return;window.activeLogSession={id:'custom-'+idx,cat:sess.cat,name:sess.name,custom:true,warmup:[],exercises:(sess.exercises||[]).map(function(ex){return Object.assign({},ex,{displayName:ex.name,swapped:false});})};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();toast('Session loaded');}
 function showLogView(){document.getElementById('train-lib').style.display='none';document.getElementById('train-log').style.display='block';const meta=CAT_META[activeLogSession.cat]||CAT_META.CUSTOM;document.getElementById('log-eye').textContent=meta.label;document.getElementById('log-eye').style.color=meta.color;document.getElementById('log-title').textContent=activeLogSession.name;buildLogForm();renderWarmup();restoreAutosave();renderHistory();}
-function showLibraryView(){document.getElementById('train-lib').style.display='block';document.getElementById('train-log').style.display='none';renderAssignedSessions();}
+function showLibraryView(){document.getElementById('train-lib').style.display='block';document.getElementById('train-log').style.display='none';renderLibrary();}
 function confirmClearSess(){if(!confirm('Change session? Unsaved data will be lost.'))return;clearActiveSession();}
 function clearActiveSession(){window.activeLogSession=null;sv('activeLogSession',null);extraCount=0;restTimers={};setTypeState={};clearInterval(durInterval);sessionStartTime=null;sv('logAutosave',null);showLibraryView();}
 
@@ -870,7 +836,7 @@ function delCustom(idx){
     }
     userDataCache.customSessions.splice(idx,1);
   }
-  renderCustomLib();toast('Session deleted');
+  renderLibrary();toast('Session deleted');
 }
 function addBlankEx(){
   csbExercises.push({name:'',sets:'3',reps:'10',rest:60});
@@ -941,7 +907,7 @@ async function saveCustomSess(){
       }
     }
   }
-  closeOverlay('csb-modal');renderCustomLib();showCat('custom');
+  closeOverlay('csb-modal');renderLibrary();
   toast(isEdit?'Session updated!':'Session saved!');editingCustomId=null;
 }
 
@@ -1030,7 +996,7 @@ window.renderLibrary = renderLibrary;
 window.renderCustomLib = renderCustomLib;
 window.showLibraryView = showLibraryView;
 window.showLogView = showLogView;
-window.showCat = showCat;
+window.showCat = function(){};
 window.toggleSC = toggleSC;
 window.openSwap = openSwap;
 window.selAlt = selAlt;
@@ -1085,9 +1051,5 @@ window.autosaveLog = autosaveLog;
 window.buildLogForm = buildLogForm;
 window.openExRef = openExRef;
 window.closeExRef = closeExRef;
-window.showSgptCat = showSgptCat;
 window.startAssignedSession = startAssignedSession;
 window.renderAssignedSessions = renderAssignedSessions;
-window.renderSgptSection = renderSgptSection;
-window.renderPt121Section = renderPt121Section;
-window.toggleTierTeaser = toggleTierTeaser;

@@ -1,8 +1,8 @@
-﻿import { ld, sv, toast, fmtSecs, getUnit, userDataCache } from './app.js';
-import { COMBO_TIERS, LEGEND_COMBOS, TIER_DESCS, CORNER_QUOTES, PUNCH_NAMES, DEF_DISP, DEF_CALL } from './data.js';
+﻿import { ld, sv, toast, fmtSecs, getUnit, userDataCache, sanitise, isSafeEmbedUrl } from './app.js';
+import { COMBO_TIERS, LEGEND_COMBOS, TIER_DESCS, CORNER_QUOTES, PUNCH_NAMES, DEF_DISP, DEF_CALL, LEARN_CONTENT } from './data.js';
 import { COACH_AUDIO } from './coach-audio.js';
 import { db } from './firebase.js';
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 // ─── BOX-ONLY STATE ───────────────────────────────────────────────────────────
 const FS_REST_OPTIONS=[30,45,60,90,120];
@@ -487,33 +487,61 @@ function drillRandom(){
 }
 
 // LEARN TAB
-var LEARN_CONTENT=[
-  {title:'THE PUNCHES',cat:'FOUNDATION',video:'https://www.youtube.com/embed/SedKFKgpgbk',cue:"Every punch has a number: 1 Jab, 2 Cross, 3 Lead Hook, 4 Rear Hook, 5 Lead Uppercut, 6 Rear Uppercut. Learn these numbers — your coach will call them out and the app uses them throughout. Start with 1 and 2 before anything else."},
-  {title:'DEFENCE',cat:'DEFENCE',video:'https://www.youtube.com/embed/i17tNtv8N2I',cue:"Defence keeps you safe and sets up your counters. Slip off the centreline rather than leaning back. Roll under hooks by bending your knees, not your waist. Good defence makes your offence twice as effective."},
-  {title:'FOOTWORK',cat:'MOVEMENT',video:'https://www.youtube.com/embed/zhWfajP4EVU',cue:"Your feet are the foundation of everything. Stay on the balls of your feet, never cross your legs, and move the foot closest to your direction first. Good footwork puts you in range to punch and out of range to get hit."},
-  {title:'SHADOW BOXING',cat:'TRAINING',video:'https://www.youtube.com/embed/J4j3AOVWuHE',cue:"Shadow boxing is how you build muscle memory between sessions. Throw every punch with intention — pretend your opponent is there. Use it to warm up before bag work and to practise combinations you've been drilling."},
-  {title:'HAND WRAPPING',cat:'PREPARATION',video:'https://www.youtube.com/embed/KAjzx7IajQc',cue:"Always wrap before hitting the bag or pads — no exceptions. Wraps protect your knuckles, wrist, and the small bones in your hand. Ask your coach to check your wrapping technique the first few times."},
-  {title:'COMBINATIONS',cat:'COMBINATIONS',video:'https://www.youtube.com/embed/stM-RjSq_ws',cue:"Combinations are sequences of punches thrown together. A 1-2 is a jab followed by a cross — the most fundamental combination in boxing. In the Drill tab, combinations are shown as numbers: 1-2-3 means jab, cross, lead hook. Start in Basics and work upward."},
-];
-function renderLearnTab(){
-  var saved=ld('learnOpen',null);
+async function loadLearnCards(){
+  var now=Date.now();
+  if(userDataCache.learnCards&&(now-userDataCache.lastLearnCardsRead)<5*60*1000){
+    return userDataCache.learnCards;
+  }
+  try{
+    var snap=await getDoc(doc(db,'gym','8RB','config','learnCards'));
+    if(snap.exists()){
+      var data=snap.data();
+      if(data.cards&&Array.isArray(data.cards)&&data.cards.length===6){
+        userDataCache.learnCards=data.cards;
+        userDataCache.lastLearnCardsRead=now;
+        return userDataCache.learnCards;
+      }
+    }
+  }catch(e){
+    console.warn('Failed to load LEARN cards from Firestore:',e.message);
+  }
+  userDataCache.learnCards=LEARN_CONTENT.map(function(c){return Object.assign({},c);});
+  userDataCache.lastLearnCardsRead=now;
+  return userDataCache.learnCards;
+}
+async function renderLearnTab(){
   var cont=document.getElementById('learn-sections');if(!cont)return;
-  cont.innerHTML=LEARN_CONTENT.map(function(card,ci){
+  if(!userDataCache.learnCards){
+    cont.innerHTML='<div style="padding:24px;color:var(--dim);text-align:center">Loading…</div>';
+  }
+  var cards=await loadLearnCards();
+  cont=document.getElementById('learn-sections');if(!cont)return;
+  var saved=ld('learnOpen',null);
+  cont.innerHTML=cards.map(function(card,ci){
     var open=saved?!!saved[ci]:ci===0;
-    var videoHtml='<div class="lv-wrap">'
-      +'<div class="lv-fallback"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="var(--dim)" stroke="none"/></svg><span>VIDEO UNAVAILABLE — check back soon</span></div>'
-      +'<iframe class="lv-iframe" id="lv-'+ci+'" src="'+card.video+'" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen onload="this.classList.add(\'loaded\')"></iframe>'
-      +'</div>';
+    var embedUrl=card.url||'';
+    var videoHtml;
+    if(isSafeEmbedUrl(embedUrl)){
+      videoHtml='<div class="lv-wrap">'
+        +'<div class="lv-fallback"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="var(--dim)" stroke="none"/></svg><span>VIDEO UNAVAILABLE — check back soon</span></div>'
+        +'<iframe class="lv-iframe" id="lv-'+ci+'" src="'+embedUrl+'" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen onload="this.classList.add(\'loaded\')" aria-label="Technique video for '+sanitise(card.title)+'"></iframe>'
+        +'</div>';
+    }else{
+      videoHtml='<div class="lv-wrap">'
+        +'<div class="lv-fallback lv-fallback-only"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="var(--dim)" stroke="none"/></svg><span>VIDEO UNAVAILABLE — check back soon</span></div>'
+        +'</div>';
+    }
     return '<div class="learn-card">'
       +'<div class="learn-card-hd" onclick="toggleLearnCard('+ci+')">'
-        +'<div class="learn-card-title">'+card.title+'</div>'
+        +'<div class="learn-card-title">'+sanitise(card.title)+'</div>'
         +'<span class="learn-card-chev" id="lchev-'+ci+'" style="'+(open?'transform:rotate(180deg)':'')+'">▾</span>'
       +'</div>'
       +'<div class="learn-card-bd'+(open?' open':'')+'" id="lcard-'+ci+'">'
         +'<div class="learn-card-in">'
-          +'<div class="learn-card-cat">'+card.cat+'</div>'
+          +(card.cat?'<div class="learn-card-cat">'+sanitise(card.cat)+'</div>':'')
           +videoHtml
-          +'<div class="learn-cue">'+card.cue+'</div>'
+          +'<div class="learn-cue">'+sanitise(card.cue)+'</div>'
+          +(card.credit?'<div class="learn-credit">'+sanitise(card.credit)+'</div>':'')
         +'</div>'
       +'</div>'
     +'</div>';

@@ -386,3 +386,11 @@ export const CORNER_QUOTES=[
   {text:"Anyone can be beaten. The question is whether you believe it.",attr:"Corner"},
 ];
 export const ACCENT_COLORS=[{val:'#D63040'},{val:'#457B9D'},{val:'#E6A817'},{val:'#2ecc71'},{val:'#8B5CF6'},{val:'#F4623A'},{val:'#0EA5E9'},{val:'#f0f0f0'}];
+export const LEARN_CONTENT=[
+  {id:'punches',title:'THE PUNCHES',cat:'FOUNDATION',url:'https://www.youtube.com/embed/SedKFKgpgbk',credit:'',cue:"Every punch has a number: 1 Jab, 2 Cross, 3 Lead Hook, 4 Rear Hook, 5 Lead Uppercut, 6 Rear Uppercut. Learn these numbers — your coach will call them out and the app uses them throughout. Start with 1 and 2 before anything else."},
+  {id:'defence',title:'DEFENCE',cat:'DEFENCE',url:'https://www.youtube.com/embed/i17tNtv8N2I',credit:'',cue:"Defence keeps you safe and sets up your counters. Slip off the centreline rather than leaning back. Roll under hooks by bending your knees, not your waist. Good defence makes your offence twice as effective."},
+  {id:'footwork',title:'FOOTWORK',cat:'MOVEMENT',url:'https://www.youtube.com/embed/zhWfajP4EVU',credit:'',cue:"Your feet are the foundation of everything. Stay on the balls of your feet, never cross your legs, and move the foot closest to your direction first. Good footwork puts you in range to punch and out of range to get hit."},
+  {id:'shadow-boxing',title:'SHADOW BOXING',cat:'TRAINING',url:'https://www.youtube.com/embed/J4j3AOVWuHE',credit:'',cue:"Shadow boxing is how you build muscle memory between sessions. Throw every punch with intention — pretend your opponent is there. Use it to warm up before bag work and to practise combinations you've been drilling."},
+  {id:'wrapping',title:'HAND WRAPPING',cat:'PREPARATION',url:'https://www.youtube.com/embed/KAjzx7IajQc',credit:'',cue:"Always wrap before hitting the bag or pads — no exceptions. Wraps protect your knuckles, wrist, and the small bones in your hand. Ask your coach to check your wrapping technique the first few times."},
+  {id:'combinations',title:'COMBINATIONS',cat:'COMBINATIONS',url:'https://www.youtube.com/embed/stM-RjSq_ws',credit:'',cue:"Combinations are sequences of punches thrown together. A 1-2 is a jab followed by a cross — the most fundamental combination in boxing. In the Drill tab, combinations are shown as numbers: 1-2-3 means jab, cross, lead hook. Start in Basics and work upward."},
+];

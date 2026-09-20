@@ -12,7 +12,7 @@ window.addEventListener('beforeinstallprompt', function(e) {
   savedInstallPrompt = e;
 });
 import {
-  doc, getDoc, setDoc, getDocs, collection, addDoc, deleteDoc, serverTimestamp, writeBatch, onSnapshot, updateDoc, query, where
+  doc, getDoc, setDoc, getDocs, collection, addDoc, deleteDoc, serverTimestamp, writeBatch, onSnapshot, updateDoc, query, where, increment
 } from 'firebase/firestore';
 import { EQUIP_OPTIONS, ACCENT_COLORS } from './data.js';
 
@@ -83,6 +83,7 @@ window.activeLogSession = null;
 window.currentUser = null;
 window.userProfile = null;
 window.activeAssignedSessionId = null;
+window.activeRoutineId = null;
 
 // ─── USER DATA CACHE ───────────────────────────────────────────────────────────
 // null = not yet loaded from Firestore (fall back to localStorage).
@@ -93,12 +94,13 @@ export const userDataCache = {
   boxingSessions: null,   // covers freestyle timer sessions + boxing class logs
   customCombos: null,
   customSessions: null,
+  routines: [],
   assignedSessions: null,
   sgptSessions: [],
   pt121Sessions: [],
   lockedPanels: null,
-  learnCards: null,
-  lastLearnCardsRead: 0
+  learnVideos: null,
+  learnVideosLoadedAt: 0
 };
 
 // ─── STORAGE ───────────────────────────────────────────────────────────────────
@@ -224,7 +226,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v12.4.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v12.1.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -289,7 +291,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v12.4.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v12.1.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -490,18 +492,20 @@ function showAuthError(msg) {
 // ─── LOAD USER DATA FROM FIRESTORE ────────────────────────────────────────────
 export async function loadUserData(uid) {
   try {
-    var [sessSnap, boxSnap, combosSnap, customSnap, assignedSnap] = await Promise.all([
+    var [sessSnap, boxSnap, combosSnap, customSnap, assignedSnap, routinesSnap] = await Promise.all([
       getDocs(collection(db, 'users', uid, 'sessions')),
       getDocs(collection(db, 'users', uid, 'boxingSessions')),
       getDocs(collection(db, 'users', uid, 'customCombos')),
       getDocs(collection(db, 'users', uid, 'customSessions')),
-      getDocs(collection(db, 'users', uid, 'assignedSessions'))
+      getDocs(collection(db, 'users', uid, 'assignedSessions')),
+      getDocs(collection(db, 'users', uid, 'routines'))
     ]);
     userDataCache.sessions = sessSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());}).sort(function(a,b){return a.date.localeCompare(b.date);});
     userDataCache.boxingSessions = boxSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());}).sort(function(a,b){return a.date.localeCompare(b.date);});
     userDataCache.customCombos = combosSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());});
     userDataCache.customSessions = customSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());});
     userDataCache.assignedSessions = assignedSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());});
+    userDataCache.routines = routinesSnap.docs.map(function(d){return Object.assign({_firestoreId:d.id}, d.data());});
   } catch(err) {
     console.warn('Failed to load from Firestore, using localStorage:', err);
     // userDataCache remains null — ld() will fall back to localStorage
@@ -744,6 +748,7 @@ async function launchApp(user) {
   await ensureUserProfile(user);
   await loadUserData(user.uid);
   await expireOldAssignedSessions(user.uid);
+  try { await migrateToRoutines(user.uid); } catch(e) { console.warn('[8RB] migrateToRoutines outer catch:', e); }
   if (userProfile && userProfile.onboarded === true) {
     showApp();
   } else {
@@ -965,12 +970,14 @@ async function handleSignOut() {
     userDataCache.boxingSessions = null;
     userDataCache.customCombos = null;
     userDataCache.customSessions = null;
+    userDataCache.routines = [];
     userDataCache.assignedSessions = null;
     userDataCache.sgptSessions = [];
     userDataCache.pt121Sessions = [];
     userDataCache.lockedPanels = null;
-    userDataCache.learnCards = null;
-    userDataCache.lastLearnCardsRead = 0;
+    userDataCache.learnVideos = null;
+    userDataCache.learnVideosLoadedAt = 0;
+    window.activeRoutineId = null;
     lastProgressRead = 0;
     if (typeof window.resetTrainState === 'function') window.resetTrainState();
     if (typeof window.resetBoxState === 'function') window.resetBoxState();
@@ -996,7 +1003,7 @@ async function executeDeleteAccount() {
   try {
     var uid = window.currentUser.uid;
     // Delete all Firestore subcollections
-    var colls = ['sessions','boxingSessions','customCombos','customSessions'];
+    var colls = ['sessions','boxingSessions','customCombos','customSessions','routines'];
     for (var ci = 0; ci < colls.length; ci++) {
       var snap = await getDocs(collection(db, 'users', uid, colls[ci]));
       if (snap.docs.length === 0) continue;
@@ -1054,6 +1061,91 @@ function loadCoachesNotes() {
       console.warn('Coach notes Firestore read failed (using cache/fallback):', err);
     });
   } catch(e) {}
+}
+
+// ─── ROUTINES MIGRATION ───────────────────────────────────────────────────────
+function sanitiseExercisesForRoutine(exercises) {
+  if (!Array.isArray(exercises)) return [];
+  return exercises.map(function(ex) {
+    var setsCount = Array.isArray(ex.sets) ? ex.sets.length : (parseInt(ex.sets) || 3);
+    var firstReps = Array.isArray(ex.sets) && ex.sets.length ? (ex.sets[0].reps || ex.reps || '10') : (ex.reps || '10');
+    return {
+      name: ex.name || ex.displayName || 'Exercise',
+      displayName: ex.displayName || ex.name || 'Exercise',
+      sets: String(setsCount),
+      reps: String(firstReps),
+      rest: ex.rest || 60,
+      scheme: setsCount + '×' + firstReps,
+      setType: ex.setType || 'standard'
+    };
+  });
+}
+async function migrateToRoutines(uid) {
+  var profileRef = doc(db, 'users', uid, 'profile', 'data');
+  try {
+    var profile = await getDoc(profileRef);
+    if (profile.exists() && profile.data().routinesMigrated === true) return;
+    var sessions = userDataCache.sessions || [];
+    if (sessions.length === 0 && !(userDataCache.customSessions && userDataCache.customSessions.length)) {
+      await updateDoc(profileRef, { routinesMigrated: true });
+      return;
+    }
+    var byName = {};
+    sessions.forEach(function(s) {
+      var name = s.sessName || s.sessionName || s.name || 'Untitled Session';
+      if (!byName[name]) { byName[name] = { count: 0, mostRecent: s, exercises: s.exercises }; }
+      byName[name].count++;
+      if (new Date(s.date) > new Date(byName[name].mostRecent.date)) {
+        byName[name].mostRecent = s;
+        byName[name].exercises = s.exercises;
+      }
+    });
+    var routineCandidates = Object.keys(byName)
+      .map(function(name) { return { name: name, count: byName[name].count, mostRecent: byName[name].mostRecent, exercises: byName[name].exercises }; })
+      .sort(function(a, b) { return new Date(b.mostRecent.date) - new Date(a.mostRecent.date); })
+      .slice(0, 5);
+    var newRoutines = [];
+    var batch = writeBatch(db);
+    routineCandidates.forEach(function(r, i) {
+      var routineRef = doc(collection(db, 'users', uid, 'routines'));
+      var routineDoc = {
+        name: r.name,
+        source: 'migrated',
+        exercises: sanitiseExercisesForRoutine(r.exercises || []),
+        lastUsedAt: r.mostRecent.date ? new Date(r.mostRecent.date + 'T00:00:00') : new Date(),
+        useCount: r.count,
+        order: i
+      };
+      batch.set(routineRef, Object.assign({}, routineDoc, { createdAt: serverTimestamp() }));
+      newRoutines.push(Object.assign({ _firestoreId: routineRef.id }, routineDoc));
+    });
+    var customs = userDataCache.customSessions || [];
+    customs.forEach(function(cs, i) {
+      if (!cs.name) return;
+      var routineRef = doc(collection(db, 'users', uid, 'routines'));
+      var routineDoc = {
+        name: cs.name,
+        source: 'custom',
+        sessionType: cs.sessionType || 'straight_sets',
+        exercises: cs.exercises ? cs.exercises.map(function(e) { return Object.assign({}, e); }) : [],
+        exTypes: cs.exTypes || [],
+        useCount: 0,
+        order: routineCandidates.length + i
+      };
+      batch.set(routineRef, Object.assign({}, routineDoc, { createdAt: serverTimestamp() }));
+      if (cs._firestoreId) {
+        batch.delete(doc(db, 'users', uid, 'customSessions', cs._firestoreId));
+      }
+      newRoutines.push(Object.assign({ _firestoreId: routineRef.id }, routineDoc));
+    });
+    batch.update(profileRef, { routinesMigrated: true });
+    await batch.commit();
+    userDataCache.routines = (userDataCache.routines || []).concat(newRoutines);
+    if (typeof window.renderLibrary === 'function') window.renderLibrary();
+    if (DEBUG) console.log('[8RB] Migrated ' + newRoutines.length + ' routines');
+  } catch(e) {
+    console.warn('[8RB] migrateToRoutines failed:', e);
+  }
 }
 
 // ─── DATA MIGRATION (localStorage → Firestore) ────────────────────────────────

@@ -8,9 +8,21 @@ const PROFILE_DATA = {
   gym: '8RB',
   joinDate: '2024-01-01',
   onboarded: true,
+  routinesMigrated: true,
   unit: 'kg',
   accentColor: '#D63040'
 };
+
+const MOCK_ROUTINES = [
+  { id: 'mock-routine-1', data: () => ({
+    name: 'Squat Day',
+    source: 'migrated',
+    exercises: [{ name: 'Back Squat', displayName: 'Back Squat', sets: '3', reps: '8', rest: 90, scheme: '3×8' }],
+    lastUsedAt: new Date('2024-01-15'),
+    useCount: 3,
+    order: 0
+  })}
+];
 
 const COACHES_NOTES_DATA = {
   coachNotes: '— Playwright test notes'
@@ -61,6 +73,10 @@ export function getDoc(ref) {
 }
 
 export function getDocs(ref) {
+  var path = ref && ref._path;
+  if (path && path.endsWith('/routines')) {
+    return Promise.resolve({ docs: MOCK_ROUTINES, forEach: (fn) => MOCK_ROUTINES.forEach(fn), empty: false, size: MOCK_ROUTINES.length });
+  }
   return Promise.resolve({
     docs: [],
     forEach: () => {},
@@ -111,6 +127,7 @@ export class Timestamp {
 }
 
 export function deleteField() { return { _delete: true }; }
+export function increment(n) { return { _increment: n }; }
 export function writeBatch() {
   return {
     set: () => {},

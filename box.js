@@ -1,8 +1,8 @@
 ﻿import { ld, sv, toast, fmtSecs, getUnit, userDataCache, sanitise, isSafeEmbedUrl } from './app.js';
-import { COMBO_TIERS, LEGEND_COMBOS, TIER_DESCS, CORNER_QUOTES, PUNCH_NAMES, DEF_DISP, DEF_CALL, LEARN_CONTENT } from './data.js';
+import { COMBO_TIERS, LEGEND_COMBOS, TIER_DESCS, CORNER_QUOTES, PUNCH_NAMES, DEF_DISP, DEF_CALL, LEARN_TOPICS } from './data.js';
 import { COACH_AUDIO } from './coach-audio.js';
 import { db } from './firebase.js';
-import { collection, addDoc, deleteDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
 // ─── BOX-ONLY STATE ───────────────────────────────────────────────────────────
 const FS_REST_OPTIONS=[30,45,60,90,120];
@@ -487,75 +487,109 @@ function drillRandom(){
 }
 
 // LEARN TAB
-async function loadLearnCards(){
+async function loadLearnVideos(){
   var now=Date.now();
-  if(userDataCache.learnCards&&(now-userDataCache.lastLearnCardsRead)<5*60*1000){
-    return userDataCache.learnCards;
+  if(userDataCache.learnVideos&&userDataCache.learnVideosLoadedAt&&(now-userDataCache.learnVideosLoadedAt)<5*60*1000){
+    return;
   }
   try{
-    var snap=await getDoc(doc(db,'gym','8RB','config','learnCards'));
-    if(snap.exists()){
-      var data=snap.data();
-      if(data.cards&&Array.isArray(data.cards)&&data.cards.length===6){
-        userDataCache.learnCards=data.cards;
-        userDataCache.lastLearnCardsRead=now;
-        return userDataCache.learnCards;
-      }
-    }
+    var snap=await getDocs(query(collection(db,'gym','8RB','learnVideos'),where('active','==',true)));
+    userDataCache.learnVideos=snap.docs.map(function(d){return Object.assign({_firestoreId:d.id},d.data());});
+    userDataCache.learnVideosLoadedAt=Date.now();
   }catch(e){
-    console.warn('Failed to load LEARN cards from Firestore:',e.message);
+    console.warn('Failed to load LEARN videos:',e.message);
+    if(!userDataCache.learnVideos)userDataCache.learnVideos=[];
   }
-  userDataCache.learnCards=LEARN_CONTENT.map(function(c){return Object.assign({},c);});
-  userDataCache.lastLearnCardsRead=now;
-  return userDataCache.learnCards;
+}
+function groupVideosByTopic(videos){
+  var grouped={};
+  LEARN_TOPICS.forEach(function(t){grouped[t.id]=[];});
+  videos.forEach(function(v){if(grouped[v.topicId]!==undefined)grouped[v.topicId].push(v);});
+  Object.keys(grouped).forEach(function(k){
+    grouped[k].sort(function(a,b){
+      if(a.sortOrder!==b.sortOrder)return (a.sortOrder||100)-(b.sortOrder||100);
+      var ta=a.createdAt&&a.createdAt.toDate?a.createdAt.toDate().getTime():(a.createdAt?new Date(a.createdAt).getTime():0);
+      var tb=b.createdAt&&b.createdAt.toDate?b.createdAt.toDate().getTime():(b.createdAt?new Date(b.createdAt).getTime():0);
+      return ta-tb;
+    });
+  });
+  return grouped;
+}
+function buildVideoCard(v){
+  var embedUrl=v.url||'';
+  var videoHtml;
+  if(isSafeEmbedUrl(embedUrl)){
+    videoHtml='<div class="lv-wrap">'
+      +'<div class="lv-fallback"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="var(--dim)" stroke="none"/></svg><span>VIDEO UNAVAILABLE — check back soon</span></div>'
+      +'<iframe class="lv-iframe" src="'+embedUrl+'" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen onload="this.classList.add(\'loaded\')" aria-label="'+sanitise(v.title||'')+'"></iframe>'
+      +'</div>';
+  }else{
+    videoHtml='<div class="lv-wrap">'
+      +'<div class="lv-fallback"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="var(--dim)" stroke="none"/></svg><span>Video unavailable — coach has been notified</span></div>'
+      +'</div>';
+  }
+  return '<div class="lv-card">'
+    +'<div class="lv-card-title">'+sanitise(v.title||'')+'</div>'
+    +(v.description?'<div class="lv-card-desc">'+sanitise(v.description)+'</div>':'')
+    +videoHtml
+    +(v.credit?'<div class="lv-card-credit">'+sanitise(v.credit)+'</div>':'')
+    +'</div>';
 }
 async function renderLearnTab(){
   var cont=document.getElementById('learn-sections');if(!cont)return;
-  if(!userDataCache.learnCards){
-    cont.innerHTML='<div style="padding:24px;color:var(--dim);text-align:center">Loading…</div>';
-  }
-  var cards=await loadLearnCards();
+  cont.innerHTML='<div style="padding:24px;color:var(--dim);text-align:center">Loading…</div>';
+  await loadLearnVideos();
   cont=document.getElementById('learn-sections');if(!cont)return;
-  var saved=ld('learnOpen',null);
-  cont.innerHTML=cards.map(function(card,ci){
-    var open=saved?!!saved[ci]:ci===0;
-    var embedUrl=card.url||'';
-    var videoHtml;
-    if(isSafeEmbedUrl(embedUrl)){
-      videoHtml='<div class="lv-wrap">'
-        +'<div class="lv-fallback"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="var(--dim)" stroke="none"/></svg><span>VIDEO UNAVAILABLE — check back soon</span></div>'
-        +'<iframe class="lv-iframe" id="lv-'+ci+'" src="'+embedUrl+'" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen onload="this.classList.add(\'loaded\')" aria-label="Technique video for '+sanitise(card.title)+'"></iframe>'
-        +'</div>';
-    }else{
-      videoHtml='<div class="lv-wrap">'
-        +'<div class="lv-fallback lv-fallback-only"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="var(--dim)" stroke="none"/></svg><span>VIDEO UNAVAILABLE — check back soon</span></div>'
-        +'</div>';
-    }
-    return '<div class="learn-card">'
-      +'<div class="learn-card-hd" onclick="toggleLearnCard('+ci+')">'
-        +'<div class="learn-card-title">'+sanitise(card.title)+'</div>'
-        +'<span class="learn-card-chev" id="lchev-'+ci+'" style="'+(open?'transform:rotate(180deg)':'')+'">▾</span>'
+  var videos=userDataCache.learnVideos;
+  if(!videos){
+    cont.innerHTML='<div class="ltopic-msg">Unable to load videos. Check your connection.</div>';
+    return;
+  }
+  if(videos.length===0){
+    cont.innerHTML='<div class="ltopic-msg">Your coach is setting up the video library. Check back soon.</div>';
+    return;
+  }
+  var grouped=groupVideosByTopic(videos);
+  var saved=ld('learnTopicOpen',{});
+  cont.innerHTML=LEARN_TOPICS.map(function(topic){
+    var topicVideos=grouped[topic.id]||[];
+    var isOpen=!!saved[topic.id];
+    var count=topicVideos.length;
+    var countHtml=count>0?'<span class="ltopic-count">('+count+')</span>':'';
+    var bodyContent=isOpen?(count===0
+      ?'<div class="ltopic-empty">No videos in this topic yet. Check back soon.</div>'
+      :topicVideos.map(buildVideoCard).join('')):'';
+    return '<div class="ltopic-section">'
+      +'<div class="ltopic-hd" onclick="toggleLearnTopic(\''+topic.id+'\',this)">'
+        +'<span class="ltopic-chev">'+(isOpen?'▾':'▸')+'</span>'
+        +'<span class="ltopic-label">'+topic.label+'</span>'
+        +countHtml
       +'</div>'
-      +'<div class="learn-card-bd'+(open?' open':'')+'" id="lcard-'+ci+'">'
-        +'<div class="learn-card-in">'
-          +(card.cat?'<div class="learn-card-cat">'+sanitise(card.cat)+'</div>':'')
-          +videoHtml
-          +'<div class="learn-cue">'+sanitise(card.cue)+'</div>'
-          +(card.credit?'<div class="learn-credit">'+sanitise(card.credit)+'</div>':'')
-        +'</div>'
+      +'<div class="ltopic-body'+(isOpen?' open':'')+'" id="ltbody-'+topic.id+'">'
+        +bodyContent
       +'</div>'
     +'</div>';
   }).join('');
 }
-function toggleLearnCard(ci){
-  var bd=document.getElementById('lcard-'+ci),chev=document.getElementById('lchev-'+ci);
-  if(!bd)return;
-  var open=bd.classList.toggle('open');
-  if(chev)chev.style.transform=open?'rotate(180deg)':'';
-  var saved=ld('learnOpen',{});
-  saved[ci]=open;
-  sv('learnOpen',saved);
+function toggleLearnTopic(topicId,hdEl){
+  var body=document.getElementById('ltbody-'+topicId);
+  if(!body)return;
+  var isOpen=body.classList.toggle('open');
+  var chev=hdEl?hdEl.querySelector('.ltopic-chev'):null;
+  if(chev)chev.textContent=isOpen?'▾':'▸';
+  var saved=ld('learnTopicOpen',{});
+  saved[topicId]=isOpen;
+  sv('learnTopicOpen',saved);
+  if(isOpen&&body.innerHTML===''){
+    var videos=userDataCache.learnVideos||[];
+    var grouped=groupVideosByTopic(videos);
+    var topicVideos=grouped[topicId]||[];
+    body.innerHTML=topicVideos.length===0
+      ?'<div class="ltopic-empty">No videos in this topic yet. Check back soon.</div>'
+      :topicVideos.map(buildVideoCard).join('');
+  }
 }
+window.toggleLearnTopic=toggleLearnTopic;
 // PLATE CALCULATOR
 function openPlateCalc(targetKg){document.getElementById('plate-ov').classList.add('open');document.getElementById('plate-unit-lbl').textContent=getUnit();const inp=document.getElementById('plate-input');if(targetKg){inp.value=targetKg;}else{inp.value='';}calcPlates();}
 function closePlateCalc(e){if(e&&e.target!==document.getElementById('plate-ov'))return;document.getElementById('plate-ov').classList.remove('open');}

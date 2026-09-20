@@ -1,4 +1,4 @@
-import { ld, sv, toast, fmtWt, fmtDate, fmtSecs, getUnit, getPR, openOverlay, closeOverlay, userDataCache } from './app.js';
+import { ld, sv, sanitise, toast, fmtWt, fmtDate, fmtSecs, getUnit, getPR, openOverlay, closeOverlay, userDataCache } from './app.js';
 import { TRACKED_LIFTS, CAT_META } from './data.js';
 import { db } from './firebase.js';
 import { collection, deleteDoc, doc } from 'firebase/firestore';
@@ -135,6 +135,9 @@ function renderLifts(){
     return '<div class="prog-card"><div class="pc-ttl">'+lift.name+'<span class="pc-best">Best: '+fmtWt(best)+'</span></div><div class="pc-sub">'+lift.sessLabel+'</div>'+prHtml+'<div class="pc-1rm">Est. 1RM: '+fmtWt(bestE1rm)+' <span style="font-weight:400;color:var(--dim)">(Epley)</span></div>'+narrative+chart+rows+'</div>';
   }).join('');
 }
+var histFilterName = 'all';
+var histFilterRange = 'all';
+
 function renderRecentSessions(){
   const all=ld('sessions',[]);
   const el=document.getElementById('recent-list');
@@ -167,6 +170,85 @@ function renderRecentSessions(){
       +notesHtml
     +'</div>';
   }).join('');
+  if(all.length > 5) {
+    el.insertAdjacentHTML('beforeend', '<div style="text-align:center;margin-top:12px"><button class="see-all-sessions" onclick="openSessionHistory()">SEE ALL SESSIONS →</button></div>');
+  }
+}
+
+function openSessionHistory() {
+  histFilterName = 'all';
+  histFilterRange = 'all';
+  renderSessionHistoryView();
+  var modal = document.getElementById('session-history-modal');
+  if (modal) modal.classList.add('open');
+}
+function closeSessionHistory() {
+  var modal = document.getElementById('session-history-modal');
+  if (modal) modal.classList.remove('open');
+}
+function toggleSessionHistoryFilter() {
+  var panel = document.getElementById('hist-filter-panel');
+  if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+function setHistRange(btn, range) {
+  histFilterRange = range;
+  document.querySelectorAll('.hist-range-btn').forEach(function(b) { b.classList.remove('on'); });
+  btn.classList.add('on');
+  renderSessionHistoryView();
+}
+function applySessionHistoryFilter() {
+  var sel = document.getElementById('hist-sess-filter');
+  histFilterName = sel ? sel.value : 'all';
+  renderSessionHistoryView();
+}
+function renderSessionHistoryView() {
+  var all = ld('sessions', []);
+  var cutoff = null;
+  if (histFilterRange === '7') { cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7); }
+  else if (histFilterRange === '30') { cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30); }
+  var filtered = all.filter(function(s) {
+    if (histFilterName !== 'all' && (s.sessName || s.name || '') !== histFilterName) return false;
+    if (cutoff && new Date(s.date + 'T00:00:00') < cutoff) return false;
+    return true;
+  });
+  var nameFilter = document.getElementById('hist-sess-filter');
+  if (nameFilter) {
+    var names = Array.from(new Set(all.map(function(s) { return s.sessName || s.name || ''; }).filter(Boolean)));
+    nameFilter.innerHTML = '<option value="all">All sessions</option>' + names.map(function(n) { return '<option value="' + sanitise(n) + '"' + (histFilterName === n ? ' selected' : '') + '>' + sanitise(n) + '</option>'; }).join('');
+  }
+  var listEl = document.getElementById('session-history-list');
+  if (!listEl) return;
+  if (!filtered.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:48px 24px;font-family:\'DM Sans\',sans-serif;font-size:14px;color:var(--muted)">No sessions logged yet. Complete your first session to see it here.</div>';
+    return;
+  }
+  var groups = {};
+  filtered.slice().reverse().forEach(function(s) {
+    var d = new Date(s.date + 'T00:00:00');
+    var monthKey = d.toISOString().slice(0, 7);
+    var monthLabel = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase();
+    if (!groups[monthKey]) groups[monthKey] = { label: monthLabel, sessions: [] };
+    groups[monthKey].sessions.push(s);
+  });
+  var html = '';
+  Object.keys(groups).sort().reverse().forEach(function(key) {
+    var g = groups[key];
+    html += '<div class="hist-month-lbl">' + sanitise(g.label) + '</div>';
+    g.sessions.forEach(function(s) {
+      var d = new Date(s.date + 'T00:00:00');
+      var dayLabel = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      var n = ((s.exercises || []).length + (s.extras || []).length);
+      var durHtml = s.duration ? ' · ' + s.duration + ' min' : '';
+      html += '<div class="hist-sess-row" onclick="alert(\'Session detail coming soon\')">'
+        + '<div class="hist-sess-date">' + sanitise(dayLabel) + '</div>'
+        + '<div class="hist-sess-info">'
+          + '<div class="hist-sess-name">' + sanitise(s.sessName || s.name || 'Session') + '</div>'
+          + '<div class="hist-sess-meta">' + n + (n === 1 ? ' exercise' : ' exercises') + sanitise(durHtml) + '</div>'
+        + '</div>'
+        + '</div>';
+    });
+  });
+  listEl.innerHTML = html;
 }
 function delRecentSession(id){
   if(!confirm('Delete this session?'))return;
@@ -205,3 +287,8 @@ window.renderProgress = renderProgress;
 window.delBoxing = delBoxing;
 window.delRecentSession = delRecentSession;
 window.delFreestyleSession = delFreestyleSession;
+window.openSessionHistory = openSessionHistory;
+window.closeSessionHistory = closeSessionHistory;
+window.toggleSessionHistoryFilter = toggleSessionHistoryFilter;
+window.setHistRange = setHistRange;
+window.applySessionHistoryFilter = applySessionHistoryFilter;

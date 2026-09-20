@@ -10,9 +10,21 @@ const SGPT_PROFILE = {
   gym: '8RB',
   joinDate: '2024-01-01',
   onboarded: true,
+  routinesMigrated: true,
   unit: 'kg',
   accentColor: '#D63040'
 };
+
+const MOCK_SGPT_ROUTINES = [
+  { id: 'mock-routine-sgpt-1', data: () => ({
+    name: 'SGPT Upper A',
+    source: 'sgpt',
+    exercises: [{ name: 'Barbell Bench Press', displayName: 'Barbell Bench Press', sets: '3', reps: '5', rest: 90, scheme: '3×5' }],
+    lastUsedAt: new Date('2024-01-15'),
+    useCount: 2,
+    order: 0
+  })}
+];
 
 const MOCK_SGPT_SESSIONS = [
   { id: 'mock-sgpt-1', data: () => ({
@@ -49,9 +61,11 @@ export function getDoc(ref) {
 
 export function getDocs(ref) {
   var path = ref && ref._path;
-  // Unified sessions collection (visibility: 'sgpt' queries come through here)
   if (path && path === 'gym/8RB/sessions') {
     return Promise.resolve({ docs: MOCK_SGPT_SESSIONS, forEach: (fn) => MOCK_SGPT_SESSIONS.forEach(fn), empty: false, size: MOCK_SGPT_SESSIONS.length });
+  }
+  if (path && path.endsWith('/routines')) {
+    return Promise.resolve({ docs: MOCK_SGPT_ROUTINES, forEach: (fn) => MOCK_SGPT_ROUTINES.forEach(fn), empty: false, size: MOCK_SGPT_ROUTINES.length });
   }
   return Promise.resolve({ docs: [], forEach: () => {}, empty: true, size: 0 });
 }
@@ -79,4 +93,5 @@ export class Timestamp {
   static fromDate(d) { return new Timestamp(Math.floor(d.getTime() / 1000)); }
 }
 export function deleteField() { return { _delete: true }; }
+export function increment(n) { return { _increment: n }; }
 export function writeBatch() { return { set: () => {}, update: () => {}, delete: () => {}, commit: () => Promise.resolve() }; }

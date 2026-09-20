@@ -39,11 +39,11 @@ test('TRAIN tab — session library renders with at least one session card', asy
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
-  // Flat session list renders immediately — no expand step needed
+  // Session list renders immediately
   await page.waitForSelector('#session-list', { state: 'visible', timeout: 5000 });
 
-  // At least one session card should be present
-  const cards = page.locator('#session-list .session-card');
+  // At least one routine card should be present (from mock routines data)
+  const cards = page.locator('#session-list .routine-card');
   await expect(cards.first()).toBeVisible();
 });
 
@@ -56,11 +56,11 @@ test('TRAIN tab — tapping a session opens log view', async ({ page, mockFireba
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
-  // Wait for the flat session list to render
-  await page.waitForSelector('#session-list .session-card', { state: 'visible', timeout: 5000 });
+  // Wait for the routine list to render
+  await page.waitForSelector('#session-list .routine-card', { state: 'visible', timeout: 5000 });
 
-  // Click the START button on the first session card directly
-  await page.locator('#session-list .session-card .sc-start-btn').first().click();
+  // Click the START button on the first routine card directly
+  await page.locator('#session-list .routine-card .sc-start-btn').first().click();
 
   // Log view should be visible, library should be hidden
   await expect(page.locator('#train-log')).toBeVisible({ timeout: 5000 });
@@ -214,23 +214,23 @@ test('SGPT member sees SGPT sessions in the flat session list', async ({ page, m
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
-  // Session list renders with at least one card (SGPT session mixed in)
-  await page.waitForSelector('#session-list .session-card', { state: 'visible', timeout: 5000 });
-  await expect(page.locator('#session-list .session-card').first()).toBeVisible({ timeout: 5000 });
+  // Routine list renders with at least one card (from mock SGPT routines)
+  await page.waitForSelector('#session-list .routine-card', { state: 'visible', timeout: 5000 });
+  await expect(page.locator('#session-list .routine-card').first()).toBeVisible({ timeout: 5000 });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test 12: Standard member sees session list without SGPT section headers
 // ─────────────────────────────────────────────────────────────────────────────
-test('Standard member sees flat session list — no section headers', async ({ page, mockFirebase }) => {
+test('Standard member sees routine list — no section headers', async ({ page, mockFirebase }) => {
   await loadApp(page, mockFirebase);
 
   await page.locator('.nb-train').click();
   await page.waitForSelector('#train-lib', { state: 'visible', timeout: 8000 });
 
-  // Flat list renders with standard sessions
-  await page.waitForSelector('#session-list .session-card', { state: 'visible', timeout: 5000 });
-  await expect(page.locator('#session-list .session-card').first()).toBeVisible();
+  // Routine list renders
+  await page.waitForSelector('#session-list .routine-card', { state: 'visible', timeout: 5000 });
+  await expect(page.locator('#session-list .routine-card').first()).toBeVisible();
 
   // No old SGPT section, free-train header, or progression model
   await expect(page.locator('#sgpt-section')).toHaveCount(0);

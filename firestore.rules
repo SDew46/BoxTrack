@@ -84,6 +84,10 @@ service cloud.firestore {
         && isVerified();
     }
 
+    match /users/{userId}/routines/{routineId} {
+      allow read, write: if isAuthenticated() && isVerified() && isOwner(userId);
+    }
+
     // Assigned sessions — member reads/updates own (status+completedAt only), coach full access
     match /users/{userId}/assignedSessions/{sessionId} {
       allow read: if isAuthenticated() && isVerified() && isOwner(userId);
@@ -147,6 +151,14 @@ service cloud.firestore {
         && resource.data.active == true;
       allow write: if isCoach() && isVerified()
         && gymId == get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data).data.gym;
+    }
+
+    // Learn videos — all verified members read; coach write own gym only
+    match /gym/{gymId}/learnVideos/{videoId} {
+      allow read: if isAuthenticated() && isVerified();
+      allow write: if isCoach() && isVerified()
+        && gymId == get(/databases/$(database)/documents/
+           users/$(request.auth.uid)/profile/data).data.gym;
     }
 
     // Deny everything else explicitly

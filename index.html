@@ -135,6 +135,7 @@
     <div class="done-sub" id="done-sub"></div>
     <div class="done-stat-grid" id="done-stats"></div>
     <div id="done-pr-area"></div>
+    <div id="done-save-routine-area"></div>
     <button class="abtn ab-r abtn-xl" onclick="closeDone()">DONE</button>
   </div>
 </div>
@@ -186,6 +187,76 @@
     <div class="sh-acts"><button class="sh-cancel" onclick="closeOverlay('equip-modal')">DONE</button></div>
   </div>
 </div>
+<!-- ADD ROUTINE modal -->
+<div class="ov" id="add-routine-modal" onclick="closeOverlay('add-routine-modal',event)">
+  <div class="sheet">
+    <div class="sh-hdl"></div>
+    <div class="sh-ttl">Add Routine</div>
+    <div class="sh-stl">Choose how to add</div>
+    <div style="display:flex;flex-direction:column;gap:12px;padding-bottom:8px">
+      <div class="ar-option" onclick="openStandardLibraryBrowse()">
+        <div class="ar-opt-name">BROWSE STANDARD LIBRARY</div>
+        <div class="ar-opt-desc">Pre-built sessions from 8RB</div>
+      </div>
+      <div class="ar-option" onclick="closeOverlay('add-routine-modal');openCSB()">
+        <div class="ar-opt-name">BUILD CUSTOM ROUTINE</div>
+        <div class="ar-opt-desc">Design your own</div>
+      </div>
+      <div class="ar-option" onclick="openSaveFromHistoryBrowse()">
+        <div class="ar-opt-name">SAVE FROM HISTORY</div>
+        <div class="ar-opt-desc">Turn a past session into a routine</div>
+      </div>
+    </div>
+    <div class="sh-acts"><button class="sh-cancel" onclick="closeOverlay('add-routine-modal')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- Browse library modal -->
+<div class="ov" id="browse-library-modal" onclick="closeOverlay('browse-library-modal',event)">
+  <div class="sheet">
+    <div class="sh-hdl"></div>
+    <div class="sh-ttl">Standard Library</div>
+    <div class="sh-stl">Tap + ADD to add to your routines</div>
+    <div id="browse-lib-list" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="sh-acts"><button class="sh-cancel" onclick="closeOverlay('browse-library-modal')">Done</button></div>
+  </div>
+</div>
+
+<!-- Browse history modal -->
+<div class="ov" id="browse-history-modal" onclick="closeOverlay('browse-history-modal',event)">
+  <div class="sheet">
+    <div class="sh-hdl"></div>
+    <div class="sh-ttl">Save from History</div>
+    <div class="sh-stl">Your past sessions</div>
+    <div id="browse-history-list" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="sh-acts"><button class="sh-cancel" onclick="closeOverlay('browse-history-modal')">Done</button></div>
+  </div>
+</div>
+
+<!-- Session history full-screen view -->
+<div class="session-history-modal" id="session-history-modal">
+  <div class="hist-header">
+    <button class="hist-back-btn" onclick="closeSessionHistory()">&#8592; BACK</button>
+    <div class="hist-title">SESSION HISTORY</div>
+    <button class="hist-filter-btn" onclick="toggleSessionHistoryFilter()">&#9655;</button>
+  </div>
+  <div class="hist-filter-panel" id="hist-filter-panel" style="display:none">
+    <div class="hist-filter-row">
+      <div class="hist-filter-lbl">Session</div>
+      <select id="hist-sess-filter" class="hist-filter-sel" onchange="applySessionHistoryFilter()"><option value="all">All sessions</option></select>
+    </div>
+    <div class="hist-filter-row">
+      <div class="hist-filter-lbl">Date range</div>
+      <div class="hist-range-pills">
+        <button class="pill hist-range-btn on" onclick="setHistRange(this,'all')">All time</button>
+        <button class="pill hist-range-btn" onclick="setHistRange(this,'30')">30 days</button>
+        <button class="pill hist-range-btn" onclick="setHistRange(this,'7')">7 days</button>
+      </div>
+    </div>
+  </div>
+  <div id="session-history-list" style="flex:1;overflow-y:auto"></div>
+</div>
+
 <!-- Boxing class modal -->
 <div class="ov" id="boxing-modal" onclick="closeOverlay('boxing-modal',event)">
   <div class="sheet"><div class="sh-hdl"></div><div class="sh-ttl">Log Boxing Class</div><div class="sh-stl">Quick record</div>
@@ -210,7 +281,7 @@
     <div id="deload-area"></div>
     <div id="session-list"></div>
     <div class="create-session-area">
-      <button type="button" class="create-session-btn" onclick="openCSB()" aria-label="Create a new custom session">+ CREATE NEW SESSION</button>
+      <button type="button" class="create-session-btn" onclick="openAddRoutineModal()" aria-label="Add a new routine">+ ADD ROUTINE</button>
       <button type="button" class="equip-icon-btn" onclick="openOverlay('equip-modal')" aria-label="Open equipment settings">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>

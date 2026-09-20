@@ -66,6 +66,7 @@ export class Timestamp {
 }
 
 export function deleteField() { return { _delete: true }; }
+export function increment(n) { return { _increment: n }; }
 export function writeBatch() {
   return {
     set: () => {},

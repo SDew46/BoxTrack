@@ -1,11 +1,12 @@
 ﻿import { ld, sv, toast, showPage, openOverlay, closeOverlay, fmtWt, fmtDate, fmtSecs, getUnit, detectPRs, getPR, getPrevWtFromSessions, userDataCache, userProfile } from './app.js';
 import { SESSIONS, EQUIP_OPTIONS, CAT_META, EXERCISE_LIBRARY, getSessName } from './data.js';
 import { db } from './firebase.js';
-import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
 
 // ─── TRAIN-ONLY STATE ─────────────────────────────────────────────────────────
-let extraCount=0,restTimers={},selectedFeel='',csbExercises=[],editingCustomId=null;
+let extraCount=0,restTimers={},selectedFeel='',csbExercises=[],editingRoutineId=null;
 let swapState={sessId:null,exIdx:null,selected:null},histFilter='all',sessionStartTime=null,durInterval=null,setTypeState={};
+var openRoutineCardId=null;
 let wuState={running:false,stepIdx:0,secsLeft:0,interval:null};
 var restFsEi=-1,restFsSecs=0,restFsRem=0,restFsInterval=null;
 var csbSessionType=null,csbExTypes=[],csbEmomInterval=60;
@@ -49,159 +50,290 @@ function initEquipment(){
 function toggleEquip(id){activeEquipment.has(id)?activeEquipment.delete(id):activeEquipment.add(id);sv('equipment',[...activeEquipment]);document.getElementById('ec-'+id).classList.toggle('on',activeEquipment.has(id));renderLibrary();}
 function sessAvail(sess){return(sess.equip||[]).every(e=>activeEquipment.has(e));}
 
-// LIBRARY
-function sessionVisibleToUser(sess){
-  if(sess.active===false){var role=(window.userProfile&&window.userProfile.role)||'member';return role==='coach';}
-  return true;
-}
-
-function getUsedSessionIds(){
-  var sessions=userDataCache.sessions||ld('sessions',[]);
-  return new Set(sessions.map(function(s){return s.sessId;}).filter(Boolean));
-}
-
-function getLastUsedTimestamp(sessId){
-  var sessions=userDataCache.sessions||ld('sessions',[]);
-  var last=0;
-  sessions.forEach(function(s){if(s.sessId===sessId&&s.id>last)last=s.id;});
-  return last;
-}
-
-function renderSessionCard(item){
-  var PERSON_SVG='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;pointer-events:none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-  var d=item.data;
-  if(item.type==='assigned'){
-    var fid=d._firestoreId||'';
-    var n=(d.sessionData&&d.sessionData.exercises&&d.sessionData.exercises.length)||0;
-    var today=new Date().toISOString().split('T')[0];
-    var dateLabel=d.assignedFor===today?'For today':'For '+fmtDate(d.assignedFor);
-    var sname=sanitiseTrainStr(d.sessionName||'Assigned Session');
-    return '<div class="session-card session-card-assigned">'
-      +'<div class="sc-badge-assigned">ASSIGNED</div>'
-      +'<div class="sc-date-assigned">'+sanitiseTrainStr(dateLabel)+'</div>'
-      +'<div class="sc-row">'
-        +'<div class="sc-info">'
-          +'<div class="sc-name">'+sname+'</div>'
-          +'<div class="sc-meta">'+n+(n===1?' exercise':' exercises')+'</div>'
-        +'</div>'
-        +'<button type="button" class="sc-start-btn" onclick="startAssignedSession(\''+fid+'\')" aria-label="Assigned by coach. Start session: '+sname+'">START</button>'
-      +'</div>'
-    +'</div>';
-  }
-  if(item.type==='sgpt'){
-    var fid=d._firestoreId||'';
-    var n=(d.exercises&&d.exercises.length)||0;
-    var sname=sanitiseTrainStr(d.name||'SGPT Session');
-    return '<div class="session-card">'
-      +'<div class="sc-row">'
-        +'<div class="sc-info">'
-          +'<div class="sc-name">'+sname+'</div>'
-          +'<div class="sc-meta">'+n+(n===1?' exercise':' exercises')+'</div>'
-        +'</div>'
-        +'<button type="button" class="sc-start-btn" onclick="useSgptSession(\''+fid+'\')" aria-label="Start session: '+sname+'">START</button>'
-      +'</div>'
-    +'</div>';
-  }
-  if(item.type==='pt121'){
-    var fid=d._firestoreId||'';
-    var n=(d.exercises&&d.exercises.length)||0;
-    var sname=sanitiseTrainStr(d.name||'1-2-1 Session');
-    return '<div class="session-card">'
-      +'<div class="sc-row">'
-        +'<div class="sc-info">'
-          +'<div class="sc-name">'+sname+'</div>'
-          +'<div class="sc-meta">'+n+(n===1?' exercise':' exercises')+'</div>'
-        +'</div>'
-        +'<button type="button" class="sc-start-btn" onclick="usePt121Session(\''+fid+'\')" aria-label="Start session: '+sname+'">START</button>'
-      +'</div>'
-    +'</div>';
-  }
-  if(item.type==='custom'){
-    var cidx=(userDataCache.customSessions||[]).indexOf(d);
-    var n=(d.exercises&&d.exercises.length)||0;
-    var sname=sanitiseTrainStr(d.name||'Custom Session');
-    return '<div class="session-card">'
-      +'<div class="sc-row">'
-        +'<div class="sc-info">'
-          +'<div class="sc-name">'+PERSON_SVG+sname+'</div>'
-          +'<div class="sc-meta">Your session &middot; '+n+(n===1?' exercise':' exercises')+'</div>'
-        +'</div>'
-        +'<button type="button" class="sc-start-btn" onclick="useCustomSession('+cidx+')" aria-label="Start session: '+sname+'">START</button>'
-      +'</div>'
-    +'</div>';
-  }
-  if(item.type==='used'){
-    var dname=sanitiseTrainStr(getSessName(d.id)||d.name||'Session');
-    var last=getLastUsedTimestamp(d.id);
-    var lastLabel=last?'Last run: '+fmtDate(new Date(last).toISOString().split('T')[0]):'';
-    return '<div class="session-card">'
-      +'<div class="sc-row">'
-        +'<div class="sc-info">'
-          +'<div class="sc-name">'+dname+'</div>'
-          +'<div class="sc-meta">'+sanitiseTrainStr(lastLabel)+'</div>'
-        +'</div>'
-        +'<button type="button" class="sc-start-btn" onclick="useSession(\''+d.id+'\')" aria-label="Start session: '+dname+'">START</button>'
-      +'</div>'
-    +'</div>';
-  }
-  var dname=sanitiseTrainStr(getSessName(d.id)||d.name||'Session');
-  var n=(d.exercises&&d.exercises.length)||0;
-  return '<div class="session-card">'
-    +'<div class="sc-row">'
-      +'<div class="sc-info">'
-        +'<div class="sc-name">'+dname+'</div>'
-        +'<div class="sc-meta">'+n+(n===1?' exercise':' exercises')+'</div>'
-      +'</div>'
-      +'<button type="button" class="sc-start-btn" onclick="useSession(\''+d.id+'\')" aria-label="Start session: '+dname+'">START</button>'
-    +'</div>'
-  +'</div>';
-}
-
-function renderLibrary(){
-  var container=document.getElementById('session-list');
-  if(!container)return;
-  var role=(window.userProfile&&window.userProfile.role)||'member';
-  var isSgpt=!!(window.userProfile&&window.userProfile.sgpt===true);
-  var isPt121=!!(window.userProfile&&window.userProfile.pt121===true);
-  var isCoach=role==='coach';
-  var today=new Date().toISOString().split('T')[0];
-  var items=[];
-
-  var assigned=(userDataCache.assignedSessions||[]).filter(function(s){
-    return s.status==='pending'&&s.assignedFor<=today;
+// LIBRARY — ROUTINES ARCHITECTURE
+function sanitiseExercisesForRoutine(exercises) {
+  if (!Array.isArray(exercises)) return [];
+  return exercises.map(function(ex) {
+    var setsCount = Array.isArray(ex.sets) ? ex.sets.length : (parseInt(ex.sets) || 3);
+    var firstReps = Array.isArray(ex.sets) && ex.sets.length ? (ex.sets[0].reps || ex.reps || '10') : (ex.reps || '10');
+    return {
+      name: ex.name || ex.displayName || 'Exercise',
+      displayName: ex.displayName || ex.name || 'Exercise',
+      sets: String(setsCount),
+      reps: String(firstReps),
+      rest: ex.rest || 60,
+      scheme: setsCount + '×' + firstReps,
+      setType: ex.setType || 'standard'
+    };
   });
-  assigned.sort(function(a,b){return a.assignedFor.localeCompare(b.assignedFor);});
-  assigned.forEach(function(a){items.push({type:'assigned',data:a});});
+}
 
-  if(isCoach||isSgpt){
-    (userDataCache.sgptSessions||[]).forEach(function(sess){items.push({type:'sgpt',data:sess});});
+function renderAssignedCard(a) {
+  var fid = a._firestoreId || '';
+  var n = (a.sessionData && a.sessionData.exercises && a.sessionData.exercises.length) || 0;
+  var today = new Date().toISOString().split('T')[0];
+  var dateLabel = a.assignedFor === today ? 'For today' : 'For ' + fmtDate(a.assignedFor);
+  var sname = sanitiseTrainStr(a.sessionName || 'Assigned Session');
+  return '<div class="session-card session-card-assigned">'
+    + '<div class="sc-badge-assigned">ASSIGNED</div>'
+    + '<div class="sc-date-assigned">' + sanitiseTrainStr(dateLabel) + '</div>'
+    + '<div class="sc-row">'
+      + '<div class="sc-info">'
+        + '<div class="sc-name">' + sname + '</div>'
+        + '<div class="sc-meta">' + n + (n === 1 ? ' exercise' : ' exercises') + '</div>'
+      + '</div>'
+      + '<button type="button" class="sc-start-btn" onclick="startAssignedSession(\'' + fid + '\')" aria-label="Assigned by coach. Start session: ' + sname + '">START</button>'
+    + '</div>'
+    + '</div>';
+}
+
+function renderRoutineCard(r) {
+  var fid = r._firestoreId || '';
+  var n = (r.exercises && r.exercises.length) || 0;
+  var isOpen = openRoutineCardId === fid;
+  var lastDate = r.lastUsedAt ? (r.lastUsedAt.toDate ? r.lastUsedAt.toDate() : new Date(r.lastUsedAt)) : null;
+  var lastLabel = lastDate ? 'Last: ' + fmtDate(lastDate.toISOString().split('T')[0]) : 'New routine';
+  var metaStr = n + (n === 1 ? ' exercise' : ' exercises') + ' · ' + lastLabel;
+  var exHtml = '';
+  if (isOpen) {
+    exHtml = '<div class="rc-expanded">'
+      + '<div class="rc-ex-list">'
+      + (r.exercises || []).map(function(ex) {
+          var scheme = ex.scheme || (ex.sets + '×' + ex.reps);
+          var restStr = ex.rest ? ex.rest + 's rest' : '';
+          return '<div class="rc-ex-row">'
+            + '<div class="rc-ex-name">' + sanitiseTrainStr(ex.displayName || ex.name || 'Exercise') + '</div>'
+            + '<div class="rc-ex-scheme">' + sanitiseTrainStr(scheme) + '</div>'
+            + (restStr ? '<div class="rc-ex-rest">' + sanitiseTrainStr(restStr) + '</div>' : '')
+            + '</div>';
+        }).join('')
+      + '</div>'
+      + '<div class="rc-actions">'
+        + '<button class="rc-collapse-btn" onclick="event.stopPropagation();toggleRoutineCard(\'' + fid + '\')">COLLAPSE &#9650;</button>'
+        + '<button class="rc-edit-btn" onclick="event.stopPropagation();editRoutine(\'' + fid + '\')">EDIT</button>'
+        + '<button class="rc-delete-btn" onclick="event.stopPropagation();deleteRoutine(\'' + fid + '\')">DELETE</button>'
+      + '</div>'
+      + '</div>';
   }
-  if(isCoach||isPt121){
-    (userDataCache.pt121Sessions||[]).forEach(function(sess){items.push({type:'pt121',data:sess});});
+  return '<div class="routine-card' + (isOpen ? ' rc-open' : '') + '" id="rc-' + sanitiseTrainStr(fid) + '" onclick="toggleRoutineCard(\'' + fid + '\')">'
+    + '<div class="rc-top">'
+      + '<div class="rc-info">'
+        + '<div class="rc-name">' + sanitiseTrainStr(r.name || 'Routine') + '</div>'
+        + '<div class="rc-meta">' + sanitiseTrainStr(metaStr) + '</div>'
+      + '</div>'
+      + '<button type="button" class="sc-start-btn" onclick="event.stopPropagation();useRoutine(\'' + fid + '\')" aria-label="Start routine: ' + sanitiseTrainStr(r.name || 'Routine') + '">START</button>'
+    + '</div>'
+    + exHtml
+    + '</div>';
+}
+
+function renderLibrary() {
+  var container = document.getElementById('session-list');
+  if (!container) return;
+  var today = new Date().toISOString().split('T')[0];
+  var html = '';
+  var assigned = (userDataCache.assignedSessions || []).filter(function(s) {
+    return s.status === 'pending' && s.assignedFor <= today;
+  });
+  assigned.sort(function(a, b) { return a.assignedFor.localeCompare(b.assignedFor); });
+  assigned.forEach(function(a) { html += renderAssignedCard(a); });
+  var routines = (userDataCache.routines || []).slice();
+  routines.sort(function(a, b) {
+    var ao = a.order !== undefined ? a.order : 9999;
+    var bo = b.order !== undefined ? b.order : 9999;
+    if (ao !== bo) return ao - bo;
+    var aTime = a.lastUsedAt ? (a.lastUsedAt.toDate ? a.lastUsedAt.toDate().getTime() : new Date(a.lastUsedAt).getTime()) : 0;
+    var bTime = b.lastUsedAt ? (b.lastUsedAt.toDate ? b.lastUsedAt.toDate().getTime() : new Date(b.lastUsedAt).getTime()) : 0;
+    return bTime - aTime;
+  });
+  routines.forEach(function(r) { html += renderRoutineCard(r); });
+  if (!assigned.length && !routines.length) {
+    html += '<div class="sl-empty" aria-live="polite">'
+      + '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>'
+      + '<div class="sl-empty-head">No routines yet.</div>'
+      + '<div class="sl-empty-sub">Tap "+ ADD ROUTINE" to get started.</div>'
+      + '</div>';
   }
+  container.innerHTML = html;
+}
 
-  var customs=userDataCache.customSessions||[];
-  customs.sort(function(a,b){return (b.lastUsed||b.createdAt||0)-(a.lastUsed||a.createdAt||0);});
-  customs.forEach(function(c){items.push({type:'custom',data:c});});
+function toggleRoutineCard(fid) {
+  openRoutineCardId = openRoutineCardId === fid ? null : fid;
+  renderLibrary();
+}
 
-  var usedIds=getUsedSessionIds();
-  var standardUsed=SESSIONS.filter(function(s){return sessionVisibleToUser(s)&&usedIds.has(s.id);});
-  standardUsed.sort(function(a,b){return getLastUsedTimestamp(b.id)-getLastUsedTimestamp(a.id);});
-  standardUsed.forEach(function(s){items.push({type:'used',data:s});});
+function useRoutine(firestoreId) {
+  var routines = userDataCache.routines || [];
+  var r = routines.find(function(x) { return x._firestoreId === firestoreId; });
+  if (!r) { toast('Routine not found', true); return; }
+  window.activeRoutineId = firestoreId;
+  window.activeLogSession = {
+    id: firestoreId,
+    cat: r.sessionType === 'circuit' ? 'CIRCUIT' : 'CUSTOM',
+    name: r.name,
+    custom: true,
+    warmup: [],
+    exercises: (r.exercises || []).map(function(ex) {
+      return Object.assign({}, ex, { displayName: ex.displayName || ex.name, swapped: false });
+    })
+  };
+  sv('activeLogSession', window.activeLogSession);
+  restTimers = {}; sessionStartTime = null; setTypeState = {}; clearInterval(durInterval);
+  showLogView();
+}
 
-  var standardUnused=SESSIONS.filter(function(s){return sessionVisibleToUser(s)&&!usedIds.has(s.id);});
-  standardUnused.sort(function(a,b){return (getSessName(a.id)||a.name||'').localeCompare(getSessName(b.id)||b.name||'');});
-  standardUnused.forEach(function(s){items.push({type:'standard',data:s});});
-
-  if(!items.length){
-    container.innerHTML='<div class="sl-empty" aria-live="polite">'
-      +'<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>'
-      +'<div class="sl-empty-head">No sessions yet.</div>'
-      +'<div class="sl-empty-sub">Create your first session below.</div>'
-      +'</div>';
-    return;
+function deleteRoutine(firestoreId) {
+  if (!confirm('Delete this routine? Your session history is unaffected.')) return;
+  var routines = userDataCache.routines || [];
+  var idx = routines.findIndex(function(r) { return r._firestoreId === firestoreId; });
+  if (idx > -1) userDataCache.routines.splice(idx, 1);
+  if (window.currentUser && firestoreId) {
+    deleteDoc(doc(db, 'users', window.currentUser.uid, 'routines', firestoreId)).catch(function(){});
   }
-  container.innerHTML=items.map(function(item){return renderSessionCard(item);}).join('');
+  if (openRoutineCardId === firestoreId) openRoutineCardId = null;
+  renderLibrary();
+  toast('Routine deleted');
+}
+
+function editRoutine(firestoreId) { openCSB(firestoreId); }
+
+function openAddRoutineModal() { openOverlay('add-routine-modal'); }
+
+function openStandardLibraryBrowse() {
+  closeOverlay('add-routine-modal');
+  var isSgpt = !!(window.userProfile && window.userProfile.sgpt === true);
+  var isCoach = !!(window.userProfile && window.userProfile.role === 'coach');
+  var html = '';
+  SESSIONS.forEach(function(s) {
+    var n = (s.exercises && s.exercises.length) || 0;
+    var sname = sanitiseTrainStr(getSessName(s.id) || s.name || 'Session');
+    html += '<div class="ar-browse-row">'
+      + '<div class="ar-browse-info"><div class="ar-browse-name">' + sname + '</div><div class="ar-browse-meta">' + n + (n === 1 ? ' exercise' : ' exercises') + '</div></div>'
+      + '<button class="ar-add-btn" onclick="addStandardSessionAsRoutine(\'' + s.id + '\')">+ ADD</button>'
+      + '</div>';
+  });
+  if (isCoach || isSgpt) {
+    (userDataCache.sgptSessions || []).forEach(function(s) {
+      var fid = s._firestoreId || '';
+      var n = (s.exercises && s.exercises.length) || 0;
+      var sname = sanitiseTrainStr(s.name || 'SGPT Session');
+      html += '<div class="ar-browse-row">'
+        + '<div class="ar-browse-info"><div class="ar-browse-name">' + sname + '</div><div class="ar-browse-meta">Your Programme · ' + n + (n === 1 ? ' exercise' : ' exercises') + '</div></div>'
+        + '<button class="ar-add-btn" onclick="addSgptSessionAsRoutine(\'' + fid + '\')">+ ADD</button>'
+        + '</div>';
+    });
+  }
+  if (!html) html = '<div style="text-align:center;padding:32px;color:var(--muted);font-family:\'DM Sans\',sans-serif;font-size:14px">No sessions available.</div>';
+  document.getElementById('browse-lib-list').innerHTML = html;
+  openOverlay('browse-library-modal');
+}
+
+function addStandardSessionAsRoutine(sessId) {
+  var sess = SESSIONS.find(function(s) { return s.id === sessId; });
+  if (!sess) return;
+  userDataCache.routines = userDataCache.routines || [];
+  var already = userDataCache.routines.find(function(r) { return r.sourceRef === sessId && r.source === 'standard'; });
+  if (already) { toast('Already in your routines'); return; }
+  var exs = (sess.exercises || []).map(function(ex) {
+    return { name: ex.name, displayName: ex.displayName || ex.name, sets: String(ex.sets || 3), reps: String(ex.reps || 10), rest: ex.rest || 60, scheme: ex.scheme || (ex.sets + '×' + ex.reps) };
+  });
+  var newEntry = { name: getSessName(sess.id) || sess.name || 'Session', source: 'standard', sourceRef: sessId, exercises: exs, useCount: 0, order: Date.now() };
+  userDataCache.routines.push(newEntry);
+  if (window.currentUser) {
+    addDoc(collection(db, 'users', window.currentUser.uid, 'routines'), Object.assign({}, newEntry, { createdAt: serverTimestamp() }))
+      .then(function(ref) { newEntry._firestoreId = ref.id; }).catch(function(){});
+  }
+  closeOverlay('browse-library-modal');
+  renderLibrary();
+  toast('Added to your routines');
+}
+
+function addSgptSessionAsRoutine(firestoreId) {
+  var sess = (userDataCache.sgptSessions || []).find(function(s) { return s._firestoreId === firestoreId; });
+  if (!sess) return;
+  userDataCache.routines = userDataCache.routines || [];
+  var already = userDataCache.routines.find(function(r) { return r.sourceRef === firestoreId && r.source === 'sgpt'; });
+  if (already) { toast('Already in your routines'); return; }
+  var exs = (sess.exercises || []).map(function(ex) {
+    return { name: ex.name, displayName: ex.displayName || ex.name, sets: String(ex.sets || 3), reps: String(ex.reps || 10), rest: ex.rest || 60, scheme: ex.scheme || (ex.sets + '×' + ex.reps) };
+  });
+  var newEntry = { name: sess.name || 'SGPT Session', source: 'sgpt', sourceRef: firestoreId, exercises: exs, useCount: 0, order: Date.now() };
+  userDataCache.routines.push(newEntry);
+  if (window.currentUser) {
+    addDoc(collection(db, 'users', window.currentUser.uid, 'routines'), Object.assign({}, newEntry, { createdAt: serverTimestamp() }))
+      .then(function(ref) { newEntry._firestoreId = ref.id; }).catch(function(){});
+  }
+  closeOverlay('browse-library-modal');
+  renderLibrary();
+  toast('Added to your routines');
+}
+
+function openSaveFromHistoryBrowse() {
+  closeOverlay('add-routine-modal');
+  var sessions = userDataCache.sessions || ld('sessions', []);
+  var byName = {};
+  sessions.forEach(function(s) {
+    var name = s.sessName || s.sessionName || s.name || 'Session';
+    if (!byName[name]) byName[name] = { mostRecent: s, exercises: s.exercises };
+    if (new Date(s.date) > new Date(byName[name].mostRecent.date)) {
+      byName[name].mostRecent = s; byName[name].exercises = s.exercises;
+    }
+  });
+  var names = Object.keys(byName);
+  var html = '';
+  names.slice(0, 20).forEach(function(name) {
+    var entry = byName[name];
+    var dateStr = entry.mostRecent.date ? 'Last: ' + fmtDate(entry.mostRecent.date) : '';
+    var sname = sanitiseTrainStr(name);
+    html += '<div class="ar-browse-row">'
+      + '<div class="ar-browse-info"><div class="ar-browse-name">' + sname + '</div><div class="ar-browse-meta">' + sanitiseTrainStr(dateStr) + '</div></div>'
+      + '<button class="ar-add-btn" onclick="addHistorySessionAsRoutine(\'' + sname.replace(/'/g, "\\'") + '\')">+ ADD</button>'
+      + '</div>';
+  });
+  if (!html) html = '<div style="text-align:center;padding:32px;color:var(--muted);font-family:\'DM Sans\',sans-serif;font-size:14px">No session history yet.</div>';
+  document.getElementById('browse-history-list').innerHTML = html;
+  openOverlay('browse-history-modal');
+}
+
+function addHistorySessionAsRoutine(sessName) {
+  var sessions = userDataCache.sessions || ld('sessions', []);
+  var matching = sessions.filter(function(s) { return (s.sessName || s.sessionName || s.name || 'Session') === sessName; });
+  if (!matching.length) { toast('Session not found', true); return; }
+  matching.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+  var most = matching[0];
+  userDataCache.routines = userDataCache.routines || [];
+  var already = userDataCache.routines.find(function(r) { return r.name === sessName && r.source === 'history'; });
+  if (already) { toast('Already in your routines'); return; }
+  var exs = sanitiseExercisesForRoutine(most.exercises || []);
+  var newEntry = { name: sessName, source: 'history', exercises: exs, useCount: matching.length, order: Date.now() };
+  userDataCache.routines.push(newEntry);
+  if (window.currentUser) {
+    addDoc(collection(db, 'users', window.currentUser.uid, 'routines'), Object.assign({}, newEntry, { createdAt: serverTimestamp() }))
+      .then(function(ref) { newEntry._firestoreId = ref.id; }).catch(function(){});
+  }
+  closeOverlay('browse-history-modal');
+  renderLibrary();
+  toast('Added to your routines');
+}
+
+function saveAssignedAsRoutine() {
+  var assignedId = window.activeAssignedSessionId;
+  if (!assignedId) { toast('No assigned session active', true); return; }
+  var assigned = (userDataCache.assignedSessions || []).find(function(a) { return a._firestoreId === assignedId; });
+  if (!assigned || !assigned.sessionData) { toast('Session data not found', true); return; }
+  userDataCache.routines = userDataCache.routines || [];
+  var already = userDataCache.routines.find(function(r) { return r.sourceRef === assignedId && r.source === 'assigned'; });
+  if (already) { toast('Already in your routines'); return; }
+  var exs = sanitiseExercisesForRoutine(assigned.sessionData.exercises || []);
+  var newEntry = { name: assigned.sessionName || assigned.sessionData.name || 'Assigned Session', source: 'assigned', sourceRef: assignedId, exercises: exs, useCount: 0, order: Date.now() };
+  userDataCache.routines.push(newEntry);
+  if (window.currentUser) {
+    addDoc(collection(db, 'users', window.currentUser.uid, 'routines'), Object.assign({}, newEntry, { createdAt: serverTimestamp() }))
+      .then(function(ref) { newEntry._firestoreId = ref.id; }).catch(function(){});
+  }
+  var btn = document.getElementById('done-save-routine-btn');
+  if (btn) { btn.textContent = 'SAVED ✓'; btn.disabled = true; }
+  toast('Saved to your routines');
 }
 
 function useSgptSession(firestoreId){
@@ -280,6 +412,7 @@ export function resetTrainState() {
   Object.keys(restTimers).forEach(function(k){clearInterval(restTimers[k].interval);});
   restTimers={};setTypeState={};
   window.activeLogSession=null;
+  window.activeRoutineId=null;
   sv('activeLogSession',null);
   sv('logAutosave',null);
 }
@@ -344,7 +477,7 @@ function startAssignedSession(firestoreId){
     toast('Failed to start: '+(err.message||'unknown error'),true);
   }
 }
-function useCustomSession(idx){var customs=userDataCache.customSessions||ld('customSessions',[]);var sess=customs[idx];if(!sess)return;window.activeLogSession={id:'custom-'+idx,cat:sess.cat,name:sess.name,custom:true,warmup:[],exercises:(sess.exercises||[]).map(function(ex){return Object.assign({},ex,{displayName:ex.name,swapped:false});})};sv('activeLogSession',window.activeLogSession);restTimers={};sessionStartTime=null;setTypeState={};clearInterval(durInterval);showLogView();toast('Session loaded');}
+function useCustomSession(fid){useRoutine(fid);}
 function showLogView(){document.getElementById('train-lib').style.display='none';document.getElementById('train-log').style.display='block';const meta=CAT_META[activeLogSession.cat]||CAT_META.CUSTOM;document.getElementById('log-eye').textContent=meta.label;document.getElementById('log-eye').style.color=meta.color;document.getElementById('log-title').textContent=activeLogSession.name;buildLogForm();renderWarmup();restoreAutosave();renderHistory();}
 function showLibraryView(){document.getElementById('train-lib').style.display='block';document.getElementById('train-log').style.display='none';renderLibrary();}
 function confirmClearSess(){if(!confirm('Change session? Unsaved data will be lost.'))return;clearActiveSession();}
@@ -644,6 +777,8 @@ async function saveSession(){
   const extras=[];document.querySelectorAll('.extra-card').forEach(el=>{const id=el.id.replace('extra-','');const name=(document.getElementById('en-'+id)?.value||'').trim();if(!name)return;const cont=document.getElementById('xsr-'+id);const sets=[];if(cont)cont.querySelectorAll('.set-row').forEach((row,si)=>{const s=document.getElementById('xsv-'+id+'-'+si)?.value;const r=document.getElementById('xrv-'+id+'-'+si)?.value;const k=document.getElementById('xkv-'+id+'-'+si)?.value;if(s||r||k)sets.push({sets:s||'',reps:r||'',kg:k||''});});extras.push({name,sets,extra:true});});
   const notes=document.getElementById('session-notes').value.trim();
   const record={id:Date.now(),date,cat:window.activeLogSession.cat,sessId:window.activeLogSession.id,sessName:window.activeLogSession.name,exercises,extras,notes,duration};
+  var savedRoutineId = window.activeRoutineId || null;
+  window.activeRoutineId = null;
   sv('logAutosave',null);clearInterval(durInterval);sessionStartTime=null;
   // Update in-memory cache first so UI reflects change immediately
   if(userDataCache.sessions!==null){
@@ -668,6 +803,14 @@ async function saveSession(){
           var aEntry=userDataCache.assignedSessions&&userDataCache.assignedSessions.find(function(a){return a._firestoreId===assignedId;});
           if(aEntry){aEntry.status='completed';}
         }catch(e){console.warn('Failed to mark assigned session complete:',e);}
+      }
+      // Update routine stats
+      if(savedRoutineId){
+        try{
+          await updateDoc(doc(db,'users',window.currentUser.uid,'routines',savedRoutineId),{lastUsedAt:serverTimestamp(),useCount:increment(1)});
+          var rEntry=(userDataCache.routines||[]).find(function(r){return r._firestoreId===savedRoutineId;});
+          if(rEntry){rEntry.lastUsedAt=new Date();rEntry.useCount=(rEntry.useCount||0)+1;}
+        }catch(e){console.warn('[8RB] Failed to update routine stats:',e);}
       }
     }catch(err){console.error('Firestore session save failed:',err);}
   }
@@ -717,6 +860,12 @@ function showDone(record){
     +'<div class="done-stat"><div class="done-stat-lbl">TOTAL VOLUME</div><div class="done-stat-val" id="ds-vol">0'+getUnit()+'</div></div>'
     +'<div class="done-stat"><div class="done-stat-lbl">SESSION TIME</div><div class="done-stat-val" id="ds-time">'+(record.duration?record.duration+' min':'—')+'</div></div>'
     +'<div class="done-stat">'+vsHtml+'</div>';
+  var saveRoutineArea = document.getElementById('done-save-routine-area');
+  if (saveRoutineArea) {
+    saveRoutineArea.innerHTML = window.activeAssignedSessionId
+      ? '<button class="abtn ab-gh" id="done-save-routine-btn" onclick="saveAssignedAsRoutine()" style="margin-bottom:8px;font-size:13px">SAVE AS ROUTINE</button>'
+      : '';
+  }
   document.getElementById('done-ov').classList.add('open');
   countUp('ds-sets',0,setsLogged,800);
   countUp('ds-vol',0,volRound,800,getUnit());
@@ -771,14 +920,6 @@ async function saveBoxingClass(){
 }
 
 // CSB
-var csbSessionType=null,csbExTypes=[],csbEmomInterval=60;
-var CSB_EX_TYPES={
-  straight_sets:['standard','superset','amrap','ladder','pyramid','drop_set'],
-  circuit:['standard','amrap','ladder','pyramid','drop_set'],
-  amrap:['standard'],
-  emom:['standard']
-};
-var CSB_EX_LABELS={standard:'Standard',superset:'Superset',amrap:'AMRAP',ladder:'Ladder',pyramid:'Pyramid',drop_set:'Drop Set'};
 function selectCSBType(type){
   if(csbSessionType&&csbSessionType!==type&&csbExercises.length){
     if(!confirm('Changing session type will reset your exercise configuration. Continue?'))return;
@@ -796,48 +937,39 @@ function selectEmomInterval(btn,secs){
   document.querySelectorAll('#csb-emom-interval .pill').forEach(function(b){b.classList.remove('on');});
   btn.classList.add('on');
 }
-function openCSB(editIdx){
-  editingCustomId=editIdx!==undefined?editIdx:null;
-  csbExercises=[];csbExTypes=[];csbSessionType=null;csbEmomInterval=60;
-  document.getElementById('csb-name').value='';
-  document.getElementById('csb-finisher').value='';
-  document.getElementById('ex-search').value='';
-  document.getElementById('ex-results').style.display='none';
-  document.getElementById('csb-details').style.display='none';
-  document.getElementById('csb-amrap-extra').style.display='none';
-  document.getElementById('csb-emom-extra').style.display='none';
-  document.querySelectorAll('.csb-type-card').forEach(function(c){c.classList.remove('sel');});
-  document.getElementById('csb-ttl').textContent=editIdx!==undefined?'Edit Session':'Build Session';
-  if(editIdx!==undefined){
-    var customs=ld('customSessions',[]),sess=customs[editIdx];
-    if(sess){
-      document.getElementById('csb-name').value=sess.name||'';
-      document.getElementById('csb-finisher').value=sess.finisher||'';
-      csbExercises=(sess.exercises||[]).map(function(e){return Object.assign({},e);});
-      csbExTypes=(sess.exTypes||csbExercises.map(function(){return 'standard';}));
-      var st=sess.sessionType||'straight_sets';
-      csbSessionType=st;
-      document.querySelectorAll('.csb-type-card').forEach(function(c){c.classList.toggle('sel',c.dataset.type===st);});
-      document.getElementById('csb-details').style.display='block';
-      document.getElementById('csb-amrap-extra').style.display=st==='amrap'?'block':'none';
-      document.getElementById('csb-emom-extra').style.display=st==='emom'?'block':'none';
+function openCSB(editRoutineId) {
+  editingRoutineId = editRoutineId !== undefined ? editRoutineId : null;
+  csbExercises = []; csbExTypes = []; csbSessionType = null; csbEmomInterval = 60;
+  document.getElementById('csb-name').value = '';
+  document.getElementById('csb-finisher').value = '';
+  document.getElementById('ex-search').value = '';
+  document.getElementById('ex-results').style.display = 'none';
+  document.getElementById('csb-details').style.display = 'none';
+  document.getElementById('csb-amrap-extra').style.display = 'none';
+  document.getElementById('csb-emom-extra').style.display = 'none';
+  document.querySelectorAll('.csb-type-card').forEach(function(c) { c.classList.remove('sel'); });
+  document.getElementById('csb-ttl').textContent = editRoutineId !== undefined ? 'Edit Routine' : 'Build Routine';
+  if (editRoutineId !== undefined) {
+    var routines = userDataCache.routines || [];
+    var sess = routines.find(function(x) { return x._firestoreId === editRoutineId; });
+    if (sess) {
+      document.getElementById('csb-name').value = sess.name || '';
+      document.getElementById('csb-finisher').value = sess.finisher || '';
+      csbExercises = (sess.exercises || []).map(function(e) { return Object.assign({}, e); });
+      csbExTypes = (sess.exTypes || csbExercises.map(function() { return 'standard'; }));
+      var st = sess.sessionType || 'straight_sets';
+      csbSessionType = st;
+      document.querySelectorAll('.csb-type-card').forEach(function(c) { c.classList.toggle('sel', c.dataset.type === st); });
+      document.getElementById('csb-details').style.display = 'block';
+      document.getElementById('csb-amrap-extra').style.display = st === 'amrap' ? 'block' : 'none';
+      document.getElementById('csb-emom-extra').style.display = st === 'emom' ? 'block' : 'none';
     }
   }
   renderCSBList();
   openOverlay('csb-modal');
 }
-function editCustom(idx){openCSB(idx);}
-function delCustom(idx){
-  if(!confirm('Delete this custom session?'))return;
-  if(userDataCache.customSessions!==null){
-    var entry=userDataCache.customSessions[idx];
-    if(entry&&entry._firestoreId&&window.currentUser){
-      deleteDoc(doc(db,'users',window.currentUser.uid,'customSessions',entry._firestoreId)).catch(function(){});
-    }
-    userDataCache.customSessions.splice(idx,1);
-  }
-  renderLibrary();toast('Session deleted');
-}
+function editCustom(fid) { openCSB(fid); }
+function delCustom(fid){ deleteRoutine(fid); }
 function addBlankEx(){
   csbExercises.push({name:'',sets:'3',reps:'10',rest:60});
   csbExTypes.push('standard');
@@ -879,36 +1011,37 @@ function renderCSBList(){
 }
 function removeCsbEx(i){csbExercises.splice(i,1);csbExTypes.splice(i,1);renderCSBList();}
 function searchEx(){const q=document.getElementById('ex-search').value.toLowerCase().trim();const res=document.getElementById('ex-results');if(!q){res.style.display='none';return;}const matches=EXERCISE_LIBRARY.filter(e=>e.name.toLowerCase().includes(q)||e.muscles.toLowerCase().includes(q)).slice(0,10);if(!matches.length){res.style.display='none';return;}res.style.display='block';res.innerHTML=matches.map(e=>'<div class="ex-ri" onclick="addCSBExFromLib(\''+e.name.replace(/'/g,"\\'")+'\')">'+ e.name+'<small>'+e.muscles+'</small></div>').join('');}
-async function saveCustomSess(){
-  if(!csbSessionType){toast('Choose a session type first',true);return;}
-  var name=document.getElementById('csb-name').value.trim();
-  if(!name){toast('Please name your session',true);return;}
-  if(!csbExercises.length){toast('Add at least one exercise',true);return;}
-  var extra={};
-  if(csbSessionType==='amrap'){extra.amrapCap=parseInt(document.getElementById('csb-amrap-cap').value)||20;extra.amrapTargetRounds=document.getElementById('csb-amrap-rounds').value||null;}
-  if(csbSessionType==='emom'){extra.emomDur=parseInt(document.getElementById('csb-emom-dur').value)||20;extra.emomInterval=csbEmomInterval;}
-  var sess={name:name,cat:'CUSTOM',sessionType:csbSessionType,finisher:document.getElementById('csb-finisher').value.trim(),exercises:csbExercises.map(function(e){return Object.assign({},e);}),exTypes:csbExTypes.slice(),extra:extra,createdAt:Date.now()};
-  var isEdit=editingCustomId!==null;
-  if(userDataCache.customSessions!==null){
-    if(isEdit){
-      var oldEntry=userDataCache.customSessions[editingCustomId];
-      if(oldEntry){
-        Object.assign(oldEntry,sess);
-        if(oldEntry._firestoreId&&window.currentUser){
-          // For edits, we'd need setDoc — for simplicity in Step 2, delete and re-add
-          deleteDoc(doc(db,'users',window.currentUser.uid,'customSessions',oldEntry._firestoreId)).catch(function(){});
-          addDoc(collection(db,'users',window.currentUser.uid,'customSessions'),Object.assign({},sess,{createdAt:serverTimestamp()})).then(function(ref){oldEntry._firestoreId=ref.id;}).catch(function(){});
-        }
-      }
-    } else {
-      userDataCache.customSessions.push(sess);
-      if(window.currentUser){
-        addDoc(collection(db,'users',window.currentUser.uid,'customSessions'),Object.assign({},sess,{createdAt:serverTimestamp()})).then(function(ref){sess._firestoreId=ref.id;}).catch(function(){});
+async function saveCustomSess() {
+  if (!csbSessionType) { toast('Choose a session type first', true); return; }
+  var name = document.getElementById('csb-name').value.trim();
+  if (!name) { toast('Please name your session', true); return; }
+  if (!csbExercises.length) { toast('Add at least one exercise', true); return; }
+  var extra = {};
+  if (csbSessionType === 'amrap') { extra.amrapCap = parseInt(document.getElementById('csb-amrap-cap').value) || 20; extra.amrapTargetRounds = document.getElementById('csb-amrap-rounds').value || null; }
+  if (csbSessionType === 'emom') { extra.emomDur = parseInt(document.getElementById('csb-emom-dur').value) || 20; extra.emomInterval = csbEmomInterval; }
+  var routineData = { name: name, source: 'custom', cat: 'CUSTOM', sessionType: csbSessionType, finisher: document.getElementById('csb-finisher').value.trim(), exercises: csbExercises.map(function(e) { return Object.assign({}, e); }), exTypes: csbExTypes.slice(), extra: extra };
+  var isEdit = editingRoutineId !== null;
+  userDataCache.routines = userDataCache.routines || [];
+  if (isEdit) {
+    var existing = userDataCache.routines.find(function(x) { return x._firestoreId === editingRoutineId; });
+    if (existing) {
+      Object.assign(existing, routineData);
+      if (existing._firestoreId && window.currentUser) {
+        updateDoc(doc(db, 'users', window.currentUser.uid, 'routines', existing._firestoreId), Object.assign({}, routineData)).catch(function(){});
       }
     }
+  } else {
+    var newEntry = Object.assign({}, routineData, { useCount: 0, order: Date.now() });
+    userDataCache.routines.push(newEntry);
+    if (window.currentUser) {
+      addDoc(collection(db, 'users', window.currentUser.uid, 'routines'), Object.assign({}, routineData, { useCount: 0, order: Date.now(), createdAt: serverTimestamp() }))
+        .then(function(ref) { newEntry._firestoreId = ref.id; }).catch(function(){});
+    }
   }
-  closeOverlay('csb-modal');renderLibrary();
-  toast(isEdit?'Session updated!':'Session saved!');editingCustomId=null;
+  closeOverlay('csb-modal');
+  renderLibrary();
+  toast(isEdit ? 'Routine updated!' : 'Routine saved!');
+  editingRoutineId = null;
 }
 
 // ─── EXERCISE REFERENCE OVERLAY ──────────────────────────────────────────────
@@ -1003,6 +1136,17 @@ window.selAlt = selAlt;
 window.confirmSwap = confirmSwap;
 window.useSession = useSession;
 window.useCustomSession = useCustomSession;
+window.useRoutine = useRoutine;
+window.toggleRoutineCard = toggleRoutineCard;
+window.deleteRoutine = deleteRoutine;
+window.editRoutine = editRoutine;
+window.openAddRoutineModal = openAddRoutineModal;
+window.openStandardLibraryBrowse = openStandardLibraryBrowse;
+window.addStandardSessionAsRoutine = addStandardSessionAsRoutine;
+window.addSgptSessionAsRoutine = addSgptSessionAsRoutine;
+window.openSaveFromHistoryBrowse = openSaveFromHistoryBrowse;
+window.addHistorySessionAsRoutine = addHistorySessionAsRoutine;
+window.saveAssignedAsRoutine = saveAssignedAsRoutine;
 window.confirmClearSess = confirmClearSess;
 window.toggleWarmup = toggleWarmup;
 window.toggleWarmupTimer = toggleWarmupTimer;

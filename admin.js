@@ -1,10 +1,10 @@
 import { auth, db } from './firebase.js';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import {
-  doc, getDoc, getDocs, setDoc, addDoc, collection,
-  serverTimestamp, updateDoc, query, where
+  doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, collection,
+  serverTimestamp, updateDoc, query, where, writeBatch
 } from 'firebase/firestore';
-import { EXERCISE_LIBRARY, LEARN_CONTENT } from './data.js';
+import { EXERCISE_LIBRARY, LEARN_TOPICS } from './data.js';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 var currentCoach = null;
@@ -27,10 +27,12 @@ var membersPage = 0;
 var MEMBERS_PER_PAGE = 20;
 var sessionLibTab = 'sgpt';
 var coachNotesValue = '';
-var adminLearnDraft = null;
-var adminLearnSaved = null;
-var adminLearnLoading = false;
-var LEARN_CARD_LABELS = ['1. PUNCHES', '2. DEFENCE', '3. FOOTWORK', '4. SHADOW BOXING', '5. WRAPPING', '6. COMBINATIONS'];
+var learnVideos = null;
+var learnVideosLoading = false;
+var learnVideoEditorMode = 'new';
+var learnVideoEditingId = null;
+var learnVideoDraft = {};
+var learnTopicOpenState = {};
 var lockedPanelsData = {
   sgpt: { heading: '', body: '', url: '' },
   pt121: { heading: '', body: '', url: '' }
@@ -76,7 +78,7 @@ function showSection(name) {
   else if (name === 'assignments') renderAssignmentsSection();
   else if (name === 'settings') renderSettingsSection();
   else if (name === 'learn') {
-    if (!adminLearnDraft && !adminLearnLoading) loadAdminLearnCards();
+    if (learnVideos === null && !learnVideosLoading) loadLearnVideosAdmin();
     renderLearnSection();
   }
 }
@@ -916,208 +918,228 @@ function normaliseYouTubeUrl(url) {
   return '';
 }
 
-function getLearnDefaults() {
-  return LEARN_CONTENT.map(function(c) {
-    return { id: c.id, title: c.title, cue: c.cue, url: c.url, credit: c.credit || '' };
-  });
+async function migrateLearnCards() {
+  try {
+    var configRef = doc(db, 'gym', '8RB', 'config', 'main');
+    var configSnap = await getDoc(configRef);
+    if (configSnap.exists() && configSnap.data().learnVideosMigrated === true) return;
+    var oldSnap = await getDoc(doc(db, 'gym', '8RB', 'config', 'learnCards'));
+    if (oldSnap.exists()) {
+      var cards = (oldSnap.data().cards || []).filter(function(c) { return c.id && c.title; });
+      if (cards.length > 0) {
+        var batch = writeBatch(db);
+        cards.forEach(function(card) {
+          var ref = doc(collection(db, 'gym', '8RB', 'learnVideos'));
+          batch.set(ref, {
+            topicId: card.id,
+            title: card.title || '',
+            description: card.cue || '',
+            url: card.url || '',
+            credit: card.credit || '',
+            sortOrder: 100,
+            active: true,
+            createdAt: serverTimestamp(),
+            createdBy: currentCoach ? currentCoach.uid : '',
+            updatedAt: serverTimestamp(),
+            updatedBy: currentCoach ? currentCoach.uid : ''
+          });
+        });
+        batch.delete(doc(db, 'gym', '8RB', 'config', 'learnCards'));
+        await batch.commit();
+      }
+    }
+    await setDoc(configRef, { learnVideosMigrated: true }, { merge: true });
+  } catch(e) {
+    console.warn('[8RB admin] migrateLearnCards failed:', e);
+  }
 }
 
-async function loadAdminLearnCards() {
-  adminLearnLoading = true;
+async function loadLearnVideosAdmin() {
+  learnVideosLoading = true;
   if (activeSection === 'learn') renderLearnSection();
   try {
-    var snap = await getDoc(doc(db, 'gym', '8RB', 'config', 'learnCards'));
-    if (snap.exists()) {
-      var d = snap.data();
-      if (d.cards && Array.isArray(d.cards) && d.cards.length === 6) {
-        adminLearnSaved = d.cards.map(function(c) {
-          return { id: c.id || '', title: c.title || '', cue: c.cue || '', url: c.url || '', credit: c.credit || '' };
-        });
-      } else {
-        adminLearnSaved = getLearnDefaults();
-      }
-    } else {
-      adminLearnSaved = getLearnDefaults();
-    }
-  } catch(err) {
-    console.warn('Failed to load learn cards:', err);
-    adminLearnSaved = getLearnDefaults();
+    var snap = await getDocs(collection(db, 'gym', '8RB', 'learnVideos'));
+    learnVideos = snap.docs.map(function(d) { return Object.assign({ _firestoreId: d.id }, d.data()); });
+  } catch(e) {
+    console.warn('[8RB admin] loadLearnVideosAdmin failed:', e);
+    learnVideos = [];
   }
-  adminLearnDraft = adminLearnSaved.map(function(c) { return Object.assign({}, c); });
-  adminLearnLoading = false;
+  learnVideosLoading = false;
   if (activeSection === 'learn') renderLearnSection();
-}
-
-function isLearnCardDirty(i) {
-  if (!adminLearnDraft || !adminLearnSaved) return false;
-  var d = adminLearnDraft[i], s = adminLearnSaved[i];
-  return d.title !== s.title || d.cue !== s.cue || d.url !== s.url || d.credit !== s.credit;
 }
 
 function renderLearnSection() {
   var el = document.getElementById('section-learn');
   if (!el) return;
-
-  if (adminLearnLoading || !adminLearnDraft) {
+  if (learnVideosLoading || learnVideos === null) {
     el.innerHTML =
       '<div class="section-hd"><div class="section-ttl">LEARN CONTENT</div>' +
-      '<div class="section-sub">Edit the technique videos and coaching cues members see in the LEARN tab.</div></div>' +
+      '<div class="section-sub">Videos your members see in the LEARN tab.</div></div>' +
       '<div style="color:var(--dim);font-size:14px;padding:24px 0">Loading…</div>';
     return;
   }
-
-  var cardsHtml = adminLearnDraft.map(function(card, i) {
-    var dirty = isLearnCardDirty(i);
-    var badge = dirty ? '<span class="lc-unsaved">UNSAVED</span>' : '';
-    var def = LEARN_CONTENT[i] || {};
-    var urlNorm = normaliseYouTubeUrl(card.url);
-    var prevDis = urlNorm ? '' : ' disabled';
-    return '<div class="lc-card" id="lc-card-' + i + '">' +
-      '<div class="lc-card-hd"><span class="lc-card-pos">' + LEARN_CARD_LABELS[i] + '</span>' + badge + '</div>' +
-      '<label class="sb-lbl" for="lc-title-' + i + '">TITLE</label>' +
-      '<input class="sb-name-inp" id="lc-title-' + i + '" type="text" maxlength="40"' +
-        ' placeholder="' + sanitise(def.title || '') + '"' +
-        ' value="' + sanitise(card.title) + '"' +
-        ' oninput="onLearnFieldInput(' + i + ',\'title\',this.value)"' +
-        ' aria-label="Title for card ' + (i + 1) + '">' +
-      '<label class="sb-lbl" for="lc-cue-' + i + '">COACHING CUE</label>' +
-      '<textarea class="admin-textarea" id="lc-cue-' + i + '" maxlength="400"' +
-        ' placeholder="' + sanitise(def.cue || '') + '"' +
-        ' oninput="onLearnFieldInput(' + i + ',\'cue\',this.value)"' +
-        ' aria-live="polite" aria-label="Coaching cue for card ' + (i + 1) + '">' + sanitise(card.cue) + '</textarea>' +
-      '<div class="admin-charcount" id="lc-cue-count-' + i + '">' + card.cue.length + '/400</div>' +
-      '<label class="sb-lbl" for="lc-url-' + i + '">YOUTUBE URL</label>' +
-      '<input class="sb-name-inp" id="lc-url-' + i + '" type="url"' +
-        ' placeholder="https://www.youtube.com/watch?v=..."' +
-        ' value="' + sanitise(card.url) + '"' +
-        ' oninput="onLearnFieldInput(' + i + ',\'url\',this.value)"' +
-        ' aria-label="YouTube URL for card ' + (i + 1) + '">' +
-      '<div class="lc-url-hint">Paste any YouTube URL. Watch, embed, or share links all work.</div>' +
-      '<button type="button" class="lc-preview-btn" id="lc-preview-btn-' + i + '"' + prevDis +
-        ' onclick="previewLearnCard(' + i + ')" aria-label="Preview video for card ' + (i + 1) + '"' +
-        (urlNorm ? '' : ' title="Enter a valid YouTube URL first"') + '>PREVIEW VIDEO</button>' +
-      '<label class="sb-lbl" for="lc-credit-' + i + '">CREDIT</label>' +
-      '<input class="sb-name-inp" id="lc-credit-' + i + '" type="text" maxlength="60"' +
-        ' placeholder="e.g. Coach Darren"' +
-        ' value="' + sanitise(card.credit) + '"' +
-        ' oninput="onLearnFieldInput(' + i + ',\'credit\',this.value)"' +
-        ' aria-label="Credit for card ' + (i + 1) + '">' +
-    '</div>';
-  }).join('');
-
-  var anyDirty = adminLearnDraft.some(function(_, i) { return isLearnCardDirty(i); });
-  el.innerHTML =
-    '<div class="section-hd"><div class="section-ttl">LEARN CONTENT</div>' +
-    '<div class="section-sub">Edit the technique videos and coaching cues members see in the LEARN tab.</div></div>' +
-    '<div style="max-width:640px">' +
-      cardsHtml +
-      '<div class="lc-save-row">' +
-        '<button type="button" class="admin-save-btn" id="lc-save-btn"' +
-          ' onclick="saveAllLearnChanges()"' +
-          ' style="flex:1;height:56px;font-size:20px;letter-spacing:2px"' +
-          ' aria-label="Save all changes to LEARN content"' +
-          (anyDirty ? '' : ' disabled') + '>SAVE ALL CHANGES</button>' +
-        '<button type="button" class="lc-discard-btn" id="lc-discard-btn"' +
-          ' onclick="discardLearnChanges()"' +
-          ' aria-label="Discard all unsaved changes"' +
-          (anyDirty ? '' : ' style="display:none"') + '>DISCARD CHANGES</button>' +
+  var grouped = {};
+  LEARN_TOPICS.forEach(function(t) { grouped[t.id] = []; });
+  learnVideos.forEach(function(v) { if (grouped[v.topicId] !== undefined) grouped[v.topicId].push(v); });
+  Object.keys(grouped).forEach(function(k) {
+    grouped[k].sort(function(a, b) { return (a.sortOrder || 100) - (b.sortOrder || 100); });
+  });
+  var topicsHtml = LEARN_TOPICS.map(function(topic) {
+    var vids = grouped[topic.id] || [];
+    var count = vids.length;
+    var isOpen = !!learnTopicOpenState[topic.id];
+    var chev = isOpen ? '▼' : '▶';
+    var rowsHtml = count === 0
+      ? '<div class="lv-empty-topic">No videos yet. Tap + ADD VIDEO to add one.</div>'
+      : vids.map(function(v) {
+          var fid = v._firestoreId;
+          return '<div class="lv-row">' +
+            '<div class="lv-row-left">' +
+              '<div class="lv-row-title">' + sanitise(v.title || '') + '</div>' +
+              '<div class="lv-row-meta">Sort: ' + (v.sortOrder != null ? v.sortOrder : 100) +
+                (v.credit ? '  ·  ' + sanitise(v.credit) : '') + '</div>' +
+            '</div>' +
+            '<div class="lv-row-actions">' +
+              '<button class="lv-edit-btn" type="button" onclick="openLearnVideoEditor(\'edit\',\'' + fid + '\')">EDIT</button>' +
+              '<button class="lv-del-btn" type="button" onclick="deleteLearnVideo(\'' + fid + '\',\'' + sanitise(v.title || '').replace(/'/g, '\\\'') + '\')">✕</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+    return '<div class="lv-topic-section">' +
+      '<div class="lv-topic-hd" onclick="toggleAdminLearnTopic(\'' + topic.id + '\')">' +
+        '<span class="lv-topic-chev" id="lvtchev-' + topic.id + '">' + chev + '</span>' +
+        '<span class="lv-topic-label">' + topic.label.toUpperCase() + '</span>' +
+        '<span class="lv-topic-count">(' + count + ')</span>' +
+      '</div>' +
+      '<div class="lv-topic-body' + (isOpen ? ' open' : '') + '" id="lvtbody-' + topic.id + '">' +
+        rowsHtml +
       '</div>' +
     '</div>';
+  }).join('');
+  el.innerHTML =
+    '<div class="section-hd-row">' +
+      '<div><div class="section-ttl">LEARN CONTENT</div>' +
+      '<div class="section-sub">Videos your members see in the LEARN tab.</div></div>' +
+      '<button type="button" class="add-video-btn" onclick="openLearnVideoEditor(\'new\', null)">+ ADD VIDEO</button>' +
+    '</div>' +
+    '<div class="lv-topics-list">' + topicsHtml + '</div>';
 }
 
-window.onLearnFieldInput = function(i, field, val) {
-  if (!adminLearnDraft) return;
-  adminLearnDraft[i][field] = val;
-
-  if (field === 'cue') {
-    var ct = document.getElementById('lc-cue-count-' + i);
-    if (ct) ct.textContent = val.length + '/400';
-  }
-
-  if (field === 'url') {
-    var norm = normaliseYouTubeUrl(val);
-    var pb = document.getElementById('lc-preview-btn-' + i);
-    if (pb) {
-      pb.disabled = !norm;
-      pb.title = norm ? '' : 'Enter a valid YouTube URL first';
-    }
-  }
-
-  var dirty = isLearnCardDirty(i);
-  var cardEl = document.getElementById('lc-card-' + i);
-  if (cardEl) {
-    var hd = cardEl.querySelector('.lc-card-hd');
-    var badge = cardEl.querySelector('.lc-unsaved');
-    if (dirty && !badge && hd) {
-      var span = document.createElement('span');
-      span.className = 'lc-unsaved';
-      span.textContent = 'UNSAVED';
-      hd.appendChild(span);
-    } else if (!dirty && badge) {
-      badge.remove();
-    }
-  }
-
-  var anyDirty = adminLearnDraft.some(function(_, j) { return isLearnCardDirty(j); });
-  var saveBtn = document.getElementById('lc-save-btn');
-  var discardBtn = document.getElementById('lc-discard-btn');
-  if (saveBtn) saveBtn.disabled = !anyDirty;
-  if (discardBtn) discardBtn.style.display = anyDirty ? '' : 'none';
+window.toggleAdminLearnTopic = function(topicId) {
+  learnTopicOpenState[topicId] = !learnTopicOpenState[topicId];
+  var body = document.getElementById('lvtbody-' + topicId);
+  var chev = document.getElementById('lvtchev-' + topicId);
+  if (body) body.classList.toggle('open', !!learnTopicOpenState[topicId]);
+  if (chev) chev.textContent = learnTopicOpenState[topicId] ? '▼' : '▶';
 };
 
-window.saveAllLearnChanges = async function() {
-  if (!adminLearnDraft) return;
-  var errors = [];
-  var normalised = adminLearnDraft.map(function(card, i) {
-    var norm = normaliseYouTubeUrl(card.url);
-    if (!norm) errors.push(LEARN_CARD_LABELS[i]);
-    return { id: card.id, title: card.title, cue: card.cue, url: norm || card.url, credit: card.credit };
-  });
-  if (errors.length) {
-    showToast('Invalid URL in: ' + errors.join(', '), true);
-    return;
+function updateLearnEditorButtons() {
+  var norm = normaliseYouTubeUrl(learnVideoDraft.url || '');
+  var prevBtn = document.getElementById('lv-preview-btn');
+  if (prevBtn) { prevBtn.disabled = !norm; prevBtn.title = norm ? '' : 'Enter a valid YouTube URL first'; }
+  var saveBtn = document.getElementById('lv-save-btn');
+  if (saveBtn) saveBtn.disabled = !(learnVideoDraft.topicId && learnVideoDraft.title && norm);
+}
+
+window.openLearnVideoEditor = function(mode, videoId) {
+  learnVideoEditorMode = mode;
+  learnVideoEditingId = videoId || null;
+  if (mode === 'edit' && videoId && learnVideos) {
+    var v = learnVideos.find(function(lv) { return lv._firestoreId === videoId; });
+    learnVideoDraft = v
+      ? { topicId: v.topicId || '', title: v.title || '', description: v.description || '', url: v.url || '', credit: v.credit || '', sortOrder: v.sortOrder != null ? v.sortOrder : 100 }
+      : { topicId: '', title: '', description: '', url: '', credit: '', sortOrder: 100 };
+  } else {
+    learnVideoDraft = { topicId: '', title: '', description: '', url: '', credit: '', sortOrder: 100 };
   }
-  var btn = document.getElementById('lc-save-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'SAVING…'; }
+  var modal = document.getElementById('lv-editor-modal');
+  if (!modal) return;
+  var hdr = document.getElementById('lv-editor-hdr');
+  if (hdr) hdr.textContent = mode === 'edit' ? 'EDIT VIDEO' : 'ADD VIDEO';
+  var saveBtn = document.getElementById('lv-save-btn');
+  if (saveBtn) saveBtn.textContent = mode === 'edit' ? 'SAVE CHANGES' : 'ADD VIDEO';
+  var sel = document.getElementById('lv-topic-sel'); if (sel) sel.value = learnVideoDraft.topicId;
+  var ti = document.getElementById('lv-title-inp'); if (ti) ti.value = learnVideoDraft.title;
+  var ta = document.getElementById('lv-desc-ta'); if (ta) ta.value = learnVideoDraft.description;
+  var dc = document.getElementById('lv-desc-count'); if (dc) dc.textContent = learnVideoDraft.description.length + '/400';
+  var ui = document.getElementById('lv-url-inp'); if (ui) ui.value = learnVideoDraft.url;
+  var ci = document.getElementById('lv-credit-inp'); if (ci) ci.value = learnVideoDraft.credit;
+  var si = document.getElementById('lv-sort-inp'); if (si) si.value = learnVideoDraft.sortOrder;
+  var pa = document.getElementById('lv-preview-area'); if (pa) pa.style.display = 'none';
+  var pf = document.getElementById('lv-preview-iframe'); if (pf) pf.src = '';
+  updateLearnEditorButtons();
+  modal.style.display = 'flex';
+};
+
+window.closeLearnVideoEditor = function() {
+  var modal = document.getElementById('lv-editor-modal'); if (modal) modal.style.display = 'none';
+  var pf = document.getElementById('lv-preview-iframe'); if (pf) pf.src = '';
+};
+
+window.onLearnVideoFieldInput = function(field, val) {
+  learnVideoDraft[field] = field === 'sortOrder' ? (parseInt(val) || 100) : val;
+  if (field === 'description') { var ct = document.getElementById('lv-desc-count'); if (ct) ct.textContent = val.length + '/400'; }
+  updateLearnEditorButtons();
+};
+
+window.previewLearnVideo = function() {
+  var norm = normaliseYouTubeUrl(learnVideoDraft.url || '');
+  if (!norm) return;
+  var pa = document.getElementById('lv-preview-area'); if (pa) pa.style.display = 'block';
+  var pf = document.getElementById('lv-preview-iframe'); if (pf) pf.src = norm;
+};
+
+window.saveLearnVideo = async function() {
+  var norm = normaliseYouTubeUrl(learnVideoDraft.url || '');
+  if (!norm) { showToast('Invalid YouTube URL', true); return; }
+  if (!learnVideoDraft.topicId) { showToast('Please select a topic', true); return; }
+  if (!learnVideoDraft.title) { showToast('Please enter a title', true); return; }
+  var saveBtn = document.getElementById('lv-save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'SAVING…'; }
   try {
-    await setDoc(doc(db, 'gym', '8RB', 'config', 'learnCards'), {
-      cards: normalised,
+    var docData = {
+      topicId: learnVideoDraft.topicId,
+      title: learnVideoDraft.title.trim(),
+      description: learnVideoDraft.description.trim(),
+      url: norm,
+      credit: learnVideoDraft.credit.trim(),
+      sortOrder: Number(learnVideoDraft.sortOrder) || 100,
+      active: true,
       updatedAt: serverTimestamp(),
       updatedBy: currentCoach ? currentCoach.uid : ''
-    });
-    adminLearnSaved = normalised.map(function(c) { return Object.assign({}, c); });
-    adminLearnDraft = normalised.map(function(c) { return Object.assign({}, c); });
-    showToast('LEARN CONTENT UPDATED');
+    };
+    if (learnVideoEditorMode === 'edit' && learnVideoEditingId) {
+      await updateDoc(doc(db, 'gym', '8RB', 'learnVideos', learnVideoEditingId), docData);
+      if (learnVideos) {
+        var idx = learnVideos.findIndex(function(v) { return v._firestoreId === learnVideoEditingId; });
+        if (idx >= 0) learnVideos[idx] = Object.assign({ _firestoreId: learnVideoEditingId }, docData);
+      }
+      showToast('VIDEO SAVED');
+    } else {
+      docData.createdAt = serverTimestamp();
+      docData.createdBy = currentCoach ? currentCoach.uid : '';
+      var newRef = await addDoc(collection(db, 'gym', '8RB', 'learnVideos'), docData);
+      if (learnVideos) learnVideos.push(Object.assign({ _firestoreId: newRef.id }, docData));
+      showToast('VIDEO ADDED');
+    }
+    window.closeLearnVideoEditor();
     renderLearnSection();
   } catch(err) {
     showToast('SAVE FAILED — TRY AGAIN', true);
-    if (btn) { btn.disabled = false; btn.textContent = 'SAVE ALL CHANGES'; }
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = learnVideoEditorMode === 'edit' ? 'SAVE CHANGES' : 'ADD VIDEO'; }
   }
 };
 
-window.discardLearnChanges = function() {
-  if (!confirm('Discard all changes since last save?')) return;
-  adminLearnDraft = adminLearnSaved.map(function(c) { return Object.assign({}, c); });
-  renderLearnSection();
-};
-
-window.previewLearnCard = function(i) {
-  if (!adminLearnDraft) return;
-  var urlInput = document.getElementById('lc-url-' + i);
-  var raw = urlInput ? urlInput.value : (adminLearnDraft[i] ? adminLearnDraft[i].url : '');
-  var norm = normaliseYouTubeUrl(raw);
-  if (!norm) return;
-  var iframe = document.getElementById('lc-preview-iframe');
-  var modal = document.getElementById('lc-preview-modal');
-  if (iframe) iframe.src = norm;
-  if (modal) modal.style.display = 'flex';
-};
-
-window.closeLearnPreview = function() {
-  var iframe = document.getElementById('lc-preview-iframe');
-  var modal = document.getElementById('lc-preview-modal');
-  if (iframe) iframe.src = '';
-  if (modal) modal.style.display = 'none';
+window.deleteLearnVideo = async function(videoId, title) {
+  if (!confirm('Delete \'' + title + '\'? This cannot be undone.')) return;
+  try {
+    await deleteDoc(doc(db, 'gym', '8RB', 'learnVideos', videoId));
+    if (learnVideos) learnVideos = learnVideos.filter(function(v) { return v._firestoreId !== videoId; });
+    renderLearnSection();
+    showToast('VIDEO DELETED');
+  } catch(e) {
+    showToast('DELETE FAILED — TRY AGAIN', true);
+  }
 };
 
 // ─── SIGN OUT ─────────────────────────────────────────────────────────────────
@@ -1145,6 +1167,7 @@ onAuthStateChanged(auth, async function(user) {
     await loadLockedPanels();
     await loadMembers();
     await loadAllSessions();
+    migrateLearnCards().catch(function(e) { console.warn('[8RB admin] migrateLearnCards error:', e); });
     showSection('dashboard');
   } catch(err) {
     gate.textContent = 'Error checking access. Please try again.';

@@ -178,6 +178,23 @@ test('Auth screen shows when not authenticated', async ({ page }) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Test 9b: Resuming state shows when lastSignedIn flag is set
+// ─────────────────────────────────────────────────────────────────────────────
+test('Resuming state shows when lastSignedIn flag is recent', async ({ page }) => {
+  // Set a fresh lastSignedIn timestamp before navigation so the app shows
+  // "Resuming your session..." instead of the sign-in form.
+  await page.addInitScript(() => {
+    localStorage.setItem('8rb.lastSignedIn', Date.now().toString());
+    localStorage.setItem('installGateDismissed', '1');
+  });
+  await page.goto(APP_URL);
+  // The module-level check runs synchronously on load — auth-screen should be
+  // visible and contain the resuming message before onAuthStateChanged fires.
+  await expect(page.locator('#auth-screen')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('#auth-screen')).toContainText('Resuming your session...');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Test 10: Onboarding shows for a new (never-onboarded) user
 // ─────────────────────────────────────────────────────────────────────────────
 test('Onboarding shows for a new user with no profile', async ({ page, mockFirebase }) => {

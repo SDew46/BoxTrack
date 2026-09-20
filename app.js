@@ -781,6 +781,7 @@ async function resolveAuth() {
     showEmailVerificationScreen(authUser.email);
   } else {
     if (DEBUG) console.log('[8RB] resolveAuth: no user, showing sign-in');
+    localStorage.removeItem(RESUME_KEY);
     showSignInScreen();
   }
 }
@@ -797,10 +798,22 @@ export function onSplashDone() {
   }
 }
 
+// ─── AUTH RESUME HINT ────────────────────────────────────────────────────────
+// A fresh lastSignedIn flag means the user was recently signed in.
+// Show a loading state instead of the sign-in screen while Firebase resolves.
+var RESUME_KEY = '8rb.lastSignedIn';
+function isResumeSessionActive() {
+  var v = localStorage.getItem(RESUME_KEY);
+  if (!v) return false;
+  var age = Date.now() - parseInt(v, 10);
+  return age >= 0 && age < 30 * 24 * 60 * 60 * 1000;
+}
+
 // ─── iOS GOOGLE SIGN-IN FLASH FIX ────────────────────────────────────────────
 // Show a loading screen immediately on redirect return so the sign-in form
 // never flashes before auth state resolves.
-function showGoogleLoadingScreen() {
+function showGoogleLoadingScreen(msg) {
+  var text = msg || 'Signing you in...';
   var authEl = document.getElementById('auth-screen');
   var appEl = document.getElementById('app-content');
   if (appEl) appEl.style.display = 'none';
@@ -812,13 +825,15 @@ function showGoogleLoadingScreen() {
       '<img src="8RB.webp" style="width:80px;opacity:0.8;' +
       'animation:obBreathe 3s ease-in-out infinite">' +
       '<div style="font-family:\'DM Sans\',sans-serif;font-size:14px;' +
-      'color:var(--muted)">Signing you in...</div>' +
+      'color:var(--muted)">' + text + '</div>' +
       '</div>';
   }
 }
 
 if (sessionStorage.getItem('googleRedirectPending')) {
   showGoogleLoadingScreen();
+} else if (isResumeSessionActive()) {
+  showGoogleLoadingScreen('Resuming your session...');
 }
 
 // Handle return from Google signInWithRedirect — fires on page load after redirect
@@ -876,6 +891,7 @@ async function handleSignIn() {
   if (btn) { btn.textContent = 'SIGNING IN...'; btn.disabled = true; }
   try {
     await signInWithEmailAndPassword(auth, email, pass);
+    localStorage.setItem(RESUME_KEY, Date.now().toString());
     // onAuthStateChanged handles the rest
   } catch(err) {
     var msg = err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found'
@@ -894,6 +910,7 @@ async function handleGoogleSignIn() {
     var provider = new GoogleAuthProvider();
     var result = await signInWithPopup(auth, provider);
     sessionStorage.removeItem('googleRedirectPending');
+    localStorage.setItem(RESUME_KEY, Date.now().toString());
     // ensureUserProfile handles profile creation via resolveAuth/onAuthStateChanged
     if (DEBUG) console.log('[8RB] Google popup sign-in complete:', result.user.uid);
   } catch(err) {
@@ -982,6 +999,7 @@ async function handleSignOut() {
     if (typeof window.resetTrainState === 'function') window.resetTrainState();
     if (typeof window.resetBoxState === 'function') window.resetBoxState();
     await fbSignOut(auth);
+    localStorage.removeItem(RESUME_KEY);
     closeSettingsBtn();
     showSignInScreen();
   } catch(err) { toast('Sign out failed. Try again.', true); }

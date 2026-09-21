@@ -595,6 +595,27 @@ svg.spark{width:100%;height:46px;margin-bottom:6px;display:block;}
 .auth-error{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--red);background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);border-radius:6px;padding:10px 12px;margin-top:4px;margin-bottom:4px;width:100%;box-sizing:border-box;text-align:center;}
 .auth-pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--dim);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:1px;}
 
+/* ── LOADING SCREEN (combo chip animation) ───────────────────────────────── */
+.loading-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;background:radial-gradient(circle at center,#1a1a1a 0%,#0a0a0a 100%);z-index:8000;}
+.loading-logo-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:90vw;max-width:500px;opacity:0.07;pointer-events:none;}
+.loading-logo-main{width:80px;height:auto;opacity:0.9;animation:loading-pulse 3s ease-in-out infinite;}
+.loading-chips{display:flex;gap:12px;}
+.loading-chips .chip{width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#1e1e1e;border:1px solid var(--border);border-radius:12px;font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--dim);animation:chip-cycle 1200ms infinite;}
+.loading-chips .chip[data-chip="1"]{animation-delay:0ms;}
+.loading-chips .chip[data-chip="2"]{animation-delay:300ms;}
+.loading-chips .chip[data-chip="3"]{animation-delay:600ms;}
+.loading-text{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--dim);letter-spacing:0.5px;}
+@keyframes loading-pulse{0%,100%{transform:scale(0.97);}50%{transform:scale(1.0);}}
+@keyframes chip-cycle{
+  0%{background:#1e1e1e;border-color:var(--border);color:var(--dim);box-shadow:none;}
+  25%,50%{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 12px rgba(214,48,64,0.4);transition:all 150ms ease-out;}
+  75%,100%{background:#1e1e1e;border-color:var(--border);color:var(--dim);box-shadow:none;}
+}
+@media(prefers-reduced-motion:reduce){
+  .loading-logo-main{animation:none;}
+  .loading-chips .chip{animation:none;background:var(--accent);border-color:var(--accent);color:#fff;}
+}
+
 /* ── OFFLINE DOT ─────────────────────────────────────────────────────────── */
 .offline-dot{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:var(--dim);opacity:0;transition:opacity 0.3s;pointer-events:none;}
 .offline-dot.show{opacity:1;}

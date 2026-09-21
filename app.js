@@ -227,7 +227,7 @@ export function renderProfile() {
     + '</div>'
     + '<div class="sec-lbl" style="margin-top:24px">APP</div>'
     + '<div class="sg">'
-      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v12.1.0</div></div>'
+      + '<div class="sr"><div class="sr-lbl">Version</div><div style="font-size:12px;color:var(--dim)">8RB by 8 Rounds Boxing · v12.2.0</div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Install as App</div><div class="sr-sub">Chrome · tap ⋮ · Add to Home Screen</div></div></div>'
       + '<div class="sr"><div style="flex:1"><div class="sr-lbl">Rate this App</div><div class="sr-sub">Coming soon</div></div></div>'
     + '</div>'
@@ -292,7 +292,7 @@ export function renderSettingsPanel() {
   }
   // Version
   var verEl = document.getElementById('settings-version');
-  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v12.1.0';
+  if (verEl) verEl.textContent = '8RB by 8 Rounds Boxing · v12.2.0';
 }
 
 // ─── SETTINGS ACTIONS ─────────────────────────────────────────────────────────
@@ -439,6 +439,7 @@ function showAuthForm(which) {
 }
 export function showSignInScreen() {
   if (DEBUG) console.log('[8RB DIAG] showing sign-in screen');
+  hideLoadingScreen();
   var appEl = document.getElementById('app-content');
   var authEl = document.getElementById('auth-screen');
   if (appEl) appEl.style.display = 'none';
@@ -447,6 +448,7 @@ export function showSignInScreen() {
   clearAuthErrors();
 }
 export function showEmailVerificationScreen(email) {
+  hideLoadingScreen();
   var appEl = document.getElementById('app-content');
   var authEl = document.getElementById('auth-screen');
   if (appEl) appEl.style.display = 'none';
@@ -461,6 +463,7 @@ export function showEmailVerificationScreen(email) {
   startVerificationPolling();
 }
 export function showApp() {
+  hideLoadingScreen();
   var appEl = document.getElementById('app-content');
   var authEl = document.getElementById('auth-screen');
   if (authEl) authEl.style.display = 'none';
@@ -811,34 +814,46 @@ function isResumeSessionActive() {
   return age >= 0 && age < 30 * 24 * 60 * 60 * 1000;
 }
 
-// ─── iOS GOOGLE SIGN-IN FLASH FIX ────────────────────────────────────────────
-// Show a loading screen immediately on redirect return so the sign-in form
-// never flashes before auth state resolves.
-function showGoogleLoadingScreen(msg) {
-  var text = msg || 'Signing you in...';
-  if (DEBUG && text === 'Resuming your session...') {
-    console.log('[8RB DIAG] showing resuming screen');
-  }
+// ─── LOADING SCREEN (combo chip animation) ───────────────────────────────────
+// Appends the loading screen div over auth-screen without destroying the auth
+// form HTML — hideLoadingScreen() removes it when auth resolves.
+function showLoadingScreen(message) {
+  message = message || 'Getting ready...';
+  if (DEBUG) console.log('[8RB DIAG] showing loading screen, msg=' + message);
   var authEl = document.getElementById('auth-screen');
   var appEl = document.getElementById('app-content');
   if (appEl) appEl.style.display = 'none';
   if (authEl) {
     authEl.style.display = 'flex';
-    authEl.innerHTML =
-      '<div style="display:flex;flex-direction:column;align-items:center;' +
-      'justify-content:center;height:100%;gap:16px">' +
-      '<img src="8RB.webp" style="width:80px;opacity:0.8;' +
-      'animation:obBreathe 3s ease-in-out infinite">' +
-      '<div style="font-family:\'DM Sans\',sans-serif;font-size:14px;' +
-      'color:var(--muted)">' + text + '</div>' +
-      '</div>';
+    hideLoadingScreen();
+    var div = document.createElement('div');
+    div.className = 'loading-screen';
+    div.setAttribute('role', 'status');
+    div.setAttribute('aria-live', 'polite');
+    div.innerHTML =
+      '<img src="8RB.webp" class="loading-logo-watermark" aria-hidden="true" alt="">' +
+      '<img src="8RB.webp" class="loading-logo-main" alt="8RB">' +
+      '<div class="loading-chips" aria-hidden="true">' +
+        '<span class="chip" data-chip="1">1</span>' +
+        '<span class="chip" data-chip="2">2</span>' +
+        '<span class="chip" data-chip="3">3</span>' +
+      '</div>' +
+      '<div class="loading-text">' + sanitise(message) + '</div>';
+    authEl.appendChild(div);
   }
 }
 
+function hideLoadingScreen() {
+  var authEl = document.getElementById('auth-screen');
+  if (!authEl) return;
+  var existing = authEl.querySelector('.loading-screen');
+  if (existing) existing.parentNode.removeChild(existing);
+}
+
 if (sessionStorage.getItem('googleRedirectPending')) {
-  showGoogleLoadingScreen();
+  showLoadingScreen('Signing you in...');
 } else if (isResumeSessionActive()) {
-  showGoogleLoadingScreen('Resuming your session...');
+  showLoadingScreen();
 }
 
 // Handle return from Google signInWithRedirect — fires on page load after redirect

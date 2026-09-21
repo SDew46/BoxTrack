@@ -794,10 +794,12 @@ async function resolveAuth() {
 export function onSplashDone() {
   if (isInstalledPWA() || localStorage.getItem('installGateDismissed') === '1') {
     splashDone = true;
+    if (!authReady) showLoadingScreen();
     resolveAuth();
   } else {
     window.showInstallGate(function() {
       splashDone = true;
+      if (!authReady) showLoadingScreen();
       resolveAuth();
     });
   }

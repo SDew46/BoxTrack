@@ -32,7 +32,8 @@ function isInstalledPWA() {
 }
 
 // ─── DEBUG FLAG ───────────────────────────────────────────────────────────────
-const DEBUG = false;
+const DEBUG = true;
+if (DEBUG) console.log('[8RB DIAG] init start, lastSignedIn=' + localStorage.getItem('8rb.lastSignedIn'));
 
 // ─── SECURITY UTILITIES ───────────────────────────────────────────────────────
 export function sanitise(str) {
@@ -437,6 +438,7 @@ function showAuthForm(which) {
   });
 }
 export function showSignInScreen() {
+  if (DEBUG) console.log('[8RB DIAG] showing sign-in screen');
   var appEl = document.getElementById('app-content');
   var authEl = document.getElementById('auth-screen');
   if (appEl) appEl.style.display = 'none';
@@ -814,6 +816,9 @@ function isResumeSessionActive() {
 // never flashes before auth state resolves.
 function showGoogleLoadingScreen(msg) {
   var text = msg || 'Signing you in...';
+  if (DEBUG && text === 'Resuming your session...') {
+    console.log('[8RB DIAG] showing resuming screen');
+  }
   var authEl = document.getElementById('auth-screen');
   var appEl = document.getElementById('app-content');
   if (appEl) appEl.style.display = 'none';
@@ -838,14 +843,19 @@ if (sessionStorage.getItem('googleRedirectPending')) {
 
 // Handle return from Google signInWithRedirect — fires on page load after redirect
 getRedirectResult(auth).then(function(result) {
+  // Capture flag BEFORE removing it — this is the source-of-truth for whether
+  // a Google redirect was actually in progress. Checking after removal is always null.
+  var hadPending = sessionStorage.getItem('googleRedirectPending') === '1';
   sessionStorage.removeItem('googleRedirectPending');
   if (result && result.user) {
     if (DEBUG) console.log('[8RB] getRedirectResult: Google redirect returned user', result.user.uid);
+    localStorage.setItem(RESUME_KEY, Date.now().toString());
     // ensureUserProfile handles profile creation via resolveAuth — no extra action needed
-  } else if (sessionStorage.getItem('googleRedirectPending') === null && !window.currentUser) {
-    // Flag was set but no user returned — restore sign-in screen
+  } else if (hadPending && !window.currentUser) {
+    // Redirect was in progress but no user returned (cancelled or failed)
     showSignInScreen();
   }
+  // Normal page load with no redirect pending — do nothing, let onAuthStateChanged run
 }).catch(function(err) {
   sessionStorage.removeItem('googleRedirectPending');
   if (err.code) {
@@ -858,6 +868,7 @@ getRedirectResult(auth).then(function(result) {
 var firebaseAvailable = true;
 try {
   onAuthStateChanged(auth, function(user) {
+    if (DEBUG) console.log('[8RB DIAG] auth state resolved, user=' + (user ? user.uid : 'null'));
     authReady = true;
     authUser = user;
     resolveAuth();

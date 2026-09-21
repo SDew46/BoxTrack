@@ -149,29 +149,19 @@ test('PROFILE tab — account section with Sign Out visible', async ({ page, moc
 // Test 9: Auth screen shows when NOT authenticated
 // ─────────────────────────────────────────────────────────────────────────────
 test('Auth screen shows when not authenticated', async ({ page }) => {
-  // Do NOT set up Firebase mocks — real Firebase CDN will 404 in isolation,
-  // but we use a firestore mock that returns no user via the auth mock.
-  // Instead: navigate without any mock and the real auth mock returns no user.
-  // We do this by navigating and waiting for #auth-screen directly.
-  // The page will attempt to load Firebase from CDN; since we're offline/CI
-  // the auth listener never fires OR fires with null. Either way auth-screen
-  // should appear. We wait generously.
+  // Use the no-user auth mock so onAuthStateChanged fires with null deterministically.
+  const MOCKS_DIR = path.resolve(__dirname, 'mocks');
+  await page.route('**/firebase-app.js', r => r.fulfill({ status:200, contentType:'text/javascript; charset=utf-8', path: path.join(MOCKS_DIR,'firebase-app.mock.js') }));
+  await page.route('**/firebase-auth.js', r => r.fulfill({ status:200, contentType:'text/javascript; charset=utf-8', path: path.join(MOCKS_DIR,'firebase-auth-nouser.mock.js') }));
+  await page.route('**/firebase-firestore.js', r => r.fulfill({ status:200, contentType:'text/javascript; charset=utf-8', path: path.join(MOCKS_DIR,'firebase-firestore.mock.js') }));
+  // Skip the install gate (it blocks splash completion otherwise)
+  await page.addInitScript(() => { localStorage.setItem('installGateDismissed', '1'); });
 
-  // Navigate without mocking — app detects no auth and shows sign-in screen
   await page.goto(APP_URL);
 
-  // The app shows #auth-screen if no user is authenticated
-  // (after splash dismisses). We allow a generous timeout since the real
-  // Firebase CDN request may time out or the app may show auth screen quickly.
-  try {
-    // First try: wait for auth-screen to be visible (no-mock path)
-    await page.waitForSelector('#auth-screen', { state: 'visible', timeout: 8000 });
-    await expect(page.locator('#auth-screen')).toBeVisible();
-  } catch (e) {
-    // Fallback: if the real CDN loaded (local machine has internet), the app
-    // may show auth screen after onAuthStateChanged fires with null.
-    await expect(page.locator('#auth-screen')).toBeVisible({ timeout: 5000 });
-  }
+  // onAuthStateChanged fires with null → resolveAuth → showSignInScreen
+  await page.waitForSelector('#auth-screen', { state: 'visible', timeout: 8000 });
+  await expect(page.locator('#auth-screen')).toBeVisible();
 
   // App content should NOT be visible
   await expect(page.locator('#app-content')).toBeHidden();
